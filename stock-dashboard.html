@@ -831,7 +831,7 @@ function trackPick(ticker, market, entryPrice, tp, sl) {
     checkedAt: null,
     hitPrice: null,
   });
-  if (state.trackedPicks.length > 50) state.trackedPicks.length = 50;
+  if (state.trackedPicks.length > 9999) state.trackedPicks.length = 9999;
   saveTrackedPicks();
   updateTrackedCount();
   renderTrackedPicks();

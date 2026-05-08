@@ -58,7 +58,7 @@ function nextId() { return users.length > 0 ? Math.max(...users.map(u => u.id)) 
 
 // ─── SUBSCRIPTION TIERS ─────────────────────────────────────────────────
 const TIERS = {
-  free: { scansPerDay: 999999, maxTrackedPicks: 5, scanIntervalMs: 120, name: 'Free' },
+  free: { scansPerDay: 999999, maxTrackedPicks: 999999, scanIntervalMs: 120, name: 'Free' },
   pro: { scansPerDay: 999, maxTrackedPicks: 999, scanIntervalMs: 80, name: 'Pro' },
 };
 
