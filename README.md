@@ -1,12 +1,17 @@
 # MOMENTUM · Stock Scanner
 
-> Multi-market technical analysis scanner for momentum trading. Scan **🇺🇸 US · 🇪🇺 Europe · 🇧🇷 Brazil** stocks with live Yahoo Finance data.
-
-**Target:** +15% in 30 days · **Stop-loss:** −7%
+> Multi-market technical analysis scanner for **paper trading simulation**. Educational purposes only. Scan **🇺🇸 US · 🇪🇺 Europe · 🇧🇷 Brazil** stocks with live Yahoo Finance data.
 
 ![MOMENTUM Dashboard](https://img.shields.io/badge/status-live-brightgreen)
 ![Version](https://img.shields.io/badge/version-5.0-orange)
+![Disclaimer](https://img.shields.io/badge/paper_trading_only-red)
 ![Node](https://img.shields.io/badge/node-%3E%3D18-blue)
+
+## ⚠️ DISCLAIMER
+
+**PAPER TRADING — EDUCATIONAL PURPOSES ONLY.**
+
+MOMENTUM is a technical analysis simulator. Nothing on this site constitutes financial advice, investment recommendation, or solicitation to buy or sell securities. All trades are simulated. Past performance does not guarantee future results. Consult a qualified financial advisor before making real investment decisions. By using this app you agree these are paper trades only.
 
 ## Features
 
