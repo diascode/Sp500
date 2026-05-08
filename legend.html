@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JΞRRY · LEGEND v5</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f0b08;color:#e8d5b7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;padding:20px}.container{max-width:900px;margin:0 auto}.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:12px;border-bottom:1px solid #3d2e1c}.header h1{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono',monospace;font-size:20px;background:linear-gradient(135deg,#c85a17,#e8a846);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.back{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono',monospace;font-size:12px;color:#7a6650;text-decoration:none}.back:hover{color:#e8a846}.section{background:#231b14;border:1px solid #3d2e1c;border-radius:8px;padding:20px;margin-bottom:20px}.section h2{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono',monospace;font-size:13px;color:#e8a846;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:12px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:600px){.grid2{grid-template-columns:1fr}}.item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(0,0,0,0.2);border-radius:6px;border-left:3px solid var(--c,#4caf50)}.item-label{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono',monospace;font-size:11px;font-weight:600;color:#e8d5b7;min-width:60px}.item-desc{font-size:10px;color:#b8a080;line-height:1.3}.tag{display:inline-block;padding:1px 5px;border-radius:2px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono',monospace;font-size:8px;font-weight:700}.tag.bull{background:rgba(76,175,80,0.15);color:#4caf50}.tag.bear{background:rgba(229,57,53,0.15);color:#e53935}.tag.neutral{background:rgba(255,193,7,0.1);color:#ffc107}.footer{margin-top:32px;text-align:center;font-size:10px;color:#7a6650}</style>
+</head>
+<body>
+<div class="container">
+<div class="header"><h1>JΞRRY // LEGEND v5</h1><a class="back" href="/">← dashboard</a></div>
+<div class="section">
+<h2>MOVING AVERAGES</h2>
+<div class="grid2">
+<div class="item" style="--c:#22d3ee"><div><div class="item-label">SMA 9</div><div class="item-desc">Ultra-short momentum (~9 sessions).</div></div></div>
+<div class="item" style="--c:#4caf50"><div><div class="item-label">SMA 20</div><div class="item-desc">Short-term trend (~1 month). Key for swings.</div></div></div>
+<div class="item" style="--c:#e8a846"><div><div class="item-label">SMA 50</div><div class="item-desc">Medium-term (~quarter). Institutional line.</div></div></div>
+<div class="item" style="--c:#ff6a00"><div><div class="item-label">SMA 200</div><div class="item-desc">Long-term (~1 year). Bull/bear line.</div></div></div>
+</div></div>
+<div class="section">
+<h2>TARGET BANDS</h2>
+<div class="grid2">
+<div class="item" style="--c:#4caf50"><div><div class="item-label">TP +15%</div><div class="item-desc">Take-profit target. Green dashed line on chart.</div></div></div>
+<div class="item" style="--c:#e53935"><div><div class="item-label">SL -7%</div><div class="item-desc">Stop-loss. Red dashed line on chart.</div></div></div>
+</div></div>
+<div class="section">
+<h2>INDICATORS</h2>
+<div class="grid2">
+<div class="item" style="--c:#4caf50"><div><div class="item-label">RSI</div><div class="item-desc">Relative Strength Index. &gt;55 bull, &lt;40 bear.</div></div></div>
+<div class="item" style="--c:#4caf50"><div><div class="item-label">MACD</div><div class="item-desc">Momentum. &gt;0 bullish crossover.</div></div></div>
+<div class="item" style="--c:#4caf50"><div><div class="item-label">ADX</div><div class="item-desc">Trend strength. &gt;25 = trending market.</div></div></div>
+<div class="item" style="--c:#4caf50"><div><div class="item-label">Bollinger</div><div class="item-desc">Volatility bands. Price at upper = extended.</div></div></div>
+<div class="item" style="--c:#4caf50"><div><div class="item-label">ATR</div><div class="item-desc">Average True Range. Volatility measure.</div></div></div>
+<div class="item" style="--c:#4caf50"><div><div class="item-label">Volume</div><div class="item-desc">Ratio &gt;1.5 = institutional interest.</div></div></div>
+</div></div>
+<div class="section">
+<h2>SIGNAL TIERS</h2>
+<div class="grid2">
+<div class="item" style="--c:#4caf50"><span class="tag bull">BUY</span><div><div class="item-desc">2.5+ points from RSI/MACD/ADX/MA. Strong setup.</div></div></div>
+<div class="item" style="--c:#ffc107"><span class="tag neutral">HOLD</span><div><div class="item-desc">1-2.5 points. Mixed signals. Wait for clarity.</div></div></div>
+<div class="item" style="--c:#e53935"><span class="tag bear">SELL</span><div><div class="item-desc">&lt;1 point. Multiple bearish signals. Avoid/short.</div></div></div>
+</div></div>
+<div class="footer">JΞRRY v5.0 · Not financial advice</div>
+</div>
+</body>
+</html>

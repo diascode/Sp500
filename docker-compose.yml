@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  stock-dashboard:
+    build: .
+    container_name: jerry-stock-dashboard
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
