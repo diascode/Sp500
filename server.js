@@ -1,11 +1,76 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const urlMod = require('url');
 
-const PORT = 8080;
-const HOST = '0.0.0.0';
+// ─── LOAD ENV ───────────────────────────────────────────────────────────
+function loadEnv() {
+  const envPath = path.join(__dirname, '.env');
+  const env = { PORT: '8080', HOST: '0.0.0.0', JWT_SECRET: 'dev-secret-change-me', APP_URL: 'http://localhost:8080' };
+  try {
+    const lines = fs.readFileSync(envPath, 'utf8').split('\n');
+    for (const line of lines) {
+      const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$/);
+      if (m && !m[1].startsWith('#')) env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+    }
+  } catch {}
+  // Override from process.env
+  for (const k of Object.keys(env)) { if (process.env[k]) env[k] = process.env[k]; }
+  return env;
+}
+const ENV = loadEnv();
+
+const PORT = parseInt(ENV.PORT) || 8080;
+const HOST = ENV.HOST || '0.0.0.0';
 const DIR = __dirname;
 
+// ─── JWT ────────────────────────────────────────────────────────────────
+let jwt;
+try { jwt = require('jsonwebtoken'); } catch { console.log('⚠️ jsonwebtoken not installed. Run: npm install'); process.exit(1); }
+const JWT_SECRET = ENV.JWT_SECRET || 'dev-secret-change-me';
+
+function signToken(user) { return jwt.sign({ id: user.id, email: user.email, tier: user.tier }, JWT_SECRET, { expiresIn: '30d' }); }
+function verifyToken(token) { try { return jwt.verify(token, JWT_SECRET); } catch { return null; } }
+
+// ─── USER DB ────────────────────────────────────────────────────────────
+const DB_PATH = path.join(DIR, 'data', 'users.json');
+
+function loadUsers() {
+  try { return JSON.parse(fs.readFileSync(DB_PATH, 'utf8')); } catch { return []; }
+}
+function saveUsers(users) {
+  try { if (!fs.existsSync(path.join(DIR, 'data'))) fs.mkdirSync(path.join(DIR, 'data')); fs.writeFileSync(DB_PATH, JSON.stringify(users, null, 2)); } catch {}
+}
+const users = loadUsers();
+
+function hashPassword(pw) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(pw, salt, 64).toString('hex');
+  return salt + ':' + hash;
+}
+function verifyPassword(pw, stored) {
+  const [salt, hash] = stored.split(':');
+  return crypto.scryptSync(pw, salt, 64).toString('hex') === hash;
+}
+function findUser(email) { return users.find(u => u.email.toLowerCase() === email.toLowerCase()); }
+function nextId() { return users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1; }
+
+// ─── SUBSCRIPTION TIERS ─────────────────────────────────────────────────
+const TIERS = {
+  free: { scansPerDay: 999999, maxTrackedPicks: 5, scanIntervalMs: 120, name: 'Free' },
+  pro: { scansPerDay: 999, maxTrackedPicks: 999, scanIntervalMs: 80, name: 'Pro' },
+};
+
+// ─── STRIPE ─────────────────────────────────────────────────────────────
+let stripe;
+try {
+  if (ENV.STRIPE_SECRET_KEY && !ENV.STRIPE_SECRET_KEY.startsWith('sk_live_...')) {
+    stripe = require('stripe')(ENV.STRIPE_SECRET_KEY);
+  }
+} catch {}
+
+// ─── MIME ───────────────────────────────────────────────────────────────
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css',
@@ -133,7 +198,35 @@ const UNIVERSES = {
   ],
 };
 
-// ─── HELPERS ────────────────────────────────────────────────────────────
+// ─── RATE LIMITING ──────────────────────────────────────────────────────
+const scanCounts = {}; // email -> { date, count }
+
+function getTier(email) {
+  const user = findUser(email);
+  if (!user || user.tier === 'free') return TIERS.free;
+  // Check if subscription is active
+  if (user.tier === 'pro' && user.subscriptionEnd) {
+    if (new Date(user.subscriptionEnd) < new Date()) {
+      user.tier = 'free'; saveUsers(users);
+      return TIERS.free;
+    }
+  }
+  return TIERS[user.tier] || TIERS.free;
+}
+
+function checkScanLimit(email) {
+  const tier = getTier(email);
+  const today = new Date().toISOString().slice(0, 10);
+  if (!scanCounts[email] || scanCounts[email].date !== today) {
+    scanCounts[email] = { date: today, count: 0 };
+  }
+  scanCounts[email].count++;
+  const remaining = tier.scansPerDay - scanCounts[email].count;
+  const allowed = scanCounts[email].count <= tier.scansPerDay;
+  return { allowed, remaining, tier: tier.name, scanInterval: tier.scanIntervalMs };
+}
+
+// ─── YAHOO FETCH ────────────────────────────────────────────────────────
 async function yahooFetch(ticker) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=5y&interval=1d`;
   const r = await fetch(url, { headers: { 'User-Agent': UA } });
@@ -147,157 +240,13 @@ async function yahooNews(ticker) {
   if (!r.ok) throw new Error(`Yahoo news returned ${r.status}`);
   const data = await r.json();
   return (data.news || []).map(n => ({
-    title: n.title,
-    link: n.link,
-    publisher: n.publisher,
-    summary: (n.summary || '').slice(0, 200),
+    title: n.title, link: n.link, publisher: n.publisher, summary: (n.summary || '').slice(0, 200),
   }));
-}
-
-// ─── REQUEST HANDLER ────────────────────────────────────────────────────
-async function handleRequest(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
-
-  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  const pathname = url.pathname;
-
-  // ── GET /api/universes ── list available market universes
-  if (pathname === '/api/universes') {
-    const summary = Object.entries(UNIVERSES).map(([key, stocks]) => ({
-      id: key,
-      name: key === 'us' ? 'United States' : key === 'europe' ? 'Europe' : 'Brazil',
-      label: key === 'us' ? '🇺🇸 S&P 500' : key === 'europe' ? '🇪🇺 STOXX 600' : '🇧🇷 Bovespa',
-      count: stocks.length,
-    }));
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(summary));
-    return;
-  }
-
-  // ── GET /api/universe/:market ── list stocks in a market
-  const universeMatch = pathname.match(/^\/api\/universe\/(\w+)$/);
-  if (universeMatch) {
-    const key = universeMatch[1];
-    const stocks = UNIVERSES[key];
-    if (!stocks) { res.writeHead(404); res.end(JSON.stringify({ error: 'Unknown universe' })); return; }
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(stocks));
-    return;
-  }
-
-  // ── GET /api/history/:ticker ── stock price history
-  const historyMatch = pathname.match(/^\/api\/history\/([A-Za-z0-9.]+)$/);
-  if (historyMatch) {
-    const ticker = historyMatch[1].toUpperCase();
-    try {
-      const data = await yahooFetch(ticker);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(data));
-    } catch (err) {
-      res.writeHead(502);
-      res.end(JSON.stringify({ error: err.message }));
-    }
-    return;
-  }
-
-  // ── GET /api/news/:ticker ── recent news
-  const newsMatch = pathname.match(/^\/api\/news\/([A-Za-z0-9.]+)$/);
-  if (newsMatch) {
-    const ticker = newsMatch[1].toUpperCase();
-    try {
-      const news = await yahooNews(ticker);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(news));
-    } catch (err) {
-      res.writeHead(502);
-      res.end(JSON.stringify({ error: err.message }));
-    }
-    return;
-  }
-
-  // ── GET /api/scan ── scan all markets, return analyzed data
-  if (pathname === '/api/scan') {
-    const results = {};
-    for (const [market, stocks] of Object.entries(UNIVERSES)) {
-      const batch = [];
-      for (const stock of stocks) {
-        try {
-          const data = await yahooFetch(stock.t);
-          batch.push({ ...stock, data });
-        } catch {
-          // skip failures
-        }
-        // Small delay to avoid rate limiting
-        await new Promise(r => setTimeout(r, 100));
-      }
-      results[market] = batch;
-    }
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(results));
-    return;
-  }
-
-  // ── GET /api/calendar ── economic calendar (returns upcoming events)
-  if (pathname === '/api/calendar') {
-    const events = generateCalendar();
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(events));
-    return;
-  }
-
-  // ── GET /api/portfolio ── placeholder (could persist to disk later)
-  if (pathname === '/api/portfolio') {
-    const portfolioPath = path.join(DIR, 'portfolio.json');
-    try {
-      const data = JSON.parse(fs.readFileSync(portfolioPath, 'utf8'));
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(data));
-    } catch {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify([]));
-    }
-    return;
-  }
-
-  // ── POST /api/portfolio ── save portfolio
-  if (pathname === '/api/portfolio' && req.method === 'POST') {
-    let body = '';
-    req.on('data', c => body += c);
-    req.on('end', () => {
-      try {
-        fs.writeFileSync(path.join(DIR, 'portfolio.json'), body, 'utf8');
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true }));
-      } catch (err) {
-        res.writeHead(500);
-        res.end(JSON.stringify({ error: err.message }));
-      }
-    });
-    return;
-  }
-
-  // ── Serve static files ──
-  let uri = pathname === '/' ? '/stock-dashboard.html' : pathname;
-  let fpath = path.join(DIR, uri);
-  if (!fpath.startsWith(DIR)) { res.writeHead(403); res.end('Forbidden'); return; }
-  try {
-    const content = fs.readFileSync(fpath);
-    const ext = path.extname(fpath);
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
-    res.end(content);
-  } catch {
-    res.writeHead(404);
-    res.end('Not Found');
-  }
 }
 
 // ─── ECONOMIC CALENDAR ──────────────────────────────────────────────────
 function generateCalendar() {
-  const now = new Date();
-  const y = now.getFullYear(), m = now.getMonth();
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth();
   const events = [
     { date: nextWeekday(now, 0), title: '🛢️ EIA Crude Oil Inventories', impact: 'medium' },
     { date: nextWeekday(now, 1), title: '📊 Jobless Claims', impact: 'high' },
@@ -305,37 +254,248 @@ function generateCalendar() {
     { date: nextWeekday(now, 3), title: '📈 S&P Flash Manufacturing PMI', impact: 'high' },
     { date: nextWeekday(now, 4), title: '🔨 Durable Goods Orders', impact: 'high' },
   ];
-  // Add Fed events (2nd and 4th week-ish)
   events.push({ date: nthWeekday(y, m, 2, 3), title: '🏛️ FOMC Minutes Release', impact: 'high' });
   events.push({ date: nthWeekday(y, m, 3, 4), title: '📊 GDP (Second Estimate)', impact: 'high' });
   events.push({ date: lastDay(y, m + 1), title: '📊 PCE Price Index (Core)', impact: 'high' });
   return events.sort((a, b) => new Date(a.date) - new Date(b.date));
 }
+function nextWeekday(from, offset) { const d = new Date(from); d.setDate(d.getDate() + offset); return d.toISOString().slice(0, 10); }
+function nthWeekday(year, month, n, dow) { let count = 0; for (let day = 1; day <= 31; day++) { const d = new Date(year, month, day); if (d.getMonth() !== month) break; if (d.getDay() === dow) { count++; if (count === n) return d.toISOString().slice(0, 10); } } return ''; }
+function lastDay(year, month) { const d = new Date(year, month, 0); return d.toISOString().slice(0, 10); }
 
-function nextWeekday(from, offset) {
-  const d = new Date(from);
-  d.setDate(d.getDate() + offset);
-  return d.toISOString().slice(0, 10);
+// ─── HTTP HELPERS ──────────────────────────────────────────────────────
+function sendJSON(res, code, data) {
+  res.writeHead(code, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+  res.end(JSON.stringify(data));
+}
+function sendError(res, code, msg) { sendJSON(res, code, { error: msg }); }
+function readBody(req) {
+  return new Promise((resolve) => {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      try { resolve(JSON.parse(body)); } catch { resolve({}); }
+    });
+  });
+}
+function getAuthUser(req) {
+  const auth = req.headers['authorization'] || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  return verifyToken(token);
 }
 
-function nthWeekday(year, month, n, dow) {
-  let count = 0;
-  for (let day = 1; day <= 31; day++) {
-    const d = new Date(year, month, day);
-    if (d.getMonth() !== month) break;
-    if (d.getDay() === dow) { count++; if (count === n) return d.toISOString().slice(0, 10); }
+// ─── REQUEST HANDLER ────────────────────────────────────────────────────
+async function handleRequest(req, res) {
+  // CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
+  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const pathname = url.pathname;
+
+  try {
+    // ─── AUTH ROUTES ────────────────────────────────────────────
+    if (pathname === '/api/auth/signup' && req.method === 'POST') {
+      const body = await readBody(req);
+      const { email, password } = body;
+      if (!email || !password || password.length < 6) return sendError(res, 400, 'Email and password (min 6 chars) required');
+      if (findUser(email)) return sendError(res, 409, 'Email already registered');
+      const user = { id: nextId(), email: email.toLowerCase(), password: hashPassword(password), tier: 'free', createdAt: new Date().toISOString(), subscriptionId: null, subscriptionEnd: null };
+      users.push(user); saveUsers(users);
+      const token = signToken(user);
+      return sendJSON(res, 201, { token, user: { id: user.id, email: user.email, tier: user.tier } });
+    }
+
+    if (pathname === '/api/auth/login' && req.method === 'POST') {
+      const body = await readBody(req);
+      const { email, password } = body;
+      const user = findUser(email);
+      if (!user || !verifyPassword(password, user.password)) return sendError(res, 401, 'Invalid email or password');
+      const token = signToken(user);
+      return sendJSON(res, 200, { token, user: { id: user.id, email: user.email, tier: user.tier } });
+    }
+
+    if (pathname === '/api/auth/me') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      const user = findUser(authUser.email);
+      if (!user) return sendError(res, 401, 'User not found');
+      return sendJSON(res, 200, { id: user.id, email: user.email, tier: user.tier, subscriptionEnd: user.subscriptionEnd });
+    }
+
+    // ─── STRIPE ──────────────────────────────────────────────────
+    if (pathname === '/api/stripe/create-checkout') {
+      if (!stripe) return sendError(res, 503, 'Stripe not configured');
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      const priceId = ENV.STRIPE_PRICE_PRO_MONTHLY;
+      if (!priceId) return sendError(res, 500, 'STRIPE_PRICE_PRO_MONTHLY not set');
+      try {
+        const session = await stripe.checkout.sessions.create({
+          mode: 'subscription',
+          payment_method_types: ['card'],
+          line_items: [{ price: priceId, quantity: 1 }],
+          customer_email: authUser.email,
+          success_url: ENV.APP_URL + '/?subscription=success',
+          cancel_url: ENV.APP_URL + '/?subscription=canceled',
+          metadata: { userId: String(authUser.id) },
+        });
+        return sendJSON(res, 200, { url: session.url });
+      } catch (e) { return sendError(res, 500, 'Stripe error: ' + e.message); }
+    }
+
+    if (pathname === '/api/stripe/create-portal') {
+      if (!stripe) return sendError(res, 503, 'Stripe not configured');
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      const user = findUser(authUser.email);
+      if (!user || !user.subscriptionId) return sendError(res, 400, 'No active subscription');
+      try {
+        const session = await stripe.billingPortal.sessions.create({
+          customer: user.subscriptionId,
+          return_url: ENV.APP_URL + '/',
+        });
+        return sendJSON(res, 200, { url: session.url });
+      } catch (e) { return sendError(res, 500, 'Stripe error: ' + e.message); }
+    }
+
+    if (pathname === '/api/stripe/webhook' && req.method === 'POST') {
+      if (!stripe || !ENV.STRIPE_WEBHOOK_SECRET) return sendError(res, 503, 'Stripe webhook not configured');
+      let body = '';
+      req.on('data', c => body += c);
+      await new Promise(resolve => req.on('end', resolve));
+      try {
+        const sig = req.headers['stripe-signature'];
+        const event = stripe.webhooks.constructEvent(body, sig, ENV.STRIPE_WEBHOOK_SECRET);
+        if (event.type === 'checkout.session.completed') {
+          const session = event.data.object;
+          const email = session.customer_email;
+          const user = findUser(email);
+          if (user) {
+            user.tier = 'pro';
+            user.subscriptionId = session.customer;
+            const sub = await stripe.subscriptions.retrieve(session.subscription);
+            user.subscriptionEnd = new Date(sub.current_period_end * 1000).toISOString();
+            saveUsers(users);
+          }
+        }
+        if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
+          const sub = event.data.object;
+          const email = sub.customer_email || (sub.customer && (await stripe.customers.retrieve(sub.customer)).email);
+          const user = findUser(email);
+          if (user) {
+            if (sub.status === 'active' || sub.status === 'trialing') {
+              user.tier = 'pro';
+              user.subscriptionEnd = new Date(sub.current_period_end * 1000).toISOString();
+            } else {
+              user.tier = 'free';
+              user.subscriptionEnd = null;
+            }
+            saveUsers(users);
+          }
+        }
+        return sendJSON(res, 200, { received: true });
+      } catch (e) { return sendError(res, 400, 'Webhook error: ' + e.message); }
+    }
+
+    // ─── SCAN LIMIT CHECK ───────────────────────────────────────
+    if (pathname === '/api/limit') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendJSON(res, 200, { allowed: false, tier: 'guest', scansRemaining: 0 });
+      const limit = checkScanLimit(authUser.email);
+      return sendJSON(res, 200, { allowed: limit.allowed, tier: limit.tier, scansRemaining: limit.remaining, scanInterval: limit.scanInterval });
+    }
+
+    // ─── STOCK ROUTES ────────────────────────────────────────────
+    if (pathname === '/api/universes') {
+      const summary = Object.entries(UNIVERSES).map(([key, stocks]) => ({
+        id: key, name: key === 'us' ? 'United States' : key === 'europe' ? 'Europe' : 'Brazil',
+        label: key === 'us' ? '🇺🇸 S&P 500' : key === 'europe' ? '🇪🇺 STOXX 600' : '🇧🇷 Bovespa', count: stocks.length,
+      }));
+      return sendJSON(res, 200, summary);
+    }
+
+    const universeMatch = pathname.match(/^\/api\/universe\/(\w+)$/);
+    if (universeMatch) {
+      const stocks = UNIVERSES[universeMatch[1]];
+      if (!stocks) return sendError(res, 404, 'Unknown universe');
+      return sendJSON(res, 200, stocks);
+    }
+
+    const historyMatch = pathname.match(/^\/api\/history\/([A-Za-z0-9.]+)$/);
+    if (historyMatch) {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Sign in required to scan');
+      const limit = checkScanLimit(authUser.email);
+      if (!limit.allowed) return sendJSON(res, 429, { error: 'Scan limit reached for today', limit, tier: limit.tier });
+      try {
+        const data = await yahooFetch(historyMatch[1]);
+        return sendJSON(res, 200, data);
+      } catch (err) { return sendError(res, 502, err.message); }
+    }
+
+    const newsMatch = pathname.match(/^\/api\/news\/([A-Za-z0-9.]+)$/);
+    if (newsMatch) {
+      try {
+        const news = await yahooNews(newsMatch[1]);
+        return sendJSON(res, 200, news);
+      } catch (err) { return sendError(res, 502, err.message); }
+    }
+
+    if (pathname === '/api/scan') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Sign in required to scan');
+      const limit = checkScanLimit(authUser.email);
+      if (!limit.allowed) return sendJSON(res, 429, { error: 'Daily scan limit reached', limit, tier: limit.tier });
+      // Scan all markets
+      const results = {};
+      for (const [market, stocks] of Object.entries(UNIVERSES)) {
+        const batch = [];
+        for (const stock of stocks) {
+          try { const data = await yahooFetch(stock.t); batch.push({ ...stock, data }); } catch {}
+          await new Promise(r => setTimeout(r, limit.scanInterval));
+        }
+        results[market] = batch;
+      }
+      return sendJSON(res, 200, results);
+    }
+
+    if (pathname === '/api/calendar') return sendJSON(res, 200, generateCalendar());
+
+    // ─── STATIC FILES ────────────────────────────────────────────
+    let uri = pathname === '/' ? '/stock-dashboard.html' : pathname;
+    let fpath = path.join(DIR, uri);
+    if (!fpath.startsWith(DIR)) return sendError(res, 403, 'Forbidden');
+    try {
+      const content = fs.readFileSync(fpath);
+      const ext = path.extname(fpath);
+      res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+      res.end(content);
+    } catch {
+      // Fallback to dashboard for SPA routing
+      const fallback = path.join(DIR, 'stock-dashboard.html');
+      try {
+        const content = fs.readFileSync(fallback);
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+        res.end(content);
+      } catch { sendError(res, 404, 'Not Found'); }
+    }
+  } catch (err) {
+    console.error('Server error:', err);
+    sendError(res, 500, 'Internal server error');
   }
-  return '';
-}
-
-function lastDay(year, month) {
-  const d = new Date(year, month, 0);
-  return d.toISOString().slice(0, 10);
 }
 
 // ─── START ──────────────────────────────────────────────────────────────
 const server = http.createServer(handleRequest);
 server.listen(PORT, HOST, () => {
-  console.log(`🚀 Jerry's Stock Dashboard v5.0 :: http://localhost:${PORT}`);
-  console.log(`📊 Universes: ${Object.keys(UNIVERSES).length} (${Object.values(UNIVERSES).reduce((a,b) => a+b.length, 0)} stocks)`);
+  const url = `http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`;
+  console.log(`\n🚀  MOMENTUM v5.0 — Paper Trading Simulator :: ${url}`);
+  console.log('⚠️  EDUCATIONAL PURPOSES ONLY — Not financial advice.');
+  console.log(`📊  ${Object.values(UNIVERSES).reduce((a,b) => a+b.length, 0)} stocks across ${Object.keys(UNIVERSES).length} markets`);
+  console.log(`💳  ${stripe ? 'Stripe connected' : 'Stripe not configured (set STRIPE_SECRET_KEY)'}`);
+  console.log(`👤  ${users.length} users registered`);
+  console.log(`📁  Data: ${DB_PATH}\n`);
 });

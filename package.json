@@ -1,0 +1,15 @@
+{
+  "name": "momentum",
+  "version": "5.0.0",
+  "description": "Multi-market stock scanner with subscription tiers",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.0",
+    "stripe": "^17.0.0"
+  },
+  "engines": { "node": ">=18" }
+}

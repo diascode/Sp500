@@ -152,6 +152,13 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
     <button class="btn primary" id="refreshBtn" onclick="scanAll()">⟳ SCAN</button>
     <button class="btn" id="themeBtn" onclick="toggleTheme()">☀/🌙</button>
     <button class="btn" id="portfolioBtn" onclick="showPortfolioModal()">📁 PORTFOLIO</button>
+    <div id="authSection" style="display:flex;gap:6px;align-items:center">
+      <span id="userTierBadge" style="display:none;font-family:var(--font-mono);font-size:10px;padding:4px 8px;border-radius:3px;background:rgba(76,175,80,0.15);color:var(--green-bull);border:1px solid rgba(76,175,80,0.3)">FREE</span>
+      <button class="btn" id="loginBtn" onclick="showAuthModal()" style="font-size:10px">🔑 SIGN IN</button>
+      <button class="btn" id="upgradeBtn" onclick="upgradeToPro()" style="display:none;font-size:10px;background:linear-gradient(135deg,rgba(200,90,23,0.2),rgba(200,90,23,0.05));border-color:var(--accent-amber);color:var(--accent-amber)">⬆ PRO</button>
+      <button class="btn" id="logoutBtn" onclick="logout()" style="display:none;font-size:10px;color:var(--text-dim)">SIGN OUT</button>
+
+    </div>
   </div>
 </header>
 
@@ -165,8 +172,8 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 </div>
 
 <div class="goal-card">
-  <h2>⏎ MISSION</h2>
-  <p><strong>15% in 30 days.</strong> Pure technical screen across <strong>🇺🇸 US · 🇪🇺 Europe · 🇧🇷 Brazil</strong>. Filters to BUY signals. Each scan re-fetches live Yahoo Finance data — RSI, MACD, ADX, SMA crossovers, Bollinger, pattern detection. <strong>+15% take-profit · −7% stop-loss</strong></p>
+  <h2>⏎ PAPER TRADING SIMULATOR</h2>
+  <p><strong>Educational tool.</strong> Technical analysis screen across <strong>🇺🇸 US · 🇪🇺 Europe · 🇧🇷 Brazil</strong>. Filters to high-scoring signals. Each scan re-fetches live Yahoo Finance data — RSI, MACD, ADX, SMA crossovers, Bollinger, pattern detection. <strong>Paper trading only. Not financial advice.</strong></p>
   <div class="stats" id="marketStats">
     <div>UNIVERSE: <span id="universeCount">0</span> stocks</div>
     <div>BUY SIGNALS: <span id="buyCount">0</span></div>
@@ -219,8 +226,28 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 
 <footer class="footer">
   <div><strong>MOMENTUM</strong> · v5.0 · live from Yahoo Finance</div>
-  <div class="disclaimer">⚠ Not financial advice.</div>
+  <div class="disclaimer"><strong>⚠ PAPER TRADING — EDUCATIONAL PURPOSES ONLY.</strong> MOMENTUM is a technical analysis simulator. Nothing on this site constitutes financial advice, investment recommendation, or solicitation to buy or sell securities. All trades are simulated. Past performance does not guarantee future results. Consult a qualified financial advisor before making real investment decisions. <strong>By using this app you agree these are paper trades only.</strong></div>
 </footer>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal" style="max-width:380px">
+    <h2 id="authModalTitle">🔑 SIGN IN</h2>
+    <div style="margin-bottom:12px">
+      <input class="search-input" id="authEmail" placeholder="Email" type="email" style="width:100%;margin-bottom:8px;font-size:13px">
+      <input class="search-input" id="authPassword" placeholder="Password (min 6 chars)" type="password" style="width:100%;margin-bottom:8px;font-size:13px">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" id="authSubmitBtn" onclick="submitAuth()" style="flex:1">SIGN IN</button>
+      <button class="btn" onclick="closeAuthModal()">CANCEL</button>
+    </div>
+    <div style="margin-top:10px;text-align:center">
+      <span style="font-size:12px;color:var(--text-dim)" id="authToggleText">Don't have an account?</span>
+      <button class="btn" onclick="toggleAuthMode()" style="font-size:11px;padding:4px 10px">SIGN UP</button>
+    </div>
+    <div id="authError" style="margin-top:8px;font-size:11px;color:var(--red-bear);text-align:center;display:none"></div>
+  </div>
+</div>
 
 <!-- PORTFOLIO MODAL -->
 <div class="modal-overlay" id="portfolioModal">
@@ -244,8 +271,147 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 // ─── STATE ─────────────────────────────────────────────────────────────
 let state = { market: 'us', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], signalHistory: [], universeCache: {}, theme: 'dark', showTracked: false, showUniverse: false };
 
+// ─── AUTH ────────────────────────────────────────────────────────────────
+const TOKEN_KEY = 'momentum_token';
+let authUser = null;
+let authMode = 'login';
+
+function getToken() { return localStorage.getItem(TOKEN_KEY); }
+function setToken(t) { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); }
+
+async function apiAuth(path, body) {
+  const r = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  return r.json();
+}
+
+async function apiGet(path) {
+  const token = getToken();
+  const headers = {};
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const r = await fetch(path, { headers });
+  return r.json();
+}
+
+async function checkAuth() {
+  const token = getToken();
+  if (!token) { authUser = null; updateAuthUI(); return; }
+  try {
+    const data = await apiGet('/api/auth/me');
+    if (data.id) { authUser = data; updateAuthUI(); }
+    else { setToken(null); authUser = null; updateAuthUI(); }
+  } catch { authUser = null; updateAuthUI(); }
+}
+
+function updateAuthUI() {
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const upgradeBtn = document.getElementById('upgradeBtn');
+  const tierBadge = document.getElementById('userTierBadge');
+  const limitDisplay = document.getElementById('scanLimitDisplay');
+  if (!loginBtn) return;
+  if (authUser) {
+    loginBtn.style.display = 'none';
+    logoutBtn.style.display = 'inline-block';
+    tierBadge.style.display = 'inline-block';
+    tierBadge.textContent = authUser.tier === 'pro' ? '⭐ PRO' : 'FREE';
+    tierBadge.style.background = authUser.tier === 'pro' ? 'rgba(255,193,7,0.15)' : 'rgba(76,175,80,0.15)';
+    tierBadge.style.color = authUser.tier === 'pro' ? 'var(--yellow-neutral)' : 'var(--green-bull)';
+    tierBadge.style.borderColor = authUser.tier === 'pro' ? 'rgba(255,193,7,0.3)' : 'rgba(76,175,80,0.3)';
+    if (authUser.tier === 'free') {
+      upgradeBtn.style.display = 'inline-block';
+      upgradeBtn.textContent = '⬆ UPGRADE';
+    } else {
+      upgradeBtn.style.display = 'inline-block';
+      upgradeBtn.textContent = '⚙ MANAGE';
+    }
+
+  } else {
+    loginBtn.style.display = 'inline-block';
+    logoutBtn.style.display = 'none';
+    upgradeBtn.style.display = 'none';
+    tierBadge.style.display = 'none';
+  }
+}
+
+function showAuthModal() {
+  authMode = 'login';
+  document.getElementById('authModalTitle').textContent = '🔑 SIGN IN';
+  document.getElementById('authSubmitBtn').textContent = 'SIGN IN';
+  document.getElementById('authToggleText').textContent = "Don't have an account?";
+  document.getElementById('authError').style.display = 'none';
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authPassword').value = '';
+  document.getElementById('authModal').classList.add('show');
+}
+
+function closeAuthModal() { document.getElementById('authModal').classList.remove('show'); }
+
+function toggleAuthMode() {
+  authMode = authMode === 'login' ? 'signup' : 'login';
+  document.getElementById('authModalTitle').textContent = authMode === 'login' ? '🔑 SIGN IN' : '📝 SIGN UP';
+  document.getElementById('authSubmitBtn').textContent = authMode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT';
+  document.getElementById('authToggleText').textContent = authMode === 'login' ? "Don't have an account?" : 'Already have an account?';
+  document.getElementById('authError').style.display = 'none';
+}
+
+async function submitAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authError');
+  if (!email || !password) { errEl.textContent = 'Fill in all fields'; errEl.style.display = 'block'; return; }
+  if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  const btn = document.getElementById('authSubmitBtn');
+  btn.textContent = authMode === 'login' ? 'SIGNING IN...' : 'CREATING...';
+  btn.disabled = true;
+  try {
+    const data = await apiAuth('/api/auth/' + authMode, { email, password });
+    if (data.token) {
+      setToken(data.token);
+      await checkAuth();
+      closeAuthModal();
+    } else {
+      errEl.textContent = data.error || 'Something went wrong';
+      errEl.style.display = 'block';
+    }
+  } catch (e) {
+    errEl.textContent = 'Connection error';
+    errEl.style.display = 'block';
+  }
+  btn.textContent = authMode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT';
+  btn.disabled = false;
+}
+
+function logout() {
+  setToken(null);
+  authUser = null;
+  updateAuthUI();
+  location.reload();
+}
+
+async function upgradeToPro() {
+  if (!authUser) { showAuthModal(); return; }
+  if (authUser.tier === 'pro') {
+    // Redirect to billing portal
+    const data = await apiGet('/api/stripe/create-portal');
+    if (data.url) window.location.href = data.url;
+    else alert('Manage subscription coming soon.');
+    return;
+  }
+  const btn = document.getElementById('upgradeBtn');
+  btn.textContent = '⏳ REDIRECTING...';
+  btn.disabled = true;
+  try {
+    const data = await apiGet('/api/stripe/create-checkout');
+    if (data.url) window.location.href = data.url;
+    else alert(data.error || 'Upgrade not available yet');
+  } catch { alert('Connection error'); }
+  btn.textContent = '⬆ UPGRADE';
+  btn.disabled = false;
+}
+
 // ─── API ────────────────────────────────────────────────────────────────
-async function api(path) { const r = await fetch(path); return r.json(); }
+async function api(path) { const token = getToken(); const r = await fetch(path, { headers: token ? {'Authorization':'Bearer '+token} : {} }); return r.json(); }
 async function apiPost(path, data) { await fetch(path, { method:'POST', body:JSON.stringify(data), headers:{'Content-Type':'application/json'} }); }
 
 // ─── YAHOO DATA ────────────────────────────────────────────────────────
@@ -366,6 +532,7 @@ async function scanMarket(market) {
 }
 
 async function scanAll() {
+  if (!authUser) { showAuthModal(); return; }
   const btn = document.getElementById('refreshBtn');
   btn.innerHTML = '⟳ SCANNING...';
   btn.disabled = true;
@@ -379,6 +546,7 @@ async function scanAll() {
 }
 
 async function scanAllMarkets() {
+  if (!authUser) { showAuthModal(); return; }
   document.getElementById('scanAllBtn').textContent = '⟳ SCANNING ALL...';
   document.getElementById('scanAllBtn').disabled = true;
   for (const m of ['us','europe','brazil']) {
@@ -682,6 +850,7 @@ function untrackPick(index) {
 }
 
 async function refreshTracked() {
+  if (!authUser) { showAuthModal(); return; }
   if (state.trackedPicks.length === 0) return;
   document.getElementById('scanStatus').textContent = 'REFRESHING TRACKED...';
   for (const pick of state.trackedPicks) {
@@ -920,6 +1089,8 @@ function toggleTheme() {
 
 // ─── INIT ───────────────────────────────────────────────────────────────
 async function init() {
+  // Check auth
+  await checkAuth();
   // Theme
   const savedTheme = localStorage.getItem('jerry_theme');
   if (savedTheme === 'light') document.documentElement.setAttribute('data-theme','light');
@@ -971,6 +1142,7 @@ async function init() {
     if (!ticker || isNaN(price)) return;
     trackPick(ticker, market, price, tp, sl);
   });
+  document.getElementById('authModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeAuthModal(); });
   document.getElementById('portfolioModal').addEventListener('click', e => { if (e.target === e.currentTarget) closePortfolioModal(); });
 }
 init();
