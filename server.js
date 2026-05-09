@@ -40,7 +40,7 @@ function loadUsers() {
   try { return JSON.parse(fs.readFileSync(DB_PATH, 'utf8')); } catch { return []; }
 }
 function saveUsers(users) {
-  try { if (!fs.existsSync(path.join(DIR, 'data'))) fs.mkdirSync(path.join(DIR, 'data')); fs.writeFileSync(DB_PATH, JSON.stringify(users, null, 2)); } catch {}
+  try { fs.mkdirSync(path.join(DIR, 'data'), { recursive: true }); fs.writeFileSync(DB_PATH, JSON.stringify(users, null, 2)); } catch {}
 }
 const ADMIN_EMAIL = 'thiagotupa@hotmail.com'.toLowerCase();
 const users = loadUsers();
@@ -249,31 +249,47 @@ function getTier(email) {
   return TIERS[user.tier] || TIERS.free;
 }
 
-function checkScanLimit(email) {
+function getScanState(email) {
   const tier = getTier(email);
   const today = new Date().toISOString().slice(0, 10);
   if (!scanCounts[email] || scanCounts[email].date !== today) {
     scanCounts[email] = { date: today, count: 0 };
   }
-  scanCounts[email].count++;
-  const remaining = tier.scansPerDay - scanCounts[email].count;
-  const allowed = scanCounts[email].count <= tier.scansPerDay;
+  const count = scanCounts[email].count;
+  const remaining = tier.scansPerDay - count;
+  const allowed = count < tier.scansPerDay;
   return { allowed, remaining, tier: tier.name, scanInterval: tier.scanIntervalMs };
+}
+
+function checkScanLimit(email) {
+  const state = getScanState(email);
+  if (state.allowed) {
+    scanCounts[email].count++;
+    state.remaining--;
+    // remaining after consuming one: recalculate
+    const tier = getTier(email);
+    state.remaining = tier.scansPerDay - scanCounts[email].count;
+    state.allowed = scanCounts[email].count <= tier.scansPerDay;
+  }
+  return state;
 }
 
 // ─── YAHOO FETCH ────────────────────────────────────────────────────────
 async function yahooFetch(ticker) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=5y&interval=1d`;
   const r = await fetch(url, { headers: { 'User-Agent': UA } });
-  if (!r.ok) throw new Error(`Yahoo returned ${r.status}`);
-  return r.json();
+  if (!r.ok) throw new Error(`Yahoo returned ${r.status} for ${ticker}`);
+  const text = await r.text();
+  try { return JSON.parse(text); } catch { throw new Error(`Yahoo returned non-JSON for ${ticker}`); }
 }
 
 async function yahooNews(ticker) {
   const url = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(ticker)}&newsCount=5`;
   const r = await fetch(url, { headers: { 'User-Agent': UA } });
-  if (!r.ok) throw new Error(`Yahoo news returned ${r.status}`);
-  const data = await r.json();
+  if (!r.ok) throw new Error(`Yahoo news returned ${r.status} for ${ticker}`);
+  const text = await r.text();
+  let data;
+  try { data = JSON.parse(text); } catch { throw new Error(`Yahoo news returned non-JSON for ${ticker}`); }
   return (data.news || []).map(n => ({
     title: n.title, link: n.link, publisher: n.publisher, summary: (n.summary || '').slice(0, 200),
   }));
@@ -346,6 +362,7 @@ async function handleRequest(req, res) {
     if (pathname === '/api/auth/login' && req.method === 'POST') {
       const body = await readBody(req);
       const { email, password } = body;
+      if (!email || !password) return sendError(res, 400, 'Email and password required');
       const user = findUser(email);
       if (!user || !verifyPassword(password, user.password)) return sendError(res, 401, 'Invalid email or password');
       const token = signToken(user);
@@ -436,6 +453,7 @@ async function handleRequest(req, res) {
       const body = await readBody(req);
       const user = findUser(authUser.email);
       if (!user) return sendError(res, 404, 'User not found');
+      if (!body.oldPassword) return sendError(res, 400, 'Current password is required');
       if (!verifyPassword(body.oldPassword, user.password)) return sendError(res, 400, 'Current password is incorrect');
       if (!body.newPassword || body.newPassword.length < 6) return sendError(res, 400, 'New password must be at least 6 characters');
       user.password = hashPassword(body.newPassword);
@@ -486,7 +504,7 @@ async function handleRequest(req, res) {
     if (pathname === '/api/limit') {
       const authUser = getAuthUser(req);
       if (!authUser) return sendJSON(res, 200, { allowed: false, tier: 'guest', scansRemaining: 0 });
-      const limit = checkScanLimit(authUser.email);
+      const limit = getScanState(authUser.email);
       return sendJSON(res, 200, { allowed: limit.allowed, tier: limit.tier, scansRemaining: limit.remaining, scanInterval: limit.scanInterval });
     }
 

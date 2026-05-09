@@ -191,7 +191,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
   <button class="btn" data-market="emerging" onclick="switchMarket('emerging')">🌍 Emerging</button>
   
   <button class="btn" onclick="showTrackedView()" id="trackedTabBtn">📋 TRACKED (<span id="trackedCount">0</span>)</button>
-  <button class="btn" onclick="showUniverseView()" id="universeTabBtn">📋 UNIVERSE</button>
+  <button class="btn" onclick="showUniverseView()" id="universeTabBtn">📈 ALL STOCKS</button>
   <button class="btn" onclick="showEducationView()" id="patternsTabBtn" style="display:none">📘 EDUCATION</button>
   <button class="btn" onclick="showSimulateView()" id="simulateTabBtn" style="display:none">🎲 SIMULATE</button>
   <button class="btn" onclick="showPortfolioView()" id="portfolioTabBtn">📊 MY STOCKS AND TAX REPORTS</button>
@@ -254,8 +254,8 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
     </div>
     <div id="correlationProLock" style="display:block;text-align:center;padding:16px">
       <div style="font-size:24px;margin-bottom:8px">⭐</div>
-      <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px">Correlation Matrix is a <strong>Pro feature</strong>.</div>
-      <button class="btn" onclick="upgradeToPro()" style="font-size:10px;color:var(--accent-amber);border-color:var(--accent-amber)">⬆ UPGRADE</button>
+      <div id="corrLockMsg" style="font-size:11px;color:var(--text-secondary);margin-bottom:8px">Correlation Matrix is a <strong>Pro feature</strong>.</div>
+      <button id="corrLockBtn" class="btn" onclick="upgradeToPro()" style="font-size:10px;color:var(--accent-amber);border-color:var(--accent-amber)">⬆ UPGRADE</button>
     </div>
   </div>
 </div>
@@ -267,25 +267,27 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 </div>
 
 <footer class="footer">
-  <div><strong>MOMENTUM</strong> · v5.0 · live from market data</div>
-  <div class="disclaimer"><strong>⚠ PAPER TRADING — EDUCATIONAL PURPOSES ONLY.</strong> MOMENTUM is a technical analysis simulator. Nothing on this site constitutes financial advice, investment recommendation, or solicitation to buy or sell securities. All trades are simulated. Past performance does not guarantee future results. Consult a qualified financial advisor before making real investment decisions. <strong>By using this app you agree these are paper trades only.</strong></div>
+  <div id="footerVersion"><strong>MOMENTUM</strong> · v5.0 · live from market data</div>
+  <div id="footerDisclaimer" class="disclaimer"><strong>⚠ PAPER TRADING — EDUCATIONAL PURPOSES ONLY.</strong> MOMENTUM is a technical analysis simulator. Nothing on this site constitutes financial advice, investment recommendation, or solicitation to buy or sell securities. All trades are simulated. Past performance does not guarantee future results. Consult a qualified financial advisor before making real investment decisions. <strong>By using this app you agree these are paper trades only.</strong></div>
 </footer>
 
 <!-- AUTH MODAL -->
 <div class="modal-overlay" id="authModal">
   <div class="modal" style="max-width:380px">
     <h2 id="authModalTitle">🔑 SIGN IN</h2>
-    <div style="margin-bottom:12px">
-      <input class="search-input" id="authEmail" placeholder="Email" type="email" style="width:100%;margin-bottom:8px;font-size:13px">
-      <input class="search-input" id="authPassword" placeholder="Password (min 6 chars)" type="password" style="width:100%;margin-bottom:8px;font-size:13px">
-    </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn primary" id="authSubmitBtn" onclick="submitAuth()" style="flex:1">SIGN IN</button>
-      <button class="btn" onclick="closeAuthModal()">CANCEL</button>
-    </div>
+    <form id="authForm" autocomplete="on" onsubmit="submitAuth(); return false;">
+      <div style="margin-bottom:12px">
+        <input class="search-input" id="authEmail" placeholder="Email" type="email" autocomplete="email" style="width:100%;margin-bottom:8px;font-size:13px">
+        <input class="search-input" id="authPassword" placeholder="Password (min 6 chars)" type="password" autocomplete="current-password" style="width:100%;margin-bottom:8px;font-size:13px">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn primary" id="authSubmitBtn" type="submit" style="flex:1">SIGN IN</button>
+        <button class="btn" type="button" onclick="closeAuthModal()">CANCEL</button>
+      </div>
+    </form>
     <div style="margin-top:10px;text-align:center">
       <span style="font-size:12px;color:var(--text-dim)" id="authToggleText">Don't have an account?</span>
-      <button class="btn" onclick="toggleAuthMode()" style="font-size:11px;padding:4px 10px">SIGN UP</button>
+      <button class="btn" id="authToggleBtn" onclick="toggleAuthMode()" style="font-size:11px;padding:4px 10px">SIGN UP</button>
     </div>
     <div id="authError" style="margin-top:8px;font-size:11px;color:var(--red-bear);text-align:center;display:none"></div>
   </div>
@@ -294,22 +296,22 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 <!-- PORTFOLIO MODAL -->
 <div class="modal-overlay" id="portfolioModal">
   <div class="modal">
-    <h2>📁 PORTFOLIO MANAGER</h2>
+    <h2 id="portfolioModalTitle">📁 PORTFOLIO MANAGER</h2>
     <div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn" onclick="exportCSV('portfolio')" style="font-size:10px">📥 CSV</button>
-      <button class="btn" onclick="exportMD('portfolio')" style="font-size:10px">📝 MD</button>
+      <button class="btn" onclick="exportCSV('portfolio')" style="font-size:10px" id="portfolioModalCsv">📥 CSV</button>
+      <button class="btn" onclick="exportMD('portfolio')" style="font-size:10px" id="portfolioModalMd">📝 MD</button>
     </div>
     <div id="portfolioLimitNote" style="font-size:10px;color:var(--text-dim);margin-bottom:8px">Free tier: max 3 positions. <span style="color:var(--accent-amber);cursor:pointer" onclick="upgradeToPro()">Upgrade to Pro</span> for unlimited.</div>
     <div style="margin-bottom:12px">
       <input class="search-input" id="portfolioTicker" placeholder="TICKER" style="width:100px">
       <input class="search-input" id="portfolioShares" placeholder="SHARES" type="number" style="width:80px">
       <input class="search-input" id="portfolioPrice" placeholder="ENTRY $" type="number" step="0.01" style="width:100px">
-      <button class="btn primary" onclick="addPortfolioPosition()" style="margin-left:4px">ADD</button>
+      <button class="btn primary" onclick="addPortfolioPosition()" style="margin-left:4px" id="portfolioModalAdd">ADD</button>
     </div>
     <div id="portfolioTable"></div>
     <div style="margin-top:12px;display:flex;gap:8px">
-      <button class="btn" onclick="savePortfolio()">💾 SAVE</button>
-      <button class="btn" onclick="closePortfolioModal()">CLOSE</button>
+      <button class="btn" onclick="savePortfolio()" id="portfolioModalSave">💾 SAVE</button>
+      <button class="btn" onclick="closePortfolioModal()" id="portfolioModalClose">CLOSE</button>
     </div>
   </div>
 </div>
@@ -413,16 +415,15 @@ async function updateAuthUI() {
     if (patternsBtn) patternsBtn.style.display = authUser.tier === 'admin' ? 'inline-block' : 'none';
     const simBtn = document.getElementById('simulateTabBtn');
     if (simBtn) simBtn.style.display = authUser.tier === 'admin' ? 'inline-block' : 'none';
-    // Language & theme: admin only
-    const isAdmin = authUser.tier === 'admin';
+    // Language & theme: all users
     const langSel = document.getElementById('langSelect');
     const themeBtnEl = document.getElementById('themeBtn');
     const fontPlusEl = document.getElementById('fontPlusBtn');
     const fontMinusEl = document.getElementById('fontMinusBtn');
-    if (langSel) langSel.style.display = isAdmin ? 'inline-block' : 'none';
-    if (themeBtnEl) themeBtnEl.style.display = isAdmin ? 'inline-block' : 'none';
-    if (fontPlusEl) fontPlusEl.style.display = isAdmin ? 'inline-block' : 'none';
-    if (fontMinusEl) fontMinusEl.style.display = isAdmin ? 'inline-block' : 'none';
+    if (langSel) langSel.style.display = 'inline-block';
+    if (themeBtnEl) themeBtnEl.style.display = 'inline-block';
+    if (fontPlusEl) fontPlusEl.style.display = 'inline-block';
+    if (fontMinusEl) fontMinusEl.style.display = 'inline-block';
   } else {
     loginBtn.style.display = 'inline-block';
     userMenu.style.display = 'none';
@@ -441,13 +442,13 @@ async function showChangePassword() {
   const container = document.getElementById('dashboard');
   container.innerHTML = `
     <div class="card" style="max-width:400px;margin:40px auto">
-      <h3 style="font-family:var(--font-mono);color:var(--accent-amber);margin-bottom:12px">🔑 CHANGE PASSWORD</h3>
-      <input class="search-input" id="cpOld" type="password" placeholder="Current password" style="width:100%;margin-bottom:8px;font-size:13px">
-      <input class="search-input" id="cpNew" type="password" placeholder="New password (min 6 chars)" style="width:100%;margin-bottom:8px;font-size:13px">
-      <input class="search-input" id="cpConfirm" type="password" placeholder="Confirm new password" style="width:100%;margin-bottom:12px;font-size:13px">
+      <h3 style="font-family:var(--font-mono);color:var(--accent-amber);margin-bottom:12px">🔑 ${t('auth_changePassword')}</h3>
+      <input class="search-input" id="cpOld" type="password" placeholder="${t('auth_currentPassword')}" style="width:100%;margin-bottom:8px;font-size:13px">
+      <input class="search-input" id="cpNew" type="password" placeholder="${t('auth_newPassword')}" style="width:100%;margin-bottom:8px;font-size:13px">
+      <input class="search-input" id="cpConfirm" type="password" placeholder="${t('auth_confirmPassword')}" style="width:100%;margin-bottom:12px;font-size:13px">
       <div style="display:flex;gap:8px">
-        <button class="btn primary" onclick="submitChangePassword()" style="flex:1">UPDATE</button>
-        <button class="btn" onclick="renderDashboard()">CANCEL</button>
+        <button class="btn primary" onclick="submitChangePassword()" style="flex:1">${t('auth_update')}</button>
+        <button class="btn" onclick="renderDashboard()">${t('auth_cancel')}</button>
       </div>
       <div id="cpError" style="margin-top:8px;font-size:11px;color:var(--red-bear);display:none"></div>
     </div>`;
@@ -458,7 +459,7 @@ async function submitChangePassword() {
   const pw = document.getElementById('cpNew').value;
   const confirm = document.getElementById('cpConfirm').value;
   const errEl = document.getElementById('cpError');
-  if (!old || !pw) { errEl.textContent = 'Fill all fields'; errEl.style.display='block'; return; }
+  if (!old || !pw) { errEl.textContent = t('errors_fillFields'); errEl.style.display='block'; return; }
   if (pw.length < 6) { errEl.textContent = 'Password must be at least 6 chars'; errEl.style.display='block'; return; }
   if (pw !== confirm) { errEl.textContent = 'Passwords do not match'; errEl.style.display='block'; return; }
   errEl.style.display = 'none';
@@ -469,9 +470,13 @@ async function submitChangePassword() {
 
 function showAuthModal() {
   authMode = 'login';
-  document.getElementById('authModalTitle').textContent = '🔑 SIGN IN';
-  document.getElementById('authSubmitBtn').textContent = 'SIGN IN';
-  document.getElementById('authToggleText').textContent = "Don't have an account?";
+  document.getElementById('authModalTitle').textContent = '🔑 ' + t('signIn');
+  document.getElementById('authSubmitBtn').textContent = t('signIn');
+  document.getElementById('authToggleText').textContent = t('auth_noAccount');
+  document.getElementById('authToggleBtn').textContent = t('auth_signUp');
+  document.getElementById('authEmail').setAttribute('placeholder', t('auth_emailPlaceholder'));
+  document.getElementById('authPassword').setAttribute('placeholder', t('auth_passwordPlaceholder'));
+  document.getElementById('authPassword').autocomplete = 'current-password';
   document.getElementById('authError').style.display = 'none';
   document.getElementById('authEmail').value = '';
   document.getElementById('authPassword').value = '';
@@ -482,9 +487,11 @@ function closeAuthModal() { document.getElementById('authModal').classList.remov
 
 function toggleAuthMode() {
   authMode = authMode === 'login' ? 'signup' : 'login';
-  document.getElementById('authModalTitle').textContent = authMode === 'login' ? '🔑 SIGN IN' : '📝 SIGN UP';
-  document.getElementById('authSubmitBtn').textContent = authMode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT';
-  document.getElementById('authToggleText').textContent = authMode === 'login' ? "Don't have an account?" : 'Already have an account?';
+  document.getElementById('authModalTitle').textContent = authMode === 'login' ? '🔑 ' + t('signIn') : '📝 ' + t('auth_signUp');
+  document.getElementById('authSubmitBtn').textContent = authMode === 'login' ? t('signIn') : t('auth_createAccount');
+  document.getElementById('authToggleText').textContent = authMode === 'login' ? t('auth_noAccount') : t('auth_haveAccount');
+  document.getElementById('authToggleBtn').textContent = authMode === 'login' ? t('auth_signUp') : t('signIn');
+  document.getElementById('authPassword').autocomplete = authMode === 'login' ? 'current-password' : 'new-password';
   document.getElementById('authError').style.display = 'none';
 }
 
@@ -492,11 +499,11 @@ async function submitAuth() {
   const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value;
   const errEl = document.getElementById('authError');
-  if (!email || !password) { errEl.textContent = 'Fill in all fields'; errEl.style.display = 'block'; return; }
-  if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; errEl.style.display = 'block'; return; }
+  if (!email || !password) { errEl.textContent = t('auth_fillFields'); errEl.style.display = 'block'; return; }
+  if (password.length < 6) { errEl.textContent = t('auth_fillFields'); errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
   const btn = document.getElementById('authSubmitBtn');
-  btn.textContent = authMode === 'login' ? 'SIGNING IN...' : 'CREATING...';
+  btn.textContent = authMode === 'login' ? t('auth_signingIn') : t('auth_creating');
   btn.disabled = true;
   try {
     const data = await apiAuth('/api/auth/' + authMode, { email, password });
@@ -505,14 +512,14 @@ async function submitAuth() {
       await checkAuth();
       closeAuthModal();
     } else {
-      errEl.textContent = data.error || 'Something went wrong';
+      errEl.textContent = data.error || t('auth_wrongCredentials');
       errEl.style.display = 'block';
     }
   } catch (e) {
-    errEl.textContent = 'Connection error';
+    errEl.textContent = t('auth_connectionError');
     errEl.style.display = 'block';
   }
-  btn.textContent = authMode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT';
+  btn.textContent = authMode === 'login' ? t('signIn') : t('auth_createAccount');
   btn.disabled = false;
 }
 
@@ -562,7 +569,7 @@ function showComingSoon() {
           ✓ Priority scanning
         </div>
       </div>
-      <button class="btn" onclick="renderDashboard()" style="font-size:11px">← BACK</button>
+      <button class="btn" onclick="renderDashboard()" style="font-size:11px">${t('nav_back')}</button>
     </div>`;
 }
 
@@ -587,7 +594,7 @@ async function showAdminView() {
     html += `<tr><td style="color:var(--text-dim)">${u.id}</td><td>${u.email}</td><td><span class="status-badge ${u.tier === 'pro' ? 'tp' : 'active'}">${u.tier.toUpperCase()}</span></td><td>${adminBadge}</td><td style="color:var(--text-dim)">${u.createdAt.slice(0,10)}</td><td style="color:var(--text-dim)">${u.subscriptionEnd ? u.subscriptionEnd.slice(0,10) : '—'}</td><td>${adminBtn}</td></tr>`;
   });
   html += '</tbody></table></div>';
-  html += '<div style="margin-top:8px;display:flex;gap:8px"><button class="btn" onclick="renderDashboard()" style="font-size:10px">← BACK</button></div>';
+  html += '<div style="margin-top:8px;display:flex;gap:8px"><button class="btn" onclick="renderDashboard()" style="font-size:10px">' + t('nav_back') + '</button></div>';
   container.innerHTML = html;
 }
 
@@ -751,19 +758,6 @@ async function scanAll() {
   btn.disabled = false;
 }
 
-async function scanAllMarkets() { await scanAll();
-  if (!authUser) { showAuthModal(); return; }
-  document.getElementById('scanAllBtn').textContent = '⟳ SCANNING ALL...';
-  document.getElementById('scanAllBtn').disabled = true;
-  for (const m of ['us','europe','emerging']) {
-    document.getElementById('activeMarketLabel').textContent = m === 'us' ? '🇺🇸 US' : m === 'europe' ? '🇪🇺 Europe' : '🌍 Emerging';
-    await scanMarket(m);
-  }
-  document.getElementById('activeMarketLabel').textContent = '🇺🇸 US';
-  switchMarket('us');
-  document.getElementById('scanAllBtn').textContent = '⟳ SCAN ALL MARKETS';
-  document.getElementById('scanAllBtn').disabled = false;
-}
 
 function switchMarket(market) {
   state.market = market;
@@ -801,7 +795,7 @@ function renderDashboard() {
   display.forEach((d, idx) => {
     const change = d.candles.length > 0 ? ((d.price - d.candles[0].c) / d.candles[0].c * 100) : 0;
     const changeClass = change >= 0 ? 'change-pos' : 'change-neg';
-    const signalLabel = d.signal === 'buy' ? 'BUY ↑' : d.signal === 'sell' ? 'SELL ↓' : '◈ HOLD';
+    const signalLabel = d.signal === 'buy' ? t('signal_buy') : d.signal === 'sell' ? t('signal_sell') : t('signal_hold');
     const marketLabel = state.market === 'us' ? '🇺🇸' : state.market === 'europe' ? '🇪🇺' : '🇧🇷';
     const pills = [
       {l:'RSI',v:d.rsi.toFixed(1),c:d.rsiDir},
@@ -825,9 +819,9 @@ function renderDashboard() {
       </div>
       <div class="tech-summary">${pills.map(p => `<span class="tech-pill ${p.c}">${p.l} ${p.v}</span>`).join('')}</div>
       <div class="target-bands">
-        <div class="target-band tp">🎯 TP $${d.tp.toFixed(2)} (+15%)</div>
+        <div class="target-band tp">${t('card_tp')}${d.tp.toFixed(2)} (+15%)</div>
         <div class="target-band current">📍 $${d.price.toFixed(2)}</div>
-        <div class="target-band sl">🛑 SL $${d.sl.toFixed(2)} (-7%)</div>
+        <div class="target-band sl">${t('card_sl')}${d.sl.toFixed(2)} (-7%)</div>
       </div>
       <div class="chart-container">
         <div style="display:flex;gap:4px;padding:4px 6px">
@@ -851,19 +845,19 @@ function renderDashboard() {
         ${cll(d,'RES 1','$'+d.res1.toFixed(2),'bear')}
       </div>
       <div class="analysis-row">
-        <div class="analysis-box"><div class="label">ENTRY ZONE</div><div class="value">$${d.sup1.toFixed(2)} – $${d.price.toFixed(2)}</div></div>
-        <div class="analysis-box"><div class="label">EXIT ZONE</div><div class="value bull">$${d.tp.toFixed(2)} – $${d.res2.toFixed(2)}</div></div>
+        <div class="analysis-box"><div class="label">${t('card_entryZone')}</div><div class="value">$${d.sup1.toFixed(2)} – $${d.price.toFixed(2)}</div></div>
+        <div class="analysis-box"><div class="label">${t('card_exitZone')}</div><div class="value bull">$${d.tp.toFixed(2)} – $${d.res2.toFixed(2)}</div></div>
       </div>
       ${d.news && d.news.length > 0 ? `
       <div class="news-list">
-        <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px">📰 NEWS SENTIMENT</div>
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px">${t('card_news')}</div>
         ${d.news.slice(0,3).map(n => `<div class="news-item"><div class="news-title"><a href="${n.link}" target="_blank" rel="noopener" style="color:var(--text-primary);text-decoration:none">${n.title}</a></div><div class="news-source">${n.publisher||''} ${n.link ? '↗' : ''}</div></div>`).join('')}
       </div>` : ''}
       <div style="display:flex;gap:8px;margin-top:6px">
-        <button class="btn track-btn" data-ticker="${d.ticker}" data-market="${state.market}" data-price="${d.price}" data-tp="${d.tp}" data-sl="${d.sl}" style="flex:1;font-size:10px">📌 TRACK PICK</button>
-        <button class="btn portfolio-add-btn" data-ticker="${d.ticker}" data-price="${d.price}" style="flex:1;font-size:10px;color:var(--green-bull);border-color:rgba(76,175,80,0.4)">➕ MY STOCKS</button>
+        <button class="btn track-btn" data-ticker="${d.ticker}" data-market="${state.market}" data-price="${d.price}" data-tp="${d.tp}" data-sl="${d.sl}" style="flex:1;font-size:10px">${t('card_trackPick')}</button>
+        <button class="btn portfolio-add-btn" data-ticker="${d.ticker}" data-price="${d.price}" style="flex:1;font-size:10px;color:var(--green-bull);border-color:rgba(76,175,80,0.4)">${t('card_myStocks')}</button>
       </div>
-      <div class="verdict-bar ${d.signal}">${d.signal === 'buy' ? '✓ TECHNICAL BUY — ' + d.maAlign : d.signal === 'sell' ? '✗ TECHNICAL SELL — AVOID' : '◈ NEUTRAL — CONFLICTING SIGNALS'}</div>
+      <div class="verdict-bar ${d.signal}">${d.signal === 'buy' ? t('signal_buyVerdict') + d.maAlign : d.signal === 'sell' ? t('signal_sellVerdict') : t('signal_neutralVerdict')}</div>
     `;
     container.appendChild(card);
     // Draw chart after DOM update
@@ -896,10 +890,10 @@ function addPortfolioPosition() {
   const t = document.getElementById('portfolioTicker').value.toUpperCase();
   const s = parseFloat(document.getElementById('portfolioShares').value);
   const p = parseFloat(document.getElementById('portfolioPrice').value);
-  if (!t || !s || !p) { alert('Fill all fields'); return; }
+  if (!t || !s || !p) { alert(t('errors_fillFields')); return; }
   // Free tier limit: max 3 portfolio positions
   if ((!authUser || (authUser.tier !== 'pro' && authUser.tier !== 'admin')) && state.portfolio.length >= 3) {
-    alert('Free tier limited to 3 portfolio positions. Upgrade to Pro for unlimited.');
+    alert(t('errors_freeTierPortfolio'));
     return;
   }
   state.portfolio.push({ ticker:t, quantity:s, buyPrice:p, sellPrice:null, buyDate:new Date().toISOString().slice(0,10), sellDate:null, status:'holding' });
@@ -955,6 +949,7 @@ function loadPortfolio() {
 
 function updatePortfolioSidebar() {
   const el = document.getElementById('portfolioContent');
+  if (!el) return;
   if (state.portfolio.length === 0) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">No positions. Add via 📁 Portfolio.</div>'; return; }
   let total = 0;
   el.innerHTML = state.portfolio.map(p => {
@@ -969,8 +964,11 @@ function updatePortfolioSidebar() {
       <span style="font-size:9px;color:var(--text-dim)">${statusIcon}</span>
     </div>`;
   }).join('');
-  document.getElementById('totalPnl').textContent = (total>=0?'+':'') + '$' + total.toFixed(2);
-  document.getElementById('totalPnl').style.color = total>=0 ? 'var(--green-bull)' : 'var(--red-bear)';
+  const totalPnlEl = document.getElementById('totalPnl');
+  if (totalPnlEl) {
+    totalPnlEl.textContent = (total>=0?'+':'') + '$' + total.toFixed(2);
+    totalPnlEl.style.color = total>=0 ? 'var(--green-bull)' : 'var(--red-bear)';
+  }
 }
 
 // ─── SIGNAL HISTORY — REMOVED ──────────────────────────────────────────
@@ -978,14 +976,17 @@ function updatePortfolioSidebar() {
 // ─── CALENDAR ───────────────────────────────────────────────────────────
 async function loadCalendar() {
   try {
-    const events = await api('/api/calendar');
+    const data = await api('/api/calendar');
     const el = document.getElementById('calendarContent');
+    if (!el) return;
+    const events = Array.isArray(data) ? data : (data.events || []);
+    if (!events.length) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">' + t('calendar_noEvents') + '</div>'; return; }
     el.innerHTML = events.map(e => `<div class="calendar-item">
-      <span class="calendar-date">${e.date}</span>
-      <span class="calendar-impact ${e.impact}">${e.impact.toUpperCase()}</span>
-      <span>${e.title}</span>
+      <span class="calendar-date">${e.date || ''}</span>
+      <span class="calendar-impact ${e.impact || 'medium'}">${(e.impact || '').toUpperCase()}</span>
+      <span>${e.title || ''}</span>
     </div>`).join('');
-  } catch { document.getElementById('calendarContent').innerHTML = '<div style="color:var(--text-dim);font-size:11px">Could not load calendar.</div>'; }
+  } catch { const el = document.getElementById('calendarContent'); if (el) el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">' + t('calendar_loadError') + '</div>'; }
 }
 
 // ─── CORRELATION ────────────────────────────────────────────────────────
@@ -994,7 +995,7 @@ function calcCorrelation() {
   // Gather all analyzed stocks with price data
   const all = [...(state.analyzed.us||[]), ...(state.analyzed.europe||[]), ...(state.analyzed.emerging||[])];
   const withData = all.filter(d => d.candles && d.candles.length > 20);
-  if (withData.length < 2) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">Scan at least 2 tickers to show correlation.</div>'; return; }
+  if (withData.length < 2) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">' + t('correlation_scanFirst') + '</div>'; return; }
   // Take top 6 by volume
   const top = withData.sort((a,b) => b.volAvg - a.volAvg).slice(0,8);
   // Calc daily returns for last 20 days
@@ -1028,7 +1029,7 @@ function calcCorrelation() {
     html += '</tr>';
   });
   html += '</table></div>';
-  html += '<div style="margin-top:6px;font-size:9px;color:var(--text-dim)">🟢 >0.5 = moves together &nbsp; 🔴 <-0.3 = moves opposite</div>';
+  html += '<div style="margin-top:6px;font-size:9px;color:var(--text-dim)">🟢 ' + t('correlation_together') + ' &nbsp; 🔴 ' + t('correlation_opposite') + '</div>';
   el.innerHTML = html;
 }
 
@@ -1136,14 +1137,15 @@ function checkTrackedStatus(pick) {
   const price = getCurrentPrice(pick.ticker);
   if (price === null) return { price: null, pnl: null, status: 'waiting', label: '⏳ WAITING' };
   const pnl = ((price - pick.entryPrice) / pick.entryPrice * 100);
-  if (pnl >= 15) return { price, pnl, status: 'tp', label: '✅ HIT TP' };
-  if (pnl <= -7) return { price, pnl, status: 'sl', label: '❌ HIT SL' };
+  if (pnl >= 15) return { price, pnl, status: 'tp', label: t('tracked_hitTp') };
+  if (pnl <= -7) return { price, pnl, status: 'sl', label: t('tracked_hitSl') };
   return { price, pnl, status: 'active', label: '🔵 ACTIVE' };
 }
 
 function showTrackedView() {
   state.showUniverse = false;
   state.showPortfolio = false;
+  document.querySelectorAll('.market-tabs .btn[data-market]').forEach(b => b.classList.remove('active-market'));
   document.getElementById('universeTabBtn').style.borderColor = '';
   document.getElementById('universeTabBtn').style.color = '';
   document.getElementById('portfolioTabBtn').style.borderColor = '';
@@ -1164,7 +1166,7 @@ function renderTrackedPicks() {
   if (!state.showTracked) return;
   const container = document.getElementById('dashboard');
   if (state.trackedPicks.length === 0) {
-    container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-dim);font-family:var(--font-mono)"><div style="font-size:48px;margin-bottom:12px">📋</div><div style="font-size:16px;color:var(--text-secondary)">NO TRACKED PICKS</div><div style="font-size:12px;margin-top:8px">Hit 📌 TRACK on a BUY signal to add picks here.</div></div>';
+    container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-dim);font-family:var(--font-mono)"><div style="font-size:48px;margin-bottom:12px">📋</div><div style="font-size:16px;color:var(--text-secondary)">' + t('tracked_empty') + '</div><div style="font-size:12px;margin-top:8px">' + t('tracked_emptyHint') + '</div></div>';
     return;
   }
   let html = '<div class="card" style="padding:0;overflow-x:auto"><table class="tracked-table"><thead><tr>';
@@ -1177,8 +1179,8 @@ function renderTrackedPicks() {
     const days = Math.floor((new Date() - new Date(pick.entryDate)) / (1000*60*60*24));
     // Auto-update status if TP/SL hit
     let statusLabel = check.label;
-    if (pick.status === 'tp') statusLabel = '✅ HIT TP';
-    else if (pick.status === 'sl') statusLabel = '❌ HIT SL';
+    if (pick.status === 'tp') statusLabel = t('tracked_hitTp');
+    else if (pick.status === 'sl') statusLabel = t('tracked_hitSl');
     else if (check.status === 'tp' || check.status === 'sl') {
       pick.status = check.status;
       pick.hitPrice = check.price;
@@ -1208,13 +1210,13 @@ function renderTrackedPicks() {
   const hitSl = state.trackedPicks.filter(p => p.status === 'sl').length;
   html += '</tbody></table></div>';
   html += `<div style="margin-top:8px;display:flex;gap:16px;font-family:var(--font-mono);font-size:11px">
-    <span>🔵 Active: <strong style="color:var(--green-bull)">${active}</strong></span>
-    <span>✅ Hit TP: <strong style="color:#00ccff">${hitTp}</strong></span>
-    <span>❌ Hit SL: <strong style="color:var(--red-bear)">${hitSl}</strong></span>
-    <span>📊 Total: <strong>${state.trackedPicks.length}</strong></span>
-    <button class="btn" onclick="refreshTracked()" style="font-size:10px">⟳ REFRESH PRICES</button>
-    <button class="btn" onclick="clearTracked()" style="font-size:10px;color:var(--red-bear)">🗑️ CLEAR ALL</button>
-    <button class="btn" onclick="showTrackedView();switchMarket(state.market)" style="font-size:10px">← BACK TO SCAN</button>
+    <span>${t('tracked_active')} <strong style="color:var(--green-bull)">${active}</strong></span>
+    <span>${t('tracked_hitTpStat')} <strong style="color:#00ccff">${hitTp}</strong></span>
+    <span>${t('tracked_hitSlStat')} <strong style="color:var(--red-bear)">${hitSl}</strong></span>
+    <span>${t('tracked_total')} <strong>${state.trackedPicks.length}</strong></span>
+    <button class="btn" onclick="refreshTracked()" style="font-size:10px">${t('tracked_refreshPrices')}</button>
+    <button class="btn" onclick="clearTracked()" style="font-size:10px;color:var(--red-bear)">${t('tracked_clearAll')}</button>
+    <button class="btn" onclick="showTrackedView();switchMarket(state.market)" style="font-size:10px">${t('tracked_backToScan')}</button>
   </div>`;
   container.innerHTML = html;
 }
@@ -1224,6 +1226,7 @@ function showPortfolioView() {
   state.showTracked = false;
   state.showUniverse = false;
   state.showPortfolio = !state.showPortfolio;
+  document.querySelectorAll('.market-tabs .btn[data-market]').forEach(b => b.classList.remove('active-market'));
   document.getElementById('trackedTabBtn').style.borderColor = '';
   document.getElementById('trackedTabBtn').style.color = '';
   document.getElementById('universeTabBtn').style.borderColor = '';
@@ -1234,7 +1237,7 @@ function showPortfolioView() {
     // Free users: show subscribe prompt instead
     if (!authUser || (authUser.tier !== 'pro' && authUser.tier !== 'admin')) {
       const container = document.getElementById('dashboard');
-      container.innerHTML = '<div class="card" style="max-width:450px;margin:60px auto;text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:12px">⭐</div><h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">Pro Feature</h2><p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px">MY STOCKS AND TAX REPORTS is a <strong>Pro feature</strong>.</p><p style="font-size:11px;color:var(--text-dim);margin-bottom:20px">Track your portfolio, see real-time P&amp;L, monthly profit breakdowns, and generate tax reports.</p><button class="btn primary" onclick="upgradeToPro()" style="font-size:13px;padding:10px 24px">⬆ GO PRO — €9/MO</button><br><br><button class="btn" onclick="showPortfolioView();switchMarket(state.market)" style="font-size:10px">← BACK</button></div>';
+      container.innerHTML = '<div class="card" style="max-width:450px;margin:60px auto;text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:12px">⭐</div><h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">' + t('proGate_title') + '</h2><p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px">' + t('proGate_myStocksDesc') + '</p><p style="font-size:11px;color:var(--text-dim);margin-bottom:20px">' + t('proGate_myStocksDetail') + '</p><button class="btn primary" onclick="upgradeToPro()" style="font-size:13px;padding:10px 24px">' + t('proGate_goPro') + '</button><br><br><button class="btn" onclick="showPortfolioView();switchMarket(state.market)" style="font-size:10px">' + t('nav_back') + '</button></div>';
       return;
     }
     renderPortfolioView();
@@ -1256,28 +1259,28 @@ function renderPortfolioView() {
   // Build Add form
   let html = '<div class="card" style="padding:14px;margin-bottom:14px">';
   html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
-  html += '<h3 style="font-family:var(--font-mono);font-size:13px;color:var(--accent-amber);text-transform:uppercase;letter-spacing:1px">📊 MY STOCKS AND TAX REPORTS</h3>';
+  html += '<h3 style="font-family:var(--font-mono);font-size:13px;color:var(--accent-amber);text-transform:uppercase;letter-spacing:1px">📊 ' + t('portfolio') + ' &amp; TAX REPORTS</h3>';
   html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
-  html += '<button class="btn" onclick="exportCSV(\'portfolio\')" style="font-size:10px">📥 CSV</button>';
-  html += '<button class="btn" onclick="exportMD(\'portfolio\')" style="font-size:10px">📝 MD</button>';
-  html += '<button class="btn" onclick="showPortfolioView();switchMarket(state.market)" style="font-size:10px">← BACK</button>';
+  html += '<button class="btn" onclick="exportCSV(\'portfolio\')" style="font-size:10px">' + t('portfolio_csv') + '</button>';
+  html += '<button class="btn" onclick="exportMD(\'portfolio\')" style="font-size:10px">' + t('portfolio_md') + '</button>';
+  html += '<button class="btn" onclick="showPortfolioView();switchMarket(state.market)" style="font-size:10px">' + t('portfolio_back') + '</button>';
   html += '</div></div>';
   
   // Add new position form — buy only (sell added later per row)
   html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px;background:rgba(0,0,0,0.15);border-radius:6px;border:1px solid var(--border)">';
-  html += '<span style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-right:4px">➕ ADD POSITION</span>';
-  html += '<input class="search-input" id="pfTicker" placeholder="TICKER" style="width:80px;font-size:11px">';
-  html += '<input class="search-input" id="pfQty" placeholder="QTY" type="number" step="1" style="width:60px;font-size:11px">';
-  html += '<input class="search-input" id="pfBuyPrice" placeholder="BUY $" type="number" step="0.01" style="width:80px;font-size:11px">';
-  html += '<button class="btn primary" onclick="addPortfolioItem()" style="font-size:10px">+ ADD</button>';
+  html += '<span style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-right:4px">' + t('portfolio_addPosition') + '</span>';
+  html += '<input class="search-input" id="pfTicker" placeholder="' + t('portfolio_tickerPlaceholder') + '" style="width:80px;font-size:11px">';
+  html += '<input class="search-input" id="pfQty" placeholder="' + t('portfolio_qtyPlaceholder') + '" type="number" step="1" style="width:60px;font-size:11px">';
+  html += '<input class="search-input" id="pfBuyPrice" placeholder="' + t('portfolio_buyPricePlaceholder') + '" type="number" step="0.01" style="width:80px;font-size:11px">';
+  html += '<button class="btn primary" onclick="addPortfolioItem()" style="font-size:10px">' + t('portfolio_add') + '</button>';
   html += '</div>';
   html += '</div>';
   
   if (state.portfolio.length === 0) {
     html += '<div style="text-align:center;padding:60px 20px;color:var(--text-dim);font-family:var(--font-mono)">';
     html += '<div style="font-size:48px;margin-bottom:12px">📊</div>';
-    html += '<div style="font-size:16px;color:var(--text-secondary)">EMPTY PORTFOLIO</div>';
-    html += '<div style="font-size:12px;margin-top:8px">Add positions above to track your portfolio.</div></div>';
+    html += '<div style="font-size:16px;color:var(--text-secondary)">' + t('portfolio_empty') + '</div>';
+    html += '<div style="font-size:12px;margin-top:8px">' + t('portfolio_emptyHint') + '</div></div>';
     container.innerHTML = html;
     return;
   }
@@ -1285,7 +1288,7 @@ function renderPortfolioView() {
   // Portfolio table
   html += '<div class="card" style="padding:0;overflow-x:auto;margin-bottom:14px">';
   html += '<table class="tracked-table"><thead><tr>';
-  html += '<th>#</th><th>TICKER</th><th>QTY</th><th>BUY $</th><th>CURRENT/SELL $</th><th>COST BASIS</th><th>VALUE NOW</th><th>P&amp;L %</th><th>P&amp;L $</th><th>STATUS</th><th>MONTH PROFIT</th><th></th><th></th><th></th>';
+  html += '<th>#</th><th>TICKER</th><th>QTY</th><th>BUY $</th><th>CURRENT/SELL $</th><th>' + t('portfolio_costBasis') + '</th><th>' + t('portfolio_valueNow') + '</th><th>' + t('portfolio_pnlPct') + '</th><th>' + t('portfolio_pnlDollar') + '</th><th>STATUS</th><th>' + t('portfolio_monthProfit') + '</th><th></th><th></th><th></th>';
   html += '</tr></thead><tbody>';
   
   // Track totals for summary
@@ -1308,7 +1311,7 @@ function renderPortfolioView() {
     const profitLabel = p.status === 'sold' ? '✅' : '🔵';
     const monthProfitStr = profitLabel + ' ' + (rowProfit >= 0 ? '+' : '') + '$' + rowProfit.toFixed(2);
     
-    const statusLabel = p.status === 'sold' ? '✅ SOLD' : '🔵 HOLDING';
+    const statusLabel = p.status === 'sold' ? t('portfolio_sold') : t('portfolio_holding');
     const statusClass = p.status === 'sold' ? 'tp' : 'active';
     const pnlClass = pnlDollar >= 0 ? 'pnl-up' : 'pnl-dn';
     
@@ -1342,11 +1345,11 @@ function renderPortfolioView() {
   const rgClass = realizedGain >= 0 ? 'pnl-up' : 'pnl-dn';
   const ugClass = unrealizedGain >= 0 ? 'pnl-up' : 'pnl-dn';
   html += '<div style="display:flex;flex-wrap:wrap;gap:16px;font-family:var(--font-mono);font-size:11px;margin-bottom:14px;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px">';
-  html += '<div><span style="color:var(--text-dim)">Value Bought (Cost Basis):</span> <strong>$' + totalCost.toFixed(2) + '</strong></div>';
-  html += '<div><span style="color:var(--text-dim)">Current Value:</span> <strong>$' + totalValue.toFixed(2) + '</strong></div>';
+  html += '<div><span style="color:var(--text-dim)">' + t('portfolio_costBasis') + ':</span> <strong>$' + totalCost.toFixed(2) + '</strong></div>';
+  html += '<div><span style="color:var(--text-dim)">' + t('portfolio_valueNow') + ':</span> <strong>$' + totalValue.toFixed(2) + '</strong></div>';
   html += '<div><span style="color:var(--text-dim)">Total P&amp;L:</span> <strong class="' + totalPnlClass + '">' + (totalPnL >= 0 ? '+' : '') + '$' + totalPnL.toFixed(2) + '</strong></div>';
-  html += '<div><span style="color:var(--text-dim)">Realized P&amp;L:</span> <strong class="' + rgClass + '">' + (realizedGain >= 0 ? '+' : '') + '$' + realizedGain.toFixed(2) + '</strong></div>';
-  html += '<div><span style="color:var(--text-dim)">Unrealized P&amp;L:</span> <strong class="' + ugClass + '">' + (unrealizedGain >= 0 ? '+' : '') + '$' + unrealizedGain.toFixed(2) + '</strong></div>';
+  html += '<div><span style="color:var(--text-dim)">' + t('portfolio_totalRealized') + ':</span> <strong class="' + rgClass + '">' + (realizedGain >= 0 ? '+' : '') + '$' + realizedGain.toFixed(2) + '</strong></div>';
+  html += '<div><span style="color:var(--text-dim)">' + t('portfolio_totalUnrealized') + ':</span> <strong class="' + ugClass + '">' + (unrealizedGain >= 0 ? '+' : '') + '$' + unrealizedGain.toFixed(2) + '</strong></div>';
   html += '<div><span style="color:var(--text-dim)">Positions:</span> <strong>' + state.portfolio.length + '</strong> (' + state.portfolio.filter(p => p.status === 'holding').length + ' holding, ' + state.portfolio.filter(p => p.status === 'sold').length + ' sold)</div>';
   html += '</div>';
   
@@ -1398,12 +1401,12 @@ function renderPortfolioView() {
       const active = _portfolioMonthFilter === r.v;
       html += '<button class="btn" onclick="filterPortfolioMonths(\'' + r.v + '\')" style="font-size:9px;padding:3px 8px;' + (active ? 'background:var(--accent-burnt);border-color:var(--accent-amber);color:#fff' : '') + '">' + r.l + '</button>';
     });
-    html += '<button class="btn" onclick="generateTaxReport()" style="font-size:10px;color:var(--accent-amber);border-color:var(--accent-amber)">💰 TAX REPORT</button>';
+    html += '<button class="btn" onclick="generateTaxReport()" style="font-size:10px;color:var(--accent-amber);border-color:var(--accent-amber)">' + t('taxReport_title') + '</button>';
     html += '</div></div>';
     
     // Realized monthly
     if (filteredRealizedMonths.length > 0) {
-      html += '<div style="font-size:10px;color:var(--green-bull);margin-bottom:6px;font-family:var(--font-mono)">✅ REALIZED (SOLD)</div>';
+      html += '<div style="font-size:10px;color:var(--green-bull);margin-bottom:6px;font-family:var(--font-mono)">' + t('taxReport_realized') + '</div>';
       html += '<table class="tracked-table"><thead><tr><th>MONTH</th><th>PROFIT / DEFICIT</th></tr></thead><tbody>';
       let grandRealized = 0;
       filteredRealizedMonths.forEach(month => {
@@ -1413,13 +1416,13 @@ function renderPortfolioView() {
         html += '<tr><td style="color:var(--text-dim)">' + month + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td></tr>';
       });
       const grClass = grandRealized >= 0 ? 'pnl-up' : 'pnl-dn';
-      html += '<tr><td style="font-weight:700;color:var(--text-primary)">TOTAL REALIZED</td><td class="' + grClass + '" style="font-weight:700">' + (grandRealized >= 0 ? '+' : '') + '$' + grandRealized.toFixed(2) + '</td></tr>';
+      html += '<tr><td style="font-weight:700;color:var(--text-primary)">' + t('portfolio_totalRealized') + '</td><td class="' + grClass + '" style="font-weight:700">' + (grandRealized >= 0 ? '+' : '') + '$' + grandRealized.toFixed(2) + '</td></tr>';
       html += '</tbody></table>';
     }
     
     // Unrealized monthly
     if (filteredUnrealizedMonths.length > 0) {
-      html += '<div style="font-size:10px;color:var(--yellow-neutral);margin:8px 0 6px;font-family:var(--font-mono)">🔵 UNREALIZED (HOLDING)</div>';
+      html += '<div style="font-size:10px;color:var(--yellow-neutral);margin:8px 0 6px;font-family:var(--font-mono)">' + t('taxReport_unrealized') + '</div>';
       html += '<table class="tracked-table"><thead><tr><th>MONTH</th><th>EST. PROFIT / DEFICIT</th></tr></thead><tbody>';
       let grandUnrealized = 0;
       filteredUnrealizedMonths.forEach(month => {
@@ -1429,7 +1432,7 @@ function renderPortfolioView() {
         html += '<tr><td style="color:var(--text-dim)">' + month + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td></tr>';
       });
       const gurClass = grandUnrealized >= 0 ? 'pnl-up' : 'pnl-dn';
-      html += '<tr><td style="font-weight:700;color:var(--text-primary)">TOTAL UNREALIZED</td><td class="' + gurClass + '" style="font-weight:700">' + (grandUnrealized >= 0 ? '+' : '') + '$' + grandUnrealized.toFixed(2) + '</td></tr>';
+      html += '<tr><td style="font-weight:700;color:var(--text-primary)">' + t('portfolio_totalUnrealized') + '</td><td class="' + gurClass + '" style="font-weight:700">' + (grandUnrealized >= 0 ? '+' : '') + '$' + grandUnrealized.toFixed(2) + '</td></tr>';
       html += '</tbody></table>';
     }
     
@@ -1449,7 +1452,7 @@ function addPortfolioItem() {
   const ticker = document.getElementById('pfTicker').value.toUpperCase().trim();
   const quantity = parseFloat(document.getElementById('pfQty').value);
   const buyPrice = parseFloat(document.getElementById('pfBuyPrice').value);
-  if (!ticker || !quantity || !buyPrice) { alert('Fill TICKER, QTY, and BUY $'); return; }
+  if (!ticker || !quantity || !buyPrice) { alert(t('errors_fillFields')); return; }
   state.portfolio.push({
     ticker,
     quantity,
@@ -1469,20 +1472,21 @@ function addPortfolioItem() {
 function sellPortfolioItem(index) {
   const p = state.portfolio[index];
   const container = document.getElementById('dashboard');
-  
+
   let html = '<div class="card" style="max-width:450px;margin:40px auto">';
   html += '<h3 style="font-family:var(--font-mono);font-size:13px;color:var(--accent-amber);margin-bottom:14px">💰 SELL — ' + p.ticker + '</h3>';
   html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px;margin-bottom:12px;font-family:var(--font-mono);font-size:11px;line-height:1.8">';
-  html += '<div>Quantity: <strong>' + p.quantity + '</strong></div>';
+  html += '<div>Holding: <strong>' + p.quantity + ' shares</strong></div>';
   html += '<div>Bought at: <strong>$' + p.buyPrice.toFixed(2) + '</strong></div>';
   html += '<div>Cost Basis: <strong>$' + (p.buyPrice * p.quantity).toFixed(2) + '</strong></div>';
-  // Show current market price if available
   const curPrice = getPortfolioPrice(p.ticker);
   if (curPrice) {
     html += '<div>Market Price: <strong>$' + curPrice.toFixed(2) + '</strong></div>';
   }
   html += '</div>';
   html += '<div style="margin-bottom:12px">';
+  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">SHARES TO SELL (max ' + p.quantity + ')</label>';
+  html += '<input class="search-input" id="sellQtyInput" type="number" step="1" min="1" max="' + p.quantity + '" value="' + p.quantity + '" style="width:100%;font-size:14px;margin-bottom:10px">';
   html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">SELL PRICE ($)</label>';
   html += '<input class="search-input" id="sellPriceInput" type="number" step="0.01" value="' + (curPrice ? curPrice.toFixed(2) : '') + '" style="width:100%;font-size:14px;margin-bottom:10px">';
   html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">SELL DATE</label>';
@@ -1491,56 +1495,73 @@ function sellPortfolioItem(index) {
   html += '<div id="sellPreview" style="font-family:var(--font-mono);font-size:12px;padding:8px 10px;border-radius:4px;margin-bottom:12px;background:rgba(0,0,0,0.1)"></div>';
   html += '<div style="display:flex;gap:8px">';
   html += '<button class="btn primary" onclick="confirmSell(' + index + ')" style="flex:1;background:rgba(229,57,53,0.2);border-color:var(--red-bear);color:var(--red-bear)">✅ CONFIRM SALE</button>';
-  html += '<button class="btn" onclick="renderPortfolioView()">CANCEL</button>';
+  html += '<button class="btn" onclick="renderPortfolioView()">' + t('auth_cancel') + '</button>';
   html += '</div>';
   html += '<div id="sellError" style="margin-top:8px;font-size:11px;color:var(--red-bear);display:none"></div>';
   html += '</div>';
   container.innerHTML = html;
-  
-  // Live preview
-  document.getElementById('sellPriceInput').addEventListener('input', function() {
-    updateSellPreview(index);
-  });
+
+  document.getElementById('sellQtyInput').addEventListener('input', function() { updateSellPreview(index); });
+  document.getElementById('sellPriceInput').addEventListener('input', function() { updateSellPreview(index); });
   updateSellPreview(index);
 }
 
 function updateSellPreview(index) {
   const p = state.portfolio[index];
+  const sellQty = parseFloat(document.getElementById('sellQtyInput').value);
   const sellPrice = parseFloat(document.getElementById('sellPriceInput').value);
   const previewEl = document.getElementById('sellPreview');
-  if (!sellPrice || isNaN(sellPrice)) {
-    previewEl.innerHTML = '<span style="color:var(--text-dim)">Enter a sell price to see preview</span>';
+  if (!sellPrice || isNaN(sellPrice) || !sellQty || isNaN(sellQty)) {
+    previewEl.innerHTML = '<span style="color:var(--text-dim)">Enter quantity and price to see preview</span>';
     return;
   }
-  const profit = (sellPrice - p.buyPrice) * p.quantity;
+  const qty = Math.min(sellQty, p.quantity);
+  const profit = (sellPrice - p.buyPrice) * qty;
   const profitPct = p.buyPrice > 0 ? ((sellPrice - p.buyPrice) / p.buyPrice * 100) : 0;
-  const realized = profit;
+  const remaining = p.quantity - qty;
   previewEl.innerHTML = '';
+  previewEl.innerHTML += '<div>Selling: <strong>' + qty + ' of ' + p.quantity + ' shares</strong></div>';
   previewEl.innerHTML += '<div>Realized P&amp;L: <strong class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + ' (' + (profitPct >= 0 ? '+' : '') + profitPct.toFixed(2) + '%)</strong></div>';
-  previewEl.innerHTML += '<div style="margin-top:4px;font-size:10px;color:var(--text-dim)">This will be recorded as a closed position and added to your monthly profit/deficit.</div>';
+  if (remaining > 0) {
+    previewEl.innerHTML += '<div style="margin-top:4px;color:var(--accent-amber)">Remaining holding: <strong>' + remaining + ' shares @ $' + p.buyPrice.toFixed(2) + '</strong></div>';
+  }
+  previewEl.innerHTML += '<div style="margin-top:4px;font-size:10px;color:var(--text-dim)">' + (remaining > 0 ? 'Sold portion will be recorded as closed; remaining stays as holding.' : 'Full position will be closed.') + '</div>';
 }
 
 function confirmSell(index) {
   const p = state.portfolio[index];
+  const sellQty = parseFloat(document.getElementById('sellQtyInput').value);
   const sellPrice = parseFloat(document.getElementById('sellPriceInput').value);
-  const sellDate = document.getElementById('sellDateInput').value;
+  const sellDate = document.getElementById('sellDateInput').value || new Date().toISOString().slice(0,10);
   const errEl = document.getElementById('sellError');
-  
+
   if (!sellPrice || isNaN(sellPrice) || sellPrice <= 0) {
-    errEl.textContent = 'Enter a valid sell price';
+    errEl.textContent = t('errors_invalidSellPrice');
     errEl.style.display = 'block';
     return;
   }
-  
-  state.portfolio[index] = {
-    ticker: p.ticker,
-    quantity: p.quantity,
-    buyPrice: p.buyPrice,
-    sellPrice: sellPrice,
-    buyDate: p.buyDate,
-    sellDate: sellDate || new Date().toISOString().slice(0,10),
-    status: 'sold'
-  };
+  if (!sellQty || isNaN(sellQty) || sellQty <= 0) {
+    errEl.textContent = 'Enter a valid quantity to sell.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (sellQty > p.quantity) {
+    errEl.textContent = 'Cannot sell more than you hold (' + p.quantity + ' shares).';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const soldEntry = { ticker: p.ticker, quantity: sellQty, buyPrice: p.buyPrice, sellPrice, buyDate: p.buyDate, sellDate, status: 'sold' };
+
+  if (sellQty === p.quantity) {
+    // Full sell — replace in place
+    state.portfolio[index] = soldEntry;
+  } else {
+    // Partial sell — reduce holding, append closed entry
+    state.portfolio[index] = { ...p, quantity: p.quantity - sellQty };
+    state.portfolio.push(soldEntry);
+  }
+
   savePortfolio();
   renderPortfolioView();
   updatePortfolioSidebar();
@@ -1585,8 +1606,8 @@ function editPortfolioPosition(index) {
   html += '<input class="search-input" id="editBuyDate" type="date" value="' + (p.buyDate || '') + '" style="width:100%;font-size:13px;margin-bottom:10px">';
   html += '</div>';
   html += '<div style="display:flex;gap:8px">';
-  html += '<button class="btn primary" onclick="savePortfolioEdit(' + index + ')" style="flex:1">💾 SAVE</button>';
-  html += '<button class="btn" onclick="renderPortfolioView()">CANCEL</button>';
+  html += '<button class="btn primary" onclick="savePortfolioEdit(' + index + ')" style="flex:1">' + t('portfolio_save') + '</button>';
+  html += '<button class="btn" onclick="renderPortfolioView()">' + t('auth_cancel') + '</button>';
   html += '</div>';
   html += '<div id="editError" style="margin-top:8px;font-size:11px;color:var(--red-bear);display:none"></div>';
   html += '</div>';
@@ -1659,32 +1680,32 @@ function generateTaxReport() {
   
   let html = '<div class="card" style="padding:0;overflow:hidden">';
   html += '<div style="padding:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">';
-  html += '<span style="font-family:var(--font-mono);font-size:14px;color:var(--accent-amber);font-weight:700">💰 TAX REPORT</span>';
+  html += '<span style="font-family:var(--font-mono);font-size:14px;color:var(--accent-amber);font-weight:700">' + t('taxReport_title') + '</span>';
   html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
-  html += '<button class="btn" onclick="downloadTaxCSV()" style="font-size:10px">📥 CSV</button>';
-  html += '<button class="btn" onclick="downloadTaxMD()" style="font-size:10px">📝 MD</button>';
-  html += '<button class="btn" onclick="downloadTaxPDF()" style="font-size:10px">📄 PDF</button>';
-  html += '<button class="btn" onclick="renderPortfolioView()" style="font-size:10px">← BACK</button>';
+  html += '<button class="btn" onclick="downloadTaxCSV()" style="font-size:10px">' + t('portfolio_csv') + '</button>';
+  html += '<button class="btn" onclick="downloadTaxMD()" style="font-size:10px">' + t('portfolio_md') + '</button>';
+  html += '<button class="btn" onclick="downloadTaxPDF()" style="font-size:10px">' + t('taxReport_pdf') + '</button>';
+  html += '<button class="btn" onclick="renderPortfolioView()" style="font-size:10px">' + t('portfolio_back') + '</button>';
   html += '</div></div>';
   
   // Month selector
   html += '<div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
-  html += '<label style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">📅 Select Month:</label>';
+  html += '<label style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">' + t('taxReport_selectMonth') + '</label>';
   html += '<select id="taxMonthSelect" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:6px 8px;border-radius:4px;font-family:var(--font-mono);font-size:11px">';
-  html += '<option value="all">All Time</option>';
+  html += '<option value="all">' + t('taxReport_allTime') + '</option>';
   months.forEach(m => {
     const sel = m.val === selectedMonth ? ' selected' : '';
     html += '<option value="' + m.val + '"' + sel + '>' + m.label + '</option>';
   });
   html += '</select>';
-  html += '<button class="btn" onclick="updateTaxReportMonth()" style="font-size:10px;padding:4px 10px">🔄 UPDATE</button>';
+  html += '<button class="btn" onclick="updateTaxReportMonth()" style="font-size:10px;padding:4px 10px">' + t('taxReport_update') + '</button>';
   html += '</div>';
   
   // Realized gains/losses (sold)
   html += '<div style="padding:14px;border-bottom:1px solid var(--border)">';
-  html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--green-bull);margin-bottom:10px">✅ REALIZED GAINS/LOSSES (SOLD)</h3>';
+  html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--green-bull);margin-bottom:10px">' + t('taxReport_realized') + '</h3>';
   if (soldItems.length === 0) {
-    html += '<div style="color:var(--text-dim);font-size:11px">No closed positions this period.</div>';
+    html += '<div style="color:var(--text-dim);font-size:11px">' + t('taxReport_noRealized') + '</div>';
   } else {
     html += '<table class="tracked-table"><thead><tr><th>TICKER</th><th>QTY</th><th>BUY $</th><th>SELL $</th><th>GAIN/LOSS</th><th>BUY DATE</th><th>SELL DATE</th></tr></thead><tbody>';
     let totalRealized = 0;
@@ -1695,15 +1716,15 @@ function generateTaxReport() {
       html += '<tr><td class="tkr">' + p.ticker + '</td><td>' + p.quantity + '</td><td>$' + p.buyPrice.toFixed(2) + '</td><td>$' + p.sellPrice.toFixed(2) + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td><td style="color:var(--text-dim)">' + (p.buyDate || '—') + '</td><td style="color:var(--text-dim)">' + (p.sellDate || '—') + '</td></tr>';
     });
     const trClass = totalRealized >= 0 ? 'pnl-up' : 'pnl-dn';
-    html += '<tr><td style="font-weight:700">TOTAL REALIZED</td><td></td><td></td><td></td><td class="' + trClass + '" style="font-weight:700">' + (totalRealized >= 0 ? '+' : '') + '$' + totalRealized.toFixed(2) + '</td><td></td><td></td></tr>';
+    html += '<tr><td style="font-weight:700">' + t('portfolio_totalRealized') + '</td><td></td><td></td><td></td><td class="' + trClass + '" style="font-weight:700">' + (totalRealized >= 0 ? '+' : '') + '$' + totalRealized.toFixed(2) + '</td><td></td><td></td></tr>';
     html += '</tbody></table></div>';
   }
   
   // Unrealized gains/losses (holding)
   html += '<div style="padding:14px;border-bottom:1px solid var(--border)">';
-  html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--yellow-neutral);margin-bottom:10px">🔵 UNREALIZED GAINS/LOSSES (HOLDING)</h3>';
+  html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--yellow-neutral);margin-bottom:10px">' + t('taxReport_unrealized') + '</h3>';
   if (holdingItems.length === 0) {
-    html += '<div style="color:var(--text-dim);font-size:11px">All positions closed.</div>';
+    html += '<div style="color:var(--text-dim);font-size:11px">' + t('taxReport_allClosed') + '</div>';
   } else {
     html += '<table class="tracked-table"><thead><tr><th>TICKER</th><th>QTY</th><th>BUY $</th><th>CURRENT $</th><th>UNREALIZED P&amp;L</th><th>BUY DATE</th></tr></thead><tbody>';
     let totalUnrealized = 0;
@@ -1716,7 +1737,7 @@ function generateTaxReport() {
       html += '<tr><td class="tkr">' + p.ticker + '</td><td>' + p.quantity + '</td><td>$' + p.buyPrice.toFixed(2) + '</td><td>' + (currPrice ? '$' + currPrice.toFixed(2) : '<span style="color:var(--text-dim)">—</span>') + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td><td style="color:var(--text-dim)">' + (p.buyDate || '—') + '</td></tr>';
     });
     const turClass = totalUnrealized >= 0 ? 'pnl-up' : 'pnl-dn';
-    html += '<tr><td style="font-weight:700">TOTAL UNREALIZED</td><td></td><td></td><td></td><td class="' + turClass + '" style="font-weight:700">' + (totalUnrealized >= 0 ? '+' : '') + '$' + totalUnrealized.toFixed(2) + '</td><td></td></tr>';
+    html += '<tr><td style="font-weight:700">' + t('portfolio_totalUnrealized') + '</td><td></td><td></td><td></td><td class="' + turClass + '" style="font-weight:700">' + (totalUnrealized >= 0 ? '+' : '') + '$' + totalUnrealized.toFixed(2) + '</td><td></td></tr>';
     html += '</tbody></table></div>';
   }
   
@@ -1726,9 +1747,9 @@ function generateTaxReport() {
   const taxAmount = totalRealizedGain > 0 ? totalRealizedGain * (taxRate / 100) : 0;
   const netAfterTax = totalRealizedGain - taxAmount;
   html += '<div style="padding:14px">';
-  html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--accent-amber);margin-bottom:10px">📊 TAX ESTIMATE (Realized Gains Only)</h3>';
+  html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--accent-amber);margin-bottom:10px">' + t('taxReport_taxEstimate') + '</h3>';
   html += '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">';
-  html += '<label style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">Tax Rate:</label>';
+  html += '<label style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">' + t('taxReport_taxRate') + '</label>';
   html += '<input id="taxRateInput" type="number" step="0.1" min="0" max="100" value="' + taxRate + '" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:6px 8px;border-radius:4px;font-family:var(--font-mono);font-size:12px;width:70px">';
   html += '<span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">%</span>';
   html += '<button class="btn" onclick="saveTaxRate()" style="font-size:10px;padding:4px 10px">💾 SET</button>';
@@ -1743,12 +1764,12 @@ function generateTaxReport() {
   html += '<div style="font-family:var(--font-mono);font-size:18px;font-weight:700;margin-top:4px;color:var(--red-bear)">$' + (totalRealizedGain > 0 ? taxAmount.toFixed(2) : '0.00') + '</div>';
   html += '</div>';
   html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
-  html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">Net After Tax</div>';
+  html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">' + t('taxReport_netAfterTax') + '</div>';
   html += '<div style="font-family:var(--font-mono);font-size:18px;font-weight:700;margin-top:4px;' + (netAfterTax >= 0 ? 'color:var(--green-bull)' : 'color:var(--red-bear)') + '">' + (netAfterTax >= 0 ? '+' : '') + '$' + netAfterTax.toFixed(2) + '</div>';
   html += '</div>';
   html += '</div>';
   html += '<div style="margin-top:10px;font-size:10px;color:var(--text-dim);padding:8px;background:rgba(255,193,7,0.08);border-radius:4px">';
-  html += '⚠️ <strong>Disclaimer:</strong> This is an <strong>estimate only</strong>. Tax rates vary by jurisdiction, holding period, and individual circumstances. Consult a qualified tax professional for actual tax filing.';
+  html += t('taxReport_disclaimer');
   html += '</div></div></div>';
   
   container.innerHTML = html;
@@ -1936,7 +1957,7 @@ function downloadTaxPDF() {
 
 function saveTaxRate() {
   const rate = parseFloat(document.getElementById('taxRateInput').value);
-  if (!rate || isNaN(rate) || rate < 0 || rate > 100) { alert('Enter a valid tax rate (0-100%)'); return; }
+  if (!rate || isNaN(rate) || rate < 0 || rate > 100) { alert(t('errors_invalidTaxRate')); return; }
   localStorage.setItem('jerry_tax_rate', String(rate));
   generateTaxReport();
 }
@@ -1955,6 +1976,7 @@ function showUniverseView() {
   state.showTracked = false;
   state.showPortfolio = false;
   state.showUniverse = !state.showUniverse;
+  document.querySelectorAll('.market-tabs .btn[data-market]').forEach(b => b.classList.remove('active-market'));
   document.getElementById('trackedTabBtn').style.borderColor = '';
   document.getElementById('trackedTabBtn').style.color = '';
   document.getElementById('portfolioTabBtn').style.borderColor = '';
@@ -1978,7 +2000,7 @@ async function renderUniverseView() {
   const sectors = [...new Set(stocks.map(s => s.s).filter(Boolean))].sort();
   const regions = [...new Set(stocks.map(s => s.r).filter(Boolean))].sort();
   
-  const meta = state._universeMeta[market] || { total: stocks.length, visible: stocks.length };
+  const meta = (state._universeMeta && state._universeMeta[market]) || { total: stocks.length, visible: stocks.length };
   const isLimited = meta.visible < meta.total;
   let html = `<div class="card" style="padding:0;overflow-x:auto">
     <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">
@@ -2022,6 +2044,8 @@ async function renderUniverseView() {
       const signal = found ? `<span class="card-signal ${found.signal}">${found.signal.toUpperCase()}</span>` : '<span style="color:var(--text-dim);font-size:10px">not scanned</span>';
       const tracked = state.trackedPicks.find(p => p.ticker === s.t && p.status === 'active');
       const trackBtn = tracked ? '<span style="color:var(--green-bull);font-size:10px">📌</span>' : `<button class="btn" onclick="trackFromUniv('${s.t}','${market}',${found?.price||0})" style="font-size:8px;padding:2px 6px">+ TRACK</button>`;
+      const inPortfolio = state.portfolio.find(p => p.ticker === s.t && p.status === 'holding');
+      const portfolioBtn = inPortfolio ? '<span style="color:var(--green-bull);font-size:10px">✅</span>' : `<button class="btn" onclick="addToMyStocksFromUniv('${s.t}',${found?.price||0})" style="font-size:8px;padding:2px 6px;margin-left:4px">+ MY STOCKS</button>`;
       rows += `<tr class="univ-row" data-sector="${s.s||''}" data-region="${s.r||''}">
         <td style="color:var(--text-dim)">${i+1}</td>
         <td class="tkr">${marketFlag} ${s.t}</td>
@@ -2030,7 +2054,7 @@ async function renderUniverseView() {
       if (market==='emerging') rows += `<td style="color:var(--text-dim);font-size:10px">${s.r||''}</td>`;
       rows += `<td>${price}</td>
         <td>${signal}</td>
-        <td>${trackBtn}</td>
+        <td style="white-space:nowrap">${trackBtn}${portfolioBtn}</td>
       </tr>`;
     });
     document.getElementById('univBody').innerHTML = rows;
@@ -2044,7 +2068,7 @@ async function renderUniverseView() {
   window._univRenderRows = renderRows;
   html += '</tbody></table></div></div>';
   html += `<div id="univSummary" style="margin-top:8px;display:flex;gap:12px;font-family:var(--font-mono);font-size:11px">`;
-  html += `<button class="btn" onclick="showUniverseView();switchMarket(state.market)" style="font-size:10px">← BACK TO SCAN</button></div>`;
+  html += `<button class="btn" onclick="showUniverseView();switchMarket(state.market)" style="font-size:10px">${t('nav_backToScan')}</button></div>`;
   container.innerHTML = html;
   // Initial render
   renderRows();
@@ -2078,10 +2102,24 @@ function clearUnivFilters() {
 
 function trackFromUniv(ticker, market, price) {
   if (!authUser) { showAuthModal(); return; }
-  if (!price || price === 0) { alert('Scan this market first to get prices.'); return; }
+  if (!price || price === 0) { alert(t('errors_scanFirst')); return; }
   const tp = parseFloat((price * 1.15).toFixed(2));
   const sl = parseFloat((price * 0.93).toFixed(2));
   trackPick(ticker, market, price, tp, sl);
+  if (window._univRenderRows) window._univRenderRows();
+}
+
+function addToMyStocksFromUniv(ticker, price) {
+  if (!authUser) { showAuthModal(); return; }
+  if (!price || price === 0) { alert(t('errors_scanFirst')); return; }
+  if (state.portfolio.find(p => p.ticker === ticker && p.status === 'holding')) {
+    alert(ticker + ' ' + t('errors_alreadyInPortfolio')); return;
+  }
+  if ((authUser.tier !== 'pro' && authUser.tier !== 'admin') && state.portfolio.length >= 3) {
+    alert(t('errors_freeTierPortfolio')); return;
+  }
+  state.portfolio.push({ ticker, quantity: 1, buyPrice: price, sellPrice: null, buyDate: new Date().toISOString().slice(0,10), sellDate: null, status: 'holding' });
+  savePortfolio();
   if (window._univRenderRows) window._univRenderRows();
 }
 
@@ -2185,36 +2223,386 @@ const LANGS = {
     mission: 'Educational tool. Technical analysis screen across <strong>US &middot; Europe &middot; Emerging Markets</strong>. Filters to high-scoring signals. Each scan re-fetches live market data &mdash; RSI, MACD, ADX, SMA crossovers, Bollinger, pattern detection.',
     brand: 'stock scanner &middot; live market data &middot; by jerry',
     scan: 'SCAN', scanAll: 'SCAN ALL', signals: 'SIGNALS',
-    universe: 'UNIVERSE', tracked: 'TRACKED', education: 'EDUCATION', simulate: 'SIMULATE',
+    universe: 'ALL STOCKS', tracked: 'TRACKED', education: 'EDUCATION', simulate: 'SIMULATE',
     portfolio: 'PORTFOLIO', signIn: 'SIGN IN', signOut: 'SIGN OUT',
     buy: 'BUY', sell: 'SELL', hold: 'HOLD',
     upgrade: 'GO PRO', admin: 'ADMIN',
+
+    // Status
+    status_idle: 'IDLE', status_ready: 'READY', status_scanning: 'SCANNING',
+
+    // Signals
+    signal_buy: 'BUY ↑', signal_sell: 'SELL ↓', signal_hold: '◈ HOLD',
+    signal_buyVerdict: '✓ TECHNICAL BUY — ',
+    signal_sellVerdict: '✗ TECHNICAL SELL — AVOID',
+    signal_neutralVerdict: '◈ NEUTRAL — CONFLICTING SIGNALS',
+
+    // Card buttons
+    card_trackPick: '📌 TRACK PICK', card_myStocks: '➕ MY STOCKS',
+    card_news: '📰 NEWS SENTIMENT',
+    card_entryZone: 'ENTRY ZONE', card_exitZone: 'EXIT ZONE',
+    card_tp: '🎯 TP $', card_sl: '🛑 SL $',
+
+    // Auth
+    auth_signUp: 'SIGN UP', auth_cancel: 'CANCEL',
+    auth_createAccount: 'CREATE ACCOUNT',
+    auth_emailPlaceholder: 'Email',
+    auth_passwordPlaceholder: 'Password (min 6 chars)',
+    auth_signingIn: 'SIGNING IN...', auth_creating: 'CREATING...',
+    auth_fillFields: 'Fill in all fields',
+    auth_wrongCredentials: 'Something went wrong',
+    auth_connectionError: 'Connection error',
+    auth_noAccount: "Don't have an account?",
+    auth_haveAccount: 'Already have an account?',
+    auth_changePassword: 'Change Password',
+    auth_currentPassword: 'Current password',
+    auth_newPassword: 'New password (min 6 chars)',
+    auth_confirmPassword: 'Confirm new password',
+    auth_update: 'UPDATE',
+
+    // Portfolio
+    portfolio_title: '📁 PORTFOLIO MANAGER',
+    portfolio_empty: 'EMPTY PORTFOLIO',
+    portfolio_emptyHint: 'Add positions above to track your portfolio.',
+    portfolio_addPosition: '➕ ADD POSITION',
+    portfolio_tickerPlaceholder: 'TICKER',
+    portfolio_qtyPlaceholder: 'QTY',
+    portfolio_buyPricePlaceholder: 'BUY $',
+    portfolio_add: '+ ADD', portfolio_save: '💾 SAVE', portfolio_close: 'CLOSE',
+    portfolio_csv: '📥 CSV', portfolio_md: '📝 MD',
+    portfolio_holding: '🔵 HOLDING', portfolio_sold: '✅ SOLD',
+    portfolio_back: '← BACK',
+    portfolio_costBasis: 'COST BASIS', portfolio_valueNow: 'VALUE NOW',
+    portfolio_pnlPct: 'P&L %', portfolio_pnlDollar: 'P&L $',
+    portfolio_monthProfit: 'MONTH PROFIT',
+    portfolio_totalRealized: 'TOTAL REALIZED',
+    portfolio_totalUnrealized: 'TOTAL UNREALIZED',
+    portfolio_freeTierLimit: 'Free tier: max 3 positions.',
+    portfolio_upgradeLink: 'Upgrade to Pro',
+
+    // Tracked
+    tracked_empty: 'NO TRACKED PICKS',
+    tracked_emptyHint: 'Hit 📌 TRACK on a BUY signal to add picks here.',
+    tracked_refreshPrices: '⟳ REFRESH PRICES',
+    tracked_clearAll: '🗑️ CLEAR ALL',
+    tracked_backToScan: '← BACK TO SCAN',
+    tracked_hitTp: '✅ HIT TP', tracked_hitSl: '❌ HIT SL',
+    tracked_active: '🔵 Active:', tracked_hitTpStat: '✅ Hit TP:',
+    tracked_hitSlStat: '❌ Hit SL:', tracked_total: '📊 Total:',
+
+    // Calendar
+    calendar_noEvents: 'No upcoming events.',
+    calendar_loadError: 'Could not load calendar.',
+
+    // Correlation
+    correlation_scanFirst: 'Scan at least 2 tickers to show correlation.',
+    correlation_together: '>0.5 = moves together',
+    correlation_opposite: '<-0.3 = moves opposite',
+
+    // Pro gate
+    proGate_title: 'Pro Feature',
+    proGate_myStocksDesc: 'MY STOCKS AND TAX REPORTS is a Pro feature.',
+    proGate_myStocksDetail: 'Track your portfolio, see real-time P&L, monthly profit breakdowns, and generate tax reports.',
+    proGate_correlationLock: 'Correlation Matrix is a Pro feature.',
+    proGate_upgrade: '⬆ UPGRADE',
+    proGate_goPro: '⬆ GO PRO — €9/MO',
+    proGate_signIn: 'Sign in with a Pro account.',
+    proGate_educationDesc: 'Sign in with a Pro account to access Education.',
+
+    // Nav
+    nav_back: '← BACK', nav_backToScan: '← BACK TO SCAN', nav_backToDash: '← DASHBOARD',
+
+    // Errors
+    errors_fillFields: 'Fill all fields',
+    errors_invalidSellPrice: 'Enter a valid sell price',
+    errors_alreadyTracked: 'is already tracked.',
+    errors_alreadyInPortfolio: 'is already in your portfolio.',
+    errors_freeTierPortfolio: 'Free tier limited to 3 portfolio positions. Upgrade to Pro for unlimited.',
+    errors_scanFirst: 'Scan this market first to get prices.',
+    errors_invalidTaxRate: 'Enter a valid tax rate (0-100%)',
+
+    // Tax report
+    taxReport_title: '💰 TAX REPORT',
+    taxReport_realized: '✅ REALIZED GAINS/LOSSES (SOLD)',
+    taxReport_unrealized: '🔵 UNREALIZED GAINS/LOSSES (HOLDING)',
+    taxReport_noRealized: 'No closed positions this period.',
+    taxReport_allClosed: 'All positions closed.',
+    taxReport_taxEstimate: '📊 TAX ESTIMATE (Realized Gains Only)',
+    taxReport_taxRate: 'Tax Rate:',
+    taxReport_netAfterTax: 'Net After Tax',
+    taxReport_disclaimer: '⚠️ Disclaimer: This is an estimate only. Tax rates vary by jurisdiction, holding period, and individual circumstances. Consult a qualified tax professional for actual tax filing.',
+    taxReport_selectMonth: '📅 Select Month:',
+    taxReport_allTime: 'All Time',
+    taxReport_update: '🔄 UPDATE',
+    taxReport_pdf: '📄 PDF',
+
+    // Education
+    edu_title: '📘 EDUCATION — Pro Reference',
+    edu_rsiTitle: 'RSI — Relative Strength Index',
+    edu_rsiBody: 'The RSI ranges from <strong>0 to 100</strong> and identifies overbought and oversold conditions.<br><br><strong>Reading RSI:</strong><br>• <strong>Above 70</strong> = overbought — price may reverse down<br>• <strong>Below 30</strong> = oversold — price may reverse up<br>• <strong>45-65 with uptrend</strong> = bullish momentum<br>• <strong>Divergence:</strong> when price makes new high but RSI does not = weakening trend<br><br><strong>How MOMENTUM scores it:</strong><br>• RSI between 45-65 &rarr; <strong>+1 point</strong> (healthy momentum)<br>• RSI below 35 &rarr; <strong>+0.5</strong> (oversold bounce potential)<br>• RSI above 70 or below 25 &rarr; <strong>-0.5</strong> (extreme, may reverse)',
+    edu_macdTitle: 'MACD - Moving Average Convergence Divergence',
+    edu_macdBody: 'MACD = <strong>12-day EMA</strong> minus <strong>26-day EMA</strong>. The <strong>Signal Line</strong> = 9-day EMA of MACD.<br><br><strong>Reading MACD:</strong><br>• MACD <strong>above</strong> signal line = bullish momentum<br>• MACD <strong>below</strong> signal line = bearish momentum<br>• MACD above <strong>zero</strong> = upward trend bias<br>• MACD <strong>crossing above</strong> zero = momentum shift up<br>• <strong>Histogram widening</strong> = momentum accelerating<br><br><strong>How MOMENTUM scores it:</strong><br>• MACD > 0 &rarr; <strong>+1 point</strong> (positive momentum)<br>• Combined with other indicators for overall signal strength',
+    edu_adxTitle: 'ADX - Average Directional Index',
+    edu_adxBody: 'ADX ranges from <strong>0 to 100</strong>. The higher the ADX, the stronger the trend - up or down.<br><br><strong>Reading ADX:</strong><br>• <strong>Above 25</strong> = strong trend (trend following works)<br>• <strong>Below 20</strong> = weak/ranging market (avoid trend strategies)<br>• <strong>Rising ADX</strong> = trend strengthening<br>• <strong>Falling ADX</strong> = trend weakening<br>• <strong>+DI & -DI lines</strong> show trend direction<br><br><strong>How MOMENTUM scores it:</strong><br>• ADX > 25 &rarr; <strong>+0.5 points</strong> (confirms trend strength)<br>• Helps filter out noise in sideways markets',
+    edu_smaTitle: 'SMA Crossovers - Moving Average Alignment',
+    edu_smaBody: '<strong>SMA 9:</strong> Ultra-short momentum (~9 sessions)<br><strong>SMA 20:</strong> Short-term trend (~1 month)<br><strong>SMA 50:</strong> Medium-term trend (~3 months)<br><strong>SMA 200:</strong> Long-term bull/bear line (~1 year)<br><br><strong>Reading MA Alignment:</strong><br>• Price <strong>above</strong> more MAs = stronger trend<br>• <strong>4/4 above</strong> = BULL ALIGNED (full uptrend)<br>• <strong>0/4 above</strong> = BEAR ALIGNED (full downtrend)<br>• <strong>Golden Cross:</strong> SMA50 above SMA200 = long-term bullish<br>• <strong>Death Cross:</strong> SMA50 below SMA200 = long-term bearish<br><br><strong>How MOMENTUM scores it:</strong><br>• Each MA above price = partial credit<br>• Price above SMA50 &rarr; <strong>+1 point</strong><br>• 3+ above = strong bull alignment',
+    edu_bollingerTitle: 'Bollinger Bands - Volatility Measurement',
+    edu_bollingerBody: '<strong>Middle band:</strong> 20-day SMA<br><strong>Upper band:</strong> Middle + 2 standard deviations<br><strong>Lower band:</strong> Middle - 2 standard deviations<br><br><strong>Reading Bollinger Bands:</strong><br>• Price touching <strong>upper band</strong> = overextended (possible pullback)<br>• Price touching <strong>lower band</strong> = oversold (possible bounce)<br>• <strong>Squeeze:</strong> bands narrowing = low volatility about to explode<br>• <strong>Walk:</strong> price walking up the upper band = strong uptrend<br><br><strong>How MOMENTUM uses it:</strong><br>• Price at upper band = bearish signal (extended)<br>• Price at lower band = bullish signal (oversold)<br>• Used as secondary confirmation, not scored',
+    edu_patternsTitle: 'Chart Patterns - Technical Formations',
+    edu_patternsBody: 'Each pattern provides a directional <strong>bias</strong> that confirms or contradicts the signal engine.<br><br><strong>Using Patterns:</strong><br>• BUY signal + bullish pattern = <strong>strong conviction</strong><br>• BUY signal + bearish pattern = <strong>conflicting - skip</strong><br>• NEUTRAL signal + bullish pattern = <strong>watch for entry</strong><br><br><strong>Patterns are detected automatically on your charts.</strong>',
+
+    // Footer
+    footer_version: 'MOMENTUM · v5.0 · live from market data',
+    footer_disclaimer: '⚠ PAPER TRADING — EDUCATIONAL PURPOSES ONLY. MOMENTUM is a technical analysis simulator. Nothing on this site constitutes financial advice, investment recommendation, or solicitation to buy or sell securities. All trades are simulated. Past performance does not guarantee future results. Consult a qualified financial advisor before making real investment decisions. By using this app you agree these are paper trades only.',
   },
   pt: {
     mission: 'Ferramenta educacional. An&aacute;lise t&eacute;cnica em <strong>EUA &middot; Europa &middot; Mercados Emergentes</strong>. Filtra sinais de alta pontua&ccedil;&atilde;o. Cada varredura busca dados de mercado ao vivo &mdash; RSI, MACD, ADX, m&eacute;dias m&oacute;veis, Bandas de Bollinger, detec&ccedil;&atilde;o de padr&otilde;es.',
     brand: 'analisador de a&ccedil;&otilde;es &middot; dados ao vivo &middot; por jerry',
     scan: 'VARRER', scanAll: 'VARRER TUDO', signals: 'SINAIS',
-    universe: 'UNIVERSO', tracked: 'RASTREADOS', education: 'EDUCA&Ccedil;&Atilde;O', simulate: 'SIMULAR',
-    portfolio: 'PORTF&Oacute;LIO', signIn: 'ENTRAR', signOut: 'SAIR',
+    universe: 'TODOS OS ATIVOS', tracked: 'RASTREADOS', education: 'EDUCAÇÃO', simulate: 'SIMULAR',
+    portfolio: 'PORTFÓLIO', signIn: 'ENTRAR', signOut: 'SAIR',
     buy: 'COMPRA', sell: 'VENDA', hold: 'MANTER',
     upgrade: 'PRO', admin: 'ADMIN',
+
+    // Status
+    status_idle: 'OCIOSO', status_ready: 'PRONTO', status_scanning: 'VARRENDO',
+
+    // Signals
+    signal_buy: 'COMPRA ↑', signal_sell: 'VENDA ↓', signal_hold: '◈ MANTER',
+    signal_buyVerdict: '✓ COMPRA TÉCNICA — ',
+    signal_sellVerdict: '✗ VENDA TÉCNICA — EVITAR',
+    signal_neutralVerdict: '◈ NEUTRO — SINAIS CONFLITANTES',
+
+    // Card buttons
+    card_trackPick: '📌 RASTREAR', card_myStocks: '➕ MEUS ATIVOS',
+    card_news: '📰 SENTIMENTO DE NOTÍCIAS',
+    card_entryZone: 'ZONA DE ENTRADA', card_exitZone: 'ZONA DE SAÍDA',
+    card_tp: '🎯 Alvo $', card_sl: '🛑 Stop $',
+
+    // Auth
+    auth_signUp: 'CADASTRAR', auth_cancel: 'CANCELAR',
+    auth_createAccount: 'CRIAR CONTA',
+    auth_emailPlaceholder: 'E-mail',
+    auth_passwordPlaceholder: 'Senha (mín. 6 caracteres)',
+    auth_signingIn: 'ENTRANDO...', auth_creating: 'CRIANDO...',
+    auth_fillFields: 'Preencha todos os campos',
+    auth_wrongCredentials: 'Algo deu errado',
+    auth_connectionError: 'Erro de conexão',
+    auth_noAccount: 'Não tem uma conta?',
+    auth_haveAccount: 'Já tem uma conta?',
+    auth_changePassword: 'Alterar Senha',
+    auth_currentPassword: 'Senha atual',
+    auth_newPassword: 'Nova senha (mín. 6 caracteres)',
+    auth_confirmPassword: 'Confirmar nova senha',
+    auth_update: 'ATUALIZAR',
+
+    // Portfolio
+    portfolio_title: '📁 GESTOR DE CARTEIRA',
+    portfolio_empty: 'CARTEIRA VAZIA',
+    portfolio_emptyHint: 'Adicione posições acima para rastrear sua carteira.',
+    portfolio_addPosition: '➕ ADICIONAR POSIÇÃO',
+    portfolio_tickerPlaceholder: 'TICKER',
+    portfolio_qtyPlaceholder: 'QTD',
+    portfolio_buyPricePlaceholder: 'COMPRA $',
+    portfolio_add: '+ ADICIONAR', portfolio_save: '💾 SALVAR', portfolio_close: 'FECHAR',
+    portfolio_csv: '📥 CSV', portfolio_md: '📝 MD',
+    portfolio_holding: '🔵 MANTENDO', portfolio_sold: '✅ VENDIDO',
+    portfolio_back: '← VOLTAR',
+    portfolio_costBasis: 'CUSTO BASE', portfolio_valueNow: 'VALOR ATUAL',
+    portfolio_pnlPct: 'L/P %', portfolio_pnlDollar: 'L/P $',
+    portfolio_monthProfit: 'LUCRO MENSAL',
+    portfolio_totalRealized: 'TOTAL REALIZADO',
+    portfolio_totalUnrealized: 'TOTAL NÃO REALIZADO',
+    portfolio_freeTierLimit: 'Plano gratuito: máx. 3 posições.',
+    portfolio_upgradeLink: 'Upgrade para Pro',
+
+    // Tracked
+    tracked_empty: 'SEM PICKS RASTREADOS',
+    tracked_emptyHint: 'Clique em 📌 RASTREAR em um sinal de COMPRA para adicionar picks.',
+    tracked_refreshPrices: '⟳ ATUALIZAR PREÇOS',
+    tracked_clearAll: '🗑️ LIMPAR TUDO',
+    tracked_backToScan: '← VOLTAR AO SCAN',
+    tracked_hitTp: '✅ ALVO ATINGIDO', tracked_hitSl: '❌ STOP ATINGIDO',
+    tracked_active: '🔵 Ativo:', tracked_hitTpStat: '✅ Alvo:',
+    tracked_hitSlStat: '❌ Stop:', tracked_total: '📊 Total:',
+
+    // Calendar
+    calendar_noEvents: 'Nenhum evento próximo.',
+    calendar_loadError: 'Não foi possível carregar o calendário.',
+
+    // Correlation
+    correlation_scanFirst: 'Faça scan de pelo menos 2 ativos para ver correlação.',
+    correlation_together: '>0.5 = movem juntos',
+    correlation_opposite: '<-0.3 = movem oposto',
+
+    // Pro gate
+    proGate_title: 'Recurso Pro',
+    proGate_myStocksDesc: 'MEUS ATIVOS E RELATÓRIOS FISCAIS é um recurso Pro.',
+    proGate_myStocksDetail: 'Acompanhe sua carteira, veja P&L em tempo real, detalhamentos mensais e gere relatórios fiscais.',
+    proGate_correlationLock: 'Matriz de Correlação é um recurso Pro.',
+    proGate_upgrade: '⬆ UPGRADE',
+    proGate_goPro: '⬆ GO PRO — €9/MÊS',
+    proGate_signIn: 'Entre com uma conta Pro.',
+    proGate_educationDesc: 'Entre com uma conta Pro para acessar a Educação.',
+
+    // Nav
+    nav_back: '← VOLTAR', nav_backToScan: '← VOLTAR AO SCAN', nav_backToDash: '← PAINEL',
+
+    // Errors
+    errors_fillFields: 'Preencha todos os campos',
+    errors_invalidSellPrice: 'Insira um preço de venda válido',
+    errors_alreadyTracked: 'já está rastreado.',
+    errors_alreadyInPortfolio: 'já está na sua carteira.',
+    errors_freeTierPortfolio: 'Plano gratuito limitado a 3 posições. Upgrade para Pro para ilimitado.',
+    errors_scanFirst: 'Faça scan deste mercado primeiro para obter preços.',
+    errors_invalidTaxRate: 'Insira uma alíquota válida (0-100%)',
+
+    // Tax report
+    taxReport_title: '💰 RELATÓRIO FISCAL',
+    taxReport_realized: '✅ GANHOS/PERDAS REALIZADOS (VENDIDOS)',
+    taxReport_unrealized: '🔵 GANHOS/PERDAS NÃO REALIZADOS (MANTENDO)',
+    taxReport_noRealized: 'Sem posições fechadas neste período.',
+    taxReport_allClosed: 'Todas as posições fechadas.',
+    taxReport_taxEstimate: '📊 ESTIMATIVA DE IMPOSTO (Apenas Ganhos Realizados)',
+    taxReport_taxRate: 'Alíquota:',
+    taxReport_netAfterTax: 'Líquido Após Imposto',
+    taxReport_disclaimer: '⚠️ Aviso: Esta é apenas uma estimativa. As alíquotas variam por jurisdição, prazo e circunstâncias individuais. Consulte um profissional tributário qualificado para declaração real.',
+    taxReport_selectMonth: '📅 Selecionar Mês:',
+    taxReport_allTime: 'Todo o Período',
+    taxReport_update: '🔄 ATUALIZAR',
+    taxReport_pdf: '📄 PDF',
+
+    // Education
+    edu_title: '📘 EDUCAÇÃO — Referência Pro',
+    edu_rsiTitle: 'RSI — Índice de Força Relativa',
+    edu_rsiBody: 'O RSI varia de <strong>0 a 100</strong> e identifica condições de sobrecompra e sobrevenda.<br><br><strong>Lendo o RSI:</strong><br>• <strong>Acima de 70</strong> = sobrecomprado — preço pode reverter para baixo<br>• <strong>Abaixo de 30</strong> = sobrevendido — preço pode reverter para cima<br>• <strong>45-65 com tendência de alta</strong> = momentum altista<br>• <strong>Divergência:</strong> quando o preço faz nova máxima mas o RSI não = tendência enfraquecendo<br><br><strong>Como o MOMENTUM pontua:</strong><br>• RSI entre 45-65 &rarr; <strong>+1 ponto</strong> (momentum saudável)<br>• RSI abaixo de 35 &rarr; <strong>+0.5</strong> (potencial de recuperação sobrevendida)<br>• RSI acima de 70 ou abaixo de 25 &rarr; <strong>-0.5</strong> (extremo, pode reverter)',
+    edu_macdTitle: 'MACD - Convergência/Divergência de Médias Móveis',
+    edu_macdBody: 'MACD = <strong>MME de 12 dias</strong> menos <strong>MME de 26 dias</strong>. A <strong>Linha de Sinal</strong> = MME de 9 dias do MACD.<br><br><strong>Lendo o MACD:</strong><br>• MACD <strong>acima</strong> da linha de sinal = momentum altista<br>• MACD <strong>abaixo</strong> da linha de sinal = momentum baixista<br>• MACD acima de <strong>zero</strong> = viés de tendência de alta<br>• MACD <strong>cruzando acima</strong> do zero = mudança de momentum para cima<br>• <strong>Histograma alargando</strong> = momentum acelerando<br><br><strong>Como o MOMENTUM pontua:</strong><br>• MACD > 0 &rarr; <strong>+1 ponto</strong> (momentum positivo)<br>• Combinado com outros indicadores para força geral do sinal',
+    edu_adxTitle: 'ADX - Índice Direcional Médio',
+    edu_adxBody: 'O ADX varia de <strong>0 a 100</strong>. Quanto maior o ADX, mais forte a tendência — para cima ou para baixo.<br><br><strong>Lendo o ADX:</strong><br>• <strong>Acima de 25</strong> = tendência forte (estratégias de tendência funcionam)<br>• <strong>Abaixo de 20</strong> = mercado fraco/lateral (evite estratégias de tendência)<br>• <strong>ADX subindo</strong> = tendência fortalecendo<br>• <strong>ADX caindo</strong> = tendência enfraquecendo<br>• <strong>Linhas +DI e -DI</strong> mostram a direção da tendência<br><br><strong>Como o MOMENTUM pontua:</strong><br>• ADX > 25 &rarr; <strong>+0.5 pontos</strong> (confirma força da tendência)<br>• Ajuda a filtrar ruído em mercados laterais',
+    edu_smaTitle: 'Cruzamentos de SMA - Alinhamento de Médias Móveis',
+    edu_smaBody: '<strong>SMA 9:</strong> Momentum ultra-curto (~9 sessões)<br><strong>SMA 20:</strong> Tendência de curto prazo (~1 mês)<br><strong>SMA 50:</strong> Tendência de médio prazo (~3 meses)<br><strong>SMA 200:</strong> Linha de alta/baixa longo prazo (~1 ano)<br><br><strong>Lendo o Alinhamento de MAs:</strong><br>• Preço <strong>acima</strong> de mais MAs = tendência mais forte<br>• <strong>4/4 acima</strong> = BULL ALIGNED (tendência de alta plena)<br>• <strong>0/4 acima</strong> = BEAR ALIGNED (tendência de baixa plena)<br>• <strong>Cruzamento Dourado:</strong> SMA50 acima SMA200 = altista de longo prazo<br>• <strong>Cruzamento da Morte:</strong> SMA50 abaixo SMA200 = baixista de longo prazo<br><br><strong>Como o MOMENTUM pontua:</strong><br>• Cada MA acima do preço = crédito parcial<br>• Preço acima SMA50 &rarr; <strong>+1 ponto</strong><br>• 3+ acima = forte alinhamento altista',
+    edu_bollingerTitle: 'Bandas de Bollinger - Medição de Volatilidade',
+    edu_bollingerBody: '<strong>Banda do meio:</strong> SMA de 20 dias<br><strong>Banda superior:</strong> Meio + 2 desvios padrão<br><strong>Banda inferior:</strong> Meio - 2 desvios padrão<br><br><strong>Lendo as Bandas de Bollinger:</strong><br>• Preço tocando a <strong>banda superior</strong> = sobreextendido (possível recuo)<br>• Preço tocando a <strong>banda inferior</strong> = sobrevendido (possível recuperação)<br>• <strong>Contração:</strong> bandas estreitando = baixa volatilidade prestes a explodir<br>• <strong>Caminhada:</strong> preço andando pela banda superior = tendência de alta forte<br><br><strong>Como o MOMENTUM utiliza:</strong><br>• Preço na banda superior = sinal baixista (estendido)<br>• Preço na banda inferior = sinal altista (sobrevendido)<br>• Usado como confirmação secundária, não pontuado',
+    edu_patternsTitle: 'Padrões Gráficos - Formações Técnicas',
+    edu_patternsBody: 'Cada padrão fornece um <strong>viés</strong> direcional que confirma ou contradiz o motor de sinais.<br><br><strong>Usando Padrões:</strong><br>• Sinal de COMPRA + padrão altista = <strong>forte convicção</strong><br>• Sinal de COMPRA + padrão baixista = <strong>conflitante - evitar</strong><br>• Sinal NEUTRO + padrão altista = <strong>aguardar entrada</strong><br><br><strong>Os padrões são detectados automaticamente nos seus gráficos.</strong>',
+
+    // Footer
+    footer_version: 'MOMENTUM · v5.0 · dados ao vivo do mercado',
+    footer_disclaimer: '⚠ OPERAÇÕES SIMULADAS — APENAS PARA FINS EDUCACIONAIS. O MOMENTUM é um simulador de análise técnica. Nada neste site constitui conselho financeiro, recomendação de investimento ou solicitação para comprar ou vender valores mobiliários. Todas as operações são simuladas. Resultados passados não garantem resultados futuros. Consulte um assessor financeiro qualificado antes de tomar decisões reais de investimento. Ao usar este aplicativo você concorda que estas são apenas operações simuladas.',
   },
 };
 function t(key) { return LANGS[_lang]?.[key] || LANGS.en[key] || key; }
 function switchLang(l) { _lang = l; localStorage.setItem('jerry_lang', l); applyLang(); renderDashboard(); }
 function applyLang() {
-  const m = document.getElementById('missionText');
-  if (m) m.innerHTML = t('mission');
-  const b = document.querySelector('.brand-sub');
-  if (b) b.innerHTML = t('brand');
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  const setHTML = (id, val) => { const el = document.getElementById(id); if (el) el.innerHTML = val; };
+  const setQ = (sel, val) => { const el = document.querySelector(sel); if (el) el.innerHTML = val; };
+  const setAttr = (id, attr, val) => { const el = document.getElementById(id); if (el) el.setAttribute(attr, val); };
+
+  // Brand & mission
+  setHTML('missionText', t('mission'));
+  setQ('.brand-sub', t('brand'));
+
+  // Scan button
+  const scanBtn = document.getElementById('refreshBtn');
+  if (scanBtn) scanBtn.innerHTML = '⟳ ' + t('scan');
+
+  // Login button
+  const loginBtnEl = document.getElementById('loginBtn');
+  if (loginBtnEl) loginBtnEl.innerHTML = '🔑 ' + t('signIn');
+
+  // Tab buttons
+  const universeTab = document.getElementById('universeTabBtn');
+  if (universeTab) universeTab.textContent = '📈 ' + t('universe');
+  const portfolioTab = document.getElementById('portfolioTabBtn');
+  if (portfolioTab) portfolioTab.textContent = '📊 ' + t('portfolio');
+  const patternsTab = document.getElementById('patternsTabBtn');
+  if (patternsTab) patternsTab.textContent = '📘 ' + t('education');
+  const simTab = document.getElementById('simulateTabBtn');
+  if (simTab) simTab.textContent = '🎲 ' + t('simulate');
+
+  // Tracked tab (preserve count span)
+  const trackedTabBtn = document.getElementById('trackedTabBtn');
+  if (trackedTabBtn) {
+    const cnt = document.getElementById('trackedCount');
+    const n = cnt ? cnt.textContent : '0';
+    trackedTabBtn.innerHTML = '📋 ' + t('tracked') + ' (<span id="trackedCount">' + n + '</span>)';
+  }
+
+  // Status bar defaults
+  const scanStatus = document.getElementById('scanStatus');
+  if (scanStatus && (scanStatus.textContent === 'IDLE' || scanStatus.textContent === 'OCIOSO' || scanStatus.textContent === t('status_idle') || scanStatus.textContent === LANGS.en.status_idle || scanStatus.textContent === LANGS.pt.status_idle)) {
+    scanStatus.textContent = t('status_idle');
+  }
+  const dataStatus = document.getElementById('dataStatus');
+  if (dataStatus && (dataStatus.textContent === 'READY' || dataStatus.textContent === 'PRONTO' || dataStatus.textContent === t('status_ready') || dataStatus.textContent === LANGS.en.status_ready || dataStatus.textContent === LANGS.pt.status_ready)) {
+    dataStatus.textContent = t('status_ready');
+  }
+
+  // Auth modal static text
+  const authModalTitle = document.getElementById('authModalTitle');
+  if (authModalTitle) {
+    if (typeof authMode !== 'undefined' && authMode === 'signup') {
+      authModalTitle.textContent = '📝 ' + t('auth_signUp');
+    } else {
+      authModalTitle.textContent = '🔑 ' + t('signIn');
+    }
+  }
+  const authSubmitBtn = document.getElementById('authSubmitBtn');
+  if (authSubmitBtn) {
+    if (typeof authMode !== 'undefined' && authMode === 'signup') {
+      authSubmitBtn.textContent = t('auth_createAccount');
+    } else {
+      authSubmitBtn.textContent = t('signIn');
+    }
+  }
+  const authToggleText = document.getElementById('authToggleText');
+  if (authToggleText) {
+    if (typeof authMode !== 'undefined' && authMode === 'signup') {
+      authToggleText.textContent = t('auth_haveAccount');
+    } else {
+      authToggleText.textContent = t('auth_noAccount');
+    }
+  }
+  const authToggleBtn = document.getElementById('authToggleBtn');
+  if (authToggleBtn) {
+    if (typeof authMode !== 'undefined' && authMode === 'signup') {
+      authToggleBtn.textContent = t('signIn');
+    } else {
+      authToggleBtn.textContent = t('auth_signUp');
+    }
+  }
+  setAttr('authEmail', 'placeholder', t('auth_emailPlaceholder'));
+  setAttr('authPassword', 'placeholder', t('auth_passwordPlaceholder'));
+
+  // Correlation pro lock text
+  set('corrLockMsg', t('proGate_correlationLock'));
+  set('corrLockBtn', t('proGate_upgrade'));
+
+  // Portfolio modal static text
+  set('portfolioModalTitle', t('portfolio_title'));
+  set('portfolioModalCsv', t('portfolio_csv'));
+  set('portfolioModalMd', t('portfolio_md'));
+  set('portfolioModalAdd', t('portfolio_add'));
+  set('portfolioModalSave', t('portfolio_save'));
+  set('portfolioModalClose', t('portfolio_close'));
+  const portfolioLimitNote = document.getElementById('portfolioLimitNote');
+  if (portfolioLimitNote) portfolioLimitNote.innerHTML = t('portfolio_freeTierLimit') + ' <span style="color:var(--accent-amber);cursor:pointer" onclick="upgradeToPro()">' + t('portfolio_upgradeLink') + '</span> for unlimited.';
+
+  // Footer
+  const fv = document.getElementById('footerVersion');
+  if (fv) fv.textContent = t('footer_version');
+  const fd = document.getElementById('footerDisclaimer');
+  if (fd) fd.textContent = t('footer_disclaimer');
 }
 function changeFontSize(d) {
   let s = parseFloat(localStorage.getItem('jerry_fontsize') || '1');
   s = Math.max(0.8, Math.min(1.5, s + d * 0.1));
+  s = Math.round(s * 10) / 10;
   localStorage.setItem('jerry_fontsize', s);
   document.documentElement.style.setProperty('--font-size', s);
-  document.getElementById('fontPlusBtn').textContent = s >= 1.5 ? 'A+' : 'A+';
-  document.getElementById('fontMinusBtn').textContent = s <= 0.8 ? 'A-' : 'A-';
+  document.body.style.zoom = s;
 }
 
 let _eduTopic = 'rsi';
@@ -2439,7 +2827,7 @@ function generateSimData(count) {
 function showSimulateView() {
   state.showTracked = false; state.showUniverse = false;
   if (!authUser || (authUser.tier !== 'pro' && authUser.tier !== 'admin')) {
-    document.getElementById('dashboard').innerHTML = '<div class="card" style="max-width:400px;margin:60px auto;text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:12px">🎲</div><h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">Pro Feature</h2><p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">Sign in with a Pro account.<br><button class="btn primary" onclick="showAuthModal()" style="font-size:12px;margin-top:8px">🔑 SIGN IN</button></p></div>';
+    document.getElementById('dashboard').innerHTML = '<div class="card" style="max-width:400px;margin:60px auto;text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:12px">🎲</div><h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">' + t('proGate_title') + '</h2><p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">' + t('proGate_signIn') + '<br><button class="btn primary" onclick="showAuthModal()" style="font-size:12px;margin-top:8px">🔑 ' + t('signIn') + '</button></p></div>';
     return;
   }
   renderSim();
@@ -2518,7 +2906,7 @@ function renderSim() {
         ${PAT_NAMES.map(p => `<option value="${p}" ${p===_simPattern?'selected':''}>${p}</option>`).join('')}
       </select>
       <button class="btn primary" onclick="renderSim()" style="font-size:11px">🎲 GENERATE</button>
-      <button class="btn" onclick="renderDashboard()" style="font-size:10px">← BACK</button>
+      <button class="btn" onclick="renderDashboard()" style="font-size:10px">${t('nav_back')}</button>
     </div>
   </div>`;
   html += `<div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;font-family:var(--font-mono);font-size:11px">
@@ -2586,7 +2974,7 @@ function showEducationView() {
     state.showTracked = false; state.showUniverse = false;
     if (!authUser || (authUser.tier !== 'pro' && authUser.tier !== 'admin')) { 
       const d = document.getElementById('dashboard');
-      d.innerHTML = '<div class="card" style="max-width:400px;margin:60px auto;text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:12px">📘</div><h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">Pro Feature</h2><p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:20px">Sign in with a Pro account to access Education.<br><br><button class="btn primary" onclick="showAuthModal()" style="font-size:12px">🔑 SIGN IN</button></p></div>';
+      d.innerHTML = '<div class="card" style="max-width:400px;margin:60px auto;text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:12px">📘</div><h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">' + t('proGate_title') + '</h2><p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:20px">' + t('proGate_educationDesc') + '<br><br><button class="btn primary" onclick="showAuthModal()" style="font-size:12px">🔑 ' + t('signIn') + '</button></p></div>';
       return;
     }
     renderEdu();
@@ -2598,41 +2986,41 @@ function renderEdu() {
   
   const topics = [
     { id:'rsi', icon:'📈', name:'RSI', color:'#22d3ee',
-      title:'RSI — Relative Strength Index',
+      title:t('edu_rsiTitle'),
       subtitle:'Measures the speed and magnitude of recent price changes.',
-      body:'The RSI ranges from <strong>0 to 100</strong> and identifies overbought and oversold conditions.<br><br><strong>Reading RSI:</strong><br>• <strong>Above 70</strong> = overbought — price may reverse down<br>• <strong>Below 30</strong> = oversold — price may reverse up<br>• <strong>45-65 with uptrend</strong> = bullish momentum<br>• <strong>Divergence:</strong> when price makes new high but RSI does not = weakening trend<br><br><strong>How MOMENTUM scores it:</strong><br>• RSI between 45-65 &rarr; <strong>+1 point</strong> (healthy momentum)<br>• RSI below 35 &rarr; <strong>+0.5</strong> (oversold bounce potential)<br>• RSI above 70 or below 25 &rarr; <strong>-0.5</strong> (extreme, may reverse)',
+      body:t('edu_rsiBody'),
       svg:'<rect x="2" y="34" width="6" height="20" fill="#4caf50" opacity="0.4" rx="1"/><rect x="12" y="30" width="6" height="24" fill="#4caf50" opacity="0.4" rx="1"/><rect x="22" y="26" width="6" height="28" fill="#4caf50" opacity="0.6" rx="1"/><rect x="32" y="22" width="6" height="32" fill="#4caf50" rx="1"/><rect x="42" y="18" width="6" height="36" fill="#4caf50" opacity="0.5" rx="1"/><rect x="52" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="62" y="20" width="6" height="34" fill="#e53935" opacity="0.5" rx="1"/><rect x="72" y="16" width="6" height="38" fill="#4caf50" rx="1"/><rect x="82" y="12" width="6" height="42" fill="#4caf50" rx="1"/><rect x="92" y="22" width="6" height="32" fill="#e53935" opacity="0.5" rx="1"/><rect x="102" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="112" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="122" y="8" width="6" height="46" fill="#4caf50" rx="1"/><rect x="132" y="16" width="6" height="38" fill="#4caf50" opacity="0.5" rx="1"/><rect x="142" y="12" width="6" height="42" fill="#4caf50" rx="1"/><rect x="152" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="162" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="172" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="182" y="4" width="6" height="50" fill="#4caf50" rx="1"/><line x1="2" y1="8" x2="188" y2="8" stroke="#ff8c00" stroke-dasharray="3,3" stroke-width="1" opacity="0.5"/><line x1="2" y1="48" x2="188" y2="48" stroke="#ff8c00" stroke-dasharray="3,3" stroke-width="1" opacity="0.5"/><text x="2" y="6" fill="#ff8c00" font-size="6" font-family="monospace">70</text><text x="2" y="58" fill="#ff8c00" font-size="6" font-family="monospace">30</text>' },
     { id:'macd', icon:'🔄', name:'MACD', color:'#4caf50',
-      title:'MACD - Moving Average Convergence Divergence',
+      title:t('edu_macdTitle'),
       subtitle:'Shows the relationship between two moving averages.',
-      body:'MACD = <strong>12-day EMA</strong> minus <strong>26-day EMA</strong>. The <strong>Signal Line</strong> = 9-day EMA of MACD.<br><br><strong>Reading MACD:</strong><br>• MACD <strong>above</strong> signal line = bullish momentum<br>• MACD <strong>below</strong> signal line = bearish momentum<br>• MACD above <strong>zero</strong> = upward trend bias<br>• MACD <strong>crossing above</strong> zero = momentum shift up<br>• <strong>Histogram widening</strong> = momentum accelerating<br><br><strong>How MOMENTUM scores it:</strong><br>• MACD > 0 &rarr; <strong>+1 point</strong> (positive momentum)<br>• Combined with other indicators for overall signal strength',
+      body:t('edu_macdBody'),
       svg:'<rect x="2" y="20" width="6" height="34" fill="#4caf50" opacity="0.3" rx="1"/><rect x="12" y="18" width="6" height="36" fill="#4caf50" opacity="0.4" rx="1"/><rect x="22" y="22" width="6" height="32" fill="#4caf50" opacity="0.4" rx="1"/><rect x="32" y="16" width="6" height="38" fill="#4caf50" opacity="0.5" rx="1"/><rect x="42" y="18" width="6" height="36" fill="#4caf50" opacity="0.5" rx="1"/><rect x="52" y="12" width="6" height="42" fill="#4caf50" rx="1"/><rect x="62" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="72" y="8" width="6" height="46" fill="#4caf50" rx="1"/><rect x="82" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="92" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="102" y="8" width="6" height="46" fill="#4caf50" rx="1"/><rect x="112" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="122" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="132" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="142" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="152" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="162" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="172" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="182" y="2" width="6" height="52" fill="#4caf50" rx="1"/><polyline points="2,44 10,40 20,38 30,34 40,32 50,28 60,26 70,22 80,20 90,16 100,14 110,12 120,10 130,8 140,6 150,6 160,4 170,4 180,4 190,4" stroke="#22d3ee" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-dasharray="3,3"/>' },
     { id:'adx', icon:'📊', name:'ADX', color:'#e8a846',
-      title:'ADX - Average Directional Index',
+      title:t('edu_adxTitle'),
       subtitle:'Measures trend strength regardless of direction.',
-      body:'ADX ranges from <strong>0 to 100</strong>. The higher the ADX, the stronger the trend - up or down.<br><br><strong>Reading ADX:</strong><br>• <strong>Above 25</strong> = strong trend (trend following works)<br>• <strong>Below 20</strong> = weak/ranging market (avoid trend strategies)<br>• <strong>Rising ADX</strong> = trend strengthening<br>• <strong>Falling ADX</strong> = trend weakening<br>• <strong>+DI & -DI lines</strong> show trend direction<br><br><strong>How MOMENTUM scores it:</strong><br>• ADX > 25 &rarr; <strong>+0.5 points</strong> (confirms trend strength)<br>• Helps filter out noise in sideways markets',
+      body:t('edu_adxBody'),
       svg:'<rect x="2" y="40" width="6" height="14" fill="#e53935" opacity="0.4" rx="1"/><rect x="12" y="38" width="6" height="16" fill="#e53935" opacity="0.4" rx="1"/><rect x="22" y="36" width="6" height="18" fill="#e53935" opacity="0.4" rx="1"/><rect x="32" y="34" width="6" height="20" fill="#e53935" opacity="0.4" rx="1"/><rect x="42" y="30" width="6" height="24" fill="#e53935" opacity="0.4" rx="1"/><rect x="52" y="28" width="6" height="26" fill="#e53935" rx="1"/><rect x="62" y="26" width="6" height="28" fill="#e53935" rx="1"/><rect x="72" y="22" width="6" height="32" fill="#e53935" opacity="0.6" rx="1"/><rect x="82" y="20" width="6" height="34" fill="#e53935" opacity="0.6" rx="1"/><rect x="92" y="18" width="6" height="36" fill="#e53935" rx="1"/><rect x="102" y="16" width="6" height="38" fill="#e53935" rx="1"/><rect x="112" y="14" width="6" height="40" fill="#e53935" rx="1"/><rect x="122" y="12" width="6" height="42" fill="#e53935" rx="1"/><rect x="132" y="10" width="6" height="44" fill="#e53935" rx="1"/><rect x="142" y="10" width="6" height="44" fill="#e53935" rx="1"/><rect x="152" y="8" width="6" height="46" fill="#e53935" rx="1"/><rect x="162" y="8" width="6" height="46" fill="#e53935" rx="1"/><rect x="172" y="8" width="6" height="46" fill="#e53935" rx="1"/><rect x="182" y="6" width="6" height="48" fill="#e53935" rx="1"/><line x1="2" y1="28" x2="188" y2="28" stroke="#ff8c00" stroke-dasharray="4,3" stroke-width="1" opacity="0.6"/><text x="2" y="26" fill="#ff8c00" font-size="6" font-family="monospace">25</text>' },
     { id:'sma', icon:'‰️', name:'SMA Crossovers', color:'#ff6a00',
-      title:'SMA Crossovers - Moving Average Alignment',
+      title:t('edu_smaTitle'),
       subtitle:'Four moving averages tracking different timeframes.',
-      body:'<strong>SMA 9:</strong> Ultra-short momentum (~9 sessions)<br><strong>SMA 20:</strong> Short-term trend (~1 month)<br><strong>SMA 50:</strong> Medium-term trend (~3 months)<br><strong>SMA 200:</strong> Long-term bull/bear line (~1 year)<br><br><strong>Reading MA Alignment:</strong><br>• Price <strong>above</strong> more MAs = stronger trend<br>• <strong>4/4 above</strong> = BULL ALIGNED (full uptrend)<br>• <strong>0/4 above</strong> = BEAR ALIGNED (full downtrend)<br>• <strong>Golden Cross:</strong> SMA50 above SMA200 = long-term bullish<br>• <strong>Death Cross:</strong> SMA50 below SMA200 = long-term bearish<br><br><strong>How MOMENTUM scores it:</strong><br>• Each MA above price = partial credit<br>• Price above SMA50 &rarr; <strong>+1 point</strong><br>• 3+ above = strong bull alignment',
+      body:t('edu_smaBody'),
       svg:'<rect x="2" y="20" width="6" height="34" fill="#4caf50" opacity="0.5" rx="1"/><rect x="12" y="16" width="6" height="38" fill="#4caf50" opacity="0.5" rx="1"/><rect x="22" y="18" width="6" height="36" fill="#e53935" rx="1"/><rect x="32" y="20" width="6" height="34" fill="#4caf50" rx="1"/><rect x="42" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="52" y="12" width="6" height="42" fill="#4caf50" rx="1"/><rect x="62" y="16" width="6" height="38" fill="#e53935" rx="1"/><rect x="72" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="82" y="8" width="6" height="46" fill="#4caf50" rx="1"/><rect x="92" y="12" width="6" height="42" fill="#4caf50" rx="1"/><rect x="102" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="112" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="122" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="132" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="142" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="152" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="162" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="172" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="182" y="2" width="6" height="52" fill="#4caf50" rx="1"/><polyline points="2,36 20,32 40,28 60,22 80,18 100,14 120,10 140,8 160,6 180,4" stroke="#22d3ee" stroke-width="1.2" fill="none" stroke-linecap="round"/><polyline points="2,40 20,38 40,36 60,32 80,30 100,28 120,26 140,24 160,22 180,20" stroke="#4caf50" stroke-width="1" fill="none" stroke-linecap="round"/><polyline points="2,44 20,42 40,40 60,38 80,36 100,34 120,32 140,30 160,28 180,26" stroke="#ff8c00" stroke-width="1" fill="none" stroke-linecap="round" stroke-dasharray="3,2"/><text x="178" y="4" fill="#22d3ee" font-size="5" font-family="monospace">9</text><text x="178" y="20" fill="#4caf50" font-size="5" font-family="monospace">20</text><text x="178" y="26" fill="#ff8c00" font-size="5" font-family="monospace">50</text>' },
     { id:'bb', icon:'📉', name:'Bollinger', color:'#c85a17',
-      title:'Bollinger Bands - Volatility Measurement',
+      title:t('edu_bollingerTitle'),
       subtitle:'Three bands that expand and contract with volatility.',
-      body:'<strong>Middle band:</strong> 20-day SMA<br><strong>Upper band:</strong> Middle + 2 standard deviations<br><strong>Lower band:</strong> Middle - 2 standard deviations<br><br><strong>Reading Bollinger Bands:</strong><br>• Price touching <strong>upper band</strong> = overextended (possible pullback)<br>• Price touching <strong>lower band</strong> = oversold (possible bounce)<br>• <strong>Squeeze:</strong> bands narrowing = low volatility about to explode<br>• <strong>Walk:</strong> price walking up the upper band = strong uptrend<br><br><strong>How MOMENTUM uses it:</strong><br>• Price at upper band = bearish signal (extended)<br>• Price at lower band = bullish signal (oversold)<br>• Used as secondary confirmation, not scored',
+      body:t('edu_bollingerBody'),
       svg:'<rect x="2" y="22" width="6" height="32" fill="#4caf50" opacity="0.5" rx="1"/><rect x="12" y="18" width="6" height="36" fill="#4caf50" opacity="0.5" rx="1"/><rect x="22" y="20" width="6" height="34" fill="#4caf50" opacity="0.5" rx="1"/><rect x="32" y="16" width="6" height="38" fill="#4caf50" rx="1"/><rect x="42" y="12" width="6" height="42" fill="#4caf50" rx="1"/><rect x="52" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="62" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="72" y="8" width="6" height="46" fill="#4caf50" rx="1"/><rect x="82" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="92" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="102" y="8" width="6" height="46" fill="#4caf50" rx="1"/><rect x="112" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="122" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="132" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="142" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="152" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="162" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="172" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="182" y="2" width="6" height="52" fill="#4caf50" rx="1"/><polyline points="2,16 20,12 40,8 60,6 80,4 100,4 120,4 140,2 160,2 180,2" stroke="#ff8c00" stroke-width="0.8" fill="none" stroke-linecap="round" stroke-dasharray="3,3"/><polyline points="2,52 20,48 40,44 60,40 80,38 100,36 120,34 140,32 160,30 180,28" stroke="#ff8c00" stroke-width="0.8" fill="none" stroke-linecap="round" stroke-dasharray="3,3"/>' },
     { id:'patterns', icon:'📐', name:'Patterns', color:'#4caf50',
-      title:'Chart Patterns - Technical Formations',
+      title:t('edu_patternsTitle'),
       subtitle:'20 common patterns detected from swing highs and lows.',
-      body:'Each pattern provides a directional <strong>bias</strong> that confirms or contradicts the signal engine.<br><br><strong>Using Patterns:</strong><br>• BUY signal + bullish pattern = <strong>strong conviction</strong><br>• BUY signal + bearish pattern = <strong>conflicting - skip</strong><br>• NEUTRAL signal + bullish pattern = <strong>watch for entry</strong><br><br><strong>Patterns are detected automatically on your charts.</strong>',
+      body:t('edu_patternsBody'),
       svg:'<rect x="2" y="8" width="6" height="46" fill="#4caf50" opacity="0.6" rx="1"/><rect x="12" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="22" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="32" y="22" width="6" height="32" fill="#e53935" rx="1"/><rect x="42" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="52" y="26" width="6" height="28" fill="#e53935" opacity="0.5" rx="1"/><rect x="62" y="8" width="6" height="46" fill="#4caf50" rx="1"/><rect x="72" y="18" width="6" height="36" fill="#4caf50" rx="1"/><rect x="82" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="92" y="20" width="6" height="34" fill="#e53935" rx="1"/><rect x="102" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="112" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="122" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="132" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="142" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="152" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="162" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="172" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="182" y="2" width="6" height="52" fill="#4caf50" rx="1"/>' },
   ];
 
   const current = topics.find(t => t.id === _eduTopic) || topics[0];
   
   let html = '<div class="card" style="padding:0;overflow-x:auto">';
-  html += '<div style="padding:12px 16px;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:13px;color:var(--accent-amber);font-weight:700">📘 EDUCATION — Pro Reference</div>';
+  html += '<div style="padding:12px 16px;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:13px;color:var(--accent-amber);font-weight:700">' + t('edu_title') + '</div>';
   
   // Sub-navigation
   html += '<div style="padding:8px 10px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:4px">';
@@ -2683,7 +3071,7 @@ function renderEdu() {
     });
   }
   
-  html += '</div><div style="margin-top:8px"><button class="btn" onclick="renderDashboard()" style="font-size:10px">← DASHBOARD</button></div>';
+  html += '</div><div style="margin-top:8px"><button class="btn" onclick="renderDashboard()" style="font-size:10px">' + t('nav_backToDash') + '</button></div>';
   container.innerHTML = html;
 }
 
@@ -2780,8 +3168,15 @@ async function init() {
   // Signal history removed
     const savedLang = localStorage.getItem('jerry_lang');
   if (savedLang) { _lang = savedLang; document.getElementById('langSelect').value = savedLang; }
+  else {
+    const detected = (navigator.language || 'en').toLowerCase().startsWith('pt') ? 'pt' : 'en';
+    _lang = detected;
+    const langSel = document.getElementById('langSelect');
+    if (langSel) langSel.value = detected;
+  }
   const fs = parseFloat(localStorage.getItem('jerry_fontsize') || '1');
   document.documentElement.style.setProperty('--font-size', fs);
+  document.body.style.zoom = fs;
   loadTrackedPicks(); loadPortfolio(); loadCalendar(); applyLang();
   
   // Background: auth check, universe data, then scan
@@ -2802,9 +3197,9 @@ async function init() {
       document.getElementById('universeCount').textContent = us.length;
     } catch(e) { console.log('Universe load error:', e); }
   }, 50);
-  // Phase 3: Scan after everything else is settled
+  // Phase 3: Correlation only — user must click SCAN explicitly
   setTimeout(async () => {
-    try { await scanAll(); calcCorrelation(); } catch(e) { console.log('Scan error:', e); }
+    try { calcCorrelation(); } catch(e) { console.log('Correlation error:', e); }
   }, 300);
   // Close modal on overlay click
   // Track pick delegation — flash button on click
@@ -2818,7 +3213,7 @@ async function init() {
     if (!authUser) { showAuthModal(); return; }
     // Check if already tracked
     if (state.trackedPicks.find(p => p.ticker === ticker && p.status === 'active')) {
-      alert(ticker + ' is already tracked.');
+      alert(ticker + ' ' + t('errors_alreadyTracked'));
       return;
     }
     trackPick(ticker, market, price, tp, sl);
@@ -2862,7 +3257,7 @@ async function init() {
     }
     // Check if already in portfolio
     if (state.portfolio.find(p => p.ticker === ticker && p.status === 'holding')) {
-      alert(ticker + ' is already in your portfolio.');
+      alert(ticker + ' ' + t('errors_alreadyInPortfolio'));
       return;
     }
     state.portfolio.push({
