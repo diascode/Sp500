@@ -58,8 +58,8 @@ function nextId() { return users.length > 0 ? Math.max(...users.map(u => u.id)) 
 
 // ─── SUBSCRIPTION TIERS ─────────────────────────────────────────────────
 const TIERS = {
-  free: { scansPerDay: 999999, maxTrackedPicks: 999999, scanIntervalMs: 80, name: 'Free' },
-  pro: { scansPerDay: 999999, maxTrackedPicks: 999999, scanIntervalMs: 80, name: 'Pro' },
+  free: { scansPerDay: 999999, maxTrackedPicks: 5, maxStocksPerMarket: 5, scanIntervalMs: 80, name: 'Free' },
+  pro: { scansPerDay: 999999, maxTrackedPicks: 9999, maxStocksPerMarket: 9999, scanIntervalMs: 80, name: 'Pro' },
 };
 
 // ─── STRIPE ─────────────────────────────────────────────────────────────
@@ -169,32 +169,58 @@ const UNIVERSES = {
     { t: 'KER.PA', n: 'Kering SA', s: 'Consumer Cyclical', m: 'France' },
     { t: 'RMS.PA', n: 'Hermès International', s: 'Consumer Cyclical', m: 'France' },
   ],
-  brazil: [
-    { t: 'PETR4.SA', n: 'Petrobras PN', s: 'Energy' },
-    { t: 'VALE3.SA', n: 'Vale ON', s: 'Materials' },
-    { t: 'ITUB4.SA', n: 'Itaú Unibanco PN', s: 'Financial' },
-    { t: 'BBDC4.SA', n: 'Bradesco PN', s: 'Financial' },
-    { t: 'ABEV3.SA', n: 'Ambev ON', s: 'Consumer Staples' },
-    { t: 'BBAS3.SA', n: 'Banco do Brasil ON', s: 'Financial' },
-    { t: 'B3SA3.SA', n: 'B3 ON', s: 'Financial' },
-    { t: 'ELET3.SA', n: 'Eletrobras ON', s: 'Utilities' },
-    { t: 'WEGE3.SA', n: 'WEG ON', s: 'Industrials' },
-    { t: 'RENT3.SA', n: 'Localiza ON', s: 'Consumer Cyclical' },
-    { t: 'EQTL3.SA', n: 'Equatorial Energia ON', s: 'Utilities' },
-    { t: 'SUZB3.SA', n: 'Suzano ON', s: 'Materials' },
-    { t: 'RAIL3.SA', n: 'Rumo ON', s: 'Industrials' },
-    { t: 'CSNA3.SA', n: 'CSN ON', s: 'Materials' },
-    { t: 'GGBR4.SA', n: 'Gerdau PN', s: 'Materials' },
-    { t: 'PRIO3.SA', n: 'Prio ON', s: 'Energy' },
-    { t: 'VBBR3.SA', n: 'Vibra Energia ON', s: 'Energy' },
-    { t: 'MGLU3.SA', n: 'Magazine Luiza ON', s: 'Consumer Cyclical' },
-    { t: 'LREN3.SA', n: 'Lojas Renner ON', s: 'Consumer Cyclical' },
-    { t: 'JBSS3.SA', n: 'JBS ON', s: 'Consumer Staples' },
-    { t: 'EMBR3.SA', n: 'Embraer ON', s: 'Aerospace' },
-    { t: 'CVCB3.SA', n: 'CVC Brasil ON', s: 'Consumer Cyclical' },
-    { t: 'HAPV3.SA', n: 'Hapvida ON', s: 'Healthcare' },
-    { t: 'RADL3.SA', n: 'Raia Drogasil ON', s: 'Consumer Staples' },
-    { t: 'MRFG3.SA', n: 'Marfrig ON', s: 'Consumer Staples' },
+  emerging: [
+    // 🇧🇷 BRAZIL
+    { t: 'PETR4.SA', n: 'Petrobras PN', s: 'Energy', r: 'Brazil' },
+    { t: 'VALE3.SA', n: 'Vale ON', s: 'Materials', r: 'Brazil' },
+    { t: 'ITUB4.SA', n: 'Itaú Unibanco PN', s: 'Financial', r: 'Brazil' },
+    { t: 'BBDC4.SA', n: 'Bradesco PN', s: 'Financial', r: 'Brazil' },
+    { t: 'ABEV3.SA', n: 'Ambev ON', s: 'Consumer Staples', r: 'Brazil' },
+    { t: 'BBAS3.SA', n: 'Banco do Brasil ON', s: 'Financial', r: 'Brazil' },
+    { t: 'B3SA3.SA', n: 'B3 ON', s: 'Financial', r: 'Brazil' },
+    { t: 'ELET3.SA', n: 'Eletrobras ON', s: 'Utilities', r: 'Brazil' },
+    { t: 'WEGE3.SA', n: 'WEG ON', s: 'Industrials', r: 'Brazil' },
+    { t: 'RENT3.SA', n: 'Localiza ON', s: 'Consumer Cyclical', r: 'Brazil' },
+    { t: 'EQTL3.SA', n: 'Equatorial Energia ON', s: 'Utilities', r: 'Brazil' },
+    { t: 'SUZB3.SA', n: 'Suzano ON', s: 'Materials', r: 'Brazil' },
+    { t: 'RAIL3.SA', n: 'Rumo ON', s: 'Industrials', r: 'Brazil' },
+    { t: 'CSNA3.SA', n: 'CSN ON', s: 'Materials', r: 'Brazil' },
+    { t: 'GGBR4.SA', n: 'Gerdau PN', s: 'Materials', r: 'Brazil' },
+    { t: 'PRIO3.SA', n: 'Prio ON', s: 'Energy', r: 'Brazil' },
+    { t: 'VBBR3.SA', n: 'Vibra Energia ON', s: 'Energy', r: 'Brazil' },
+    { t: 'MGLU3.SA', n: 'Magazine Luiza ON', s: 'Consumer Cyclical', r: 'Brazil' },
+    { t: 'LREN3.SA', n: 'Lojas Renner ON', s: 'Consumer Cyclical', r: 'Brazil' },
+    { t: 'JBSS3.SA', n: 'JBS ON', s: 'Consumer Staples', r: 'Brazil' },
+    { t: 'EMBR3.SA', n: 'Embraer ON', s: 'Aerospace', r: 'Brazil' },
+    { t: 'HAPV3.SA', n: 'Hapvida ON', s: 'Healthcare', r: 'Brazil' },
+    { t: 'RADL3.SA', n: 'Raia Drogasil ON', s: 'Consumer Staples', r: 'Brazil' },
+    { t: 'MRFG3.SA', n: 'Marfrig ON', s: 'Consumer Staples', r: 'Brazil' },
+    // 🇲🇽 MEXICO
+    { t: 'AMXL.MX', n: 'América Móvil', s: 'Telecom', r: 'Mexico' },
+    { t: 'WALMEX.MX', n: 'Walmart México', s: 'Consumer Staples', r: 'Mexico' },
+    { t: 'FEMSAUBD.MX', n: 'FEMSA', s: 'Consumer Staples', r: 'Mexico' },
+    { t: 'CX', n: 'CEMEX', s: 'Materials', r: 'Mexico' },
+    { t: 'GMEXICOB.MX', n: 'Grupo México', s: 'Materials', r: 'Mexico' },
+    { t: 'BBAJIOO.MX', n: 'Banco del Bajío', s: 'Financial', r: 'Mexico' },
+    // 🇮🇳 INDIA (ADRs on US exchanges)
+    { t: 'RELIANCE.NS', n: 'Reliance Industries', s: 'Energy', r: 'India' },
+    { t: 'TCS.NS', n: 'Tata Consultancy', s: 'Technology', r: 'India' },
+    { t: 'INFY', n: 'Infosys', s: 'Technology', r: 'India' },
+    { t: 'HDB', n: 'HDFC Bank', s: 'Financial', r: 'India' },
+    { t: 'IBN', n: 'ICICI Bank', s: 'Financial', r: 'India' },
+    // 🇨🇳 CHINA (ADRs)
+    { t: 'BABA', n: 'Alibaba Group', s: 'Consumer Cyclical', r: 'China' },
+    { t: 'JD', n: 'JD.com', s: 'Consumer Cyclical', r: 'China' },
+    { t: 'BIDU', n: 'Baidu Inc.', s: 'Technology', r: 'China' },
+    { t: 'NIO', n: 'NIO Inc.', s: 'Automotive', r: 'China' },
+    { t: 'PDD', n: 'Pinduoduo', s: 'Consumer Cyclical', r: 'China' },
+    // 🇿🇦 SOUTH AFRICA
+    { t: 'NPSNY', n: 'Naspers', s: 'Technology', r: 'South Africa' },
+    { t: 'SOL.JO', n: 'Sasol', s: 'Energy', r: 'South Africa' },
+    // 🇨🇱 CHILE
+    { t: 'BSAC', n: 'Banco Santander Chile', s: 'Financial', r: 'Chile' },
+    // 🇵🇱 POLAND
+    { t: 'CDR.WA', n: 'CD Projekt', s: 'Technology', r: 'Poland' },
   ],
 };
 
@@ -325,6 +351,27 @@ async function handleRequest(req, res) {
       return sendJSON(res, 200, { id: user.id, email: user.email, tier: user.tier, subscriptionEnd: user.subscriptionEnd });
     }
 
+    // ─── ADMIN ───────────────────────────────────────────────────
+    if (pathname === '/api/admin/users') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      // Admin by email (set ADMIN_EMAIL in .env) or first user
+      const adminEmail = (ENV.ADMIN_EMAIL || users.sort((a,b) => a.id - b.id)[0]?.email || '').toLowerCase();
+      if (authUser.email.toLowerCase() !== adminEmail) return sendError(res, 403, 'Admin only');
+      const safe = users.map(u => ({
+        id: u.id, email: u.email, tier: u.tier, createdAt: u.createdAt,
+        subscriptionEnd: u.subscriptionEnd,
+        isSubscribed: u.tier === 'pro' && u.subscriptionEnd && new Date(u.subscriptionEnd) > new Date(),
+      }));
+      const stats = {
+        total: users.length,
+        free: users.filter(u => u.tier === 'free').length,
+        pro: users.filter(u => u.tier === 'pro').length,
+        activeSubscriptions: users.filter(u => u.tier === 'pro' && u.subscriptionEnd && new Date(u.subscriptionEnd) > new Date()).length,
+      };
+      return sendJSON(res, 200, { users: safe, stats });
+    }
+
     // ─── STRIPE ──────────────────────────────────────────────────
     if (pathname === '/api/stripe/create-checkout') {
       if (!stripe) return sendError(res, 503, 'Stripe not configured');
@@ -359,6 +406,20 @@ async function handleRequest(req, res) {
         });
         return sendJSON(res, 200, { url: session.url });
       } catch (e) { return sendError(res, 500, 'Stripe error: ' + e.message); }
+    }
+
+    // ─── CHANGE PASSWORD ───────────────────────────────────────
+    if (pathname === '/api/auth/change-password' && req.method === 'POST') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      const body = await readBody(req);
+      const user = findUser(authUser.email);
+      if (!user) return sendError(res, 404, 'User not found');
+      if (!verifyPassword(body.oldPassword, user.password)) return sendError(res, 400, 'Current password is incorrect');
+      if (!body.newPassword || body.newPassword.length < 6) return sendError(res, 400, 'New password must be at least 6 characters');
+      user.password = hashPassword(body.newPassword);
+      saveUsers(users);
+      return sendJSON(res, 200, { ok: true });
     }
 
     if (pathname === '/api/stripe/webhook' && req.method === 'POST') {
@@ -410,18 +471,25 @@ async function handleRequest(req, res) {
 
     // ─── STOCK ROUTES ────────────────────────────────────────────
     if (pathname === '/api/universes') {
+      const authUser = getAuthUser(req);
+      const tier = authUser ? getTier(authUser.email) : TIERS.free;
       const summary = Object.entries(UNIVERSES).map(([key, stocks]) => ({
-        id: key, name: key === 'us' ? 'United States' : key === 'europe' ? 'Europe' : 'Brazil',
-        label: key === 'us' ? '🇺🇸 S&P 500' : key === 'europe' ? '🇪🇺 STOXX 600' : '🇧🇷 Bovespa', count: stocks.length,
+        id: key, name: key === 'us' ? 'United States' : key === 'europe' ? 'Europe' : 'Emerging Markets',
+        label: key === 'us' ? '🇺🇸 S&P 500' : key === 'europe' ? '🇪🇺 STOXX 600' : '🌍 Emerging Markets',
+        count: stocks.length,
+        visibleCount: Math.min(stocks.length, tier.maxStocksPerMarket),
       }));
       return sendJSON(res, 200, summary);
     }
 
     const universeMatch = pathname.match(/^\/api\/universe\/(\w+)$/);
     if (universeMatch) {
-      const stocks = UNIVERSES[universeMatch[1]];
-      if (!stocks) return sendError(res, 404, 'Unknown universe');
-      return sendJSON(res, 200, stocks);
+      const authUser = getAuthUser(req);
+      const tier = authUser ? getTier(authUser.email) : TIERS.free;
+      const allStocks = UNIVERSES[universeMatch[1]];
+      if (!allStocks) return sendError(res, 404, 'Unknown universe');
+      const limited = allStocks.slice(0, tier.maxStocksPerMarket);
+      return sendJSON(res, 200, { stocks: limited, total: allStocks.length, visible: limited.length, tier: tier.name });
     }
 
     const historyMatch = pathname.match(/^\/api\/history\/([A-Za-z0-9.]+)$/);

@@ -1,6 +1,6 @@
 # MOMENTUM · Stock Scanner
 
-> Multi-market technical analysis scanner for **paper trading simulation**. Educational purposes only. Scan **🇺🇸 US · 🇪🇺 Europe · 🇧🇷 Brazil** stocks with live Yahoo Finance data.
+> Multi-market technical analysis scanner for **paper trading simulation**. Educational purposes only. Scan **🇺🇸 US · 🇪🇺 Europe · 🌍 Emerging Markets** stocks with live market data.
 
 ![MOMENTUM Dashboard](https://img.shields.io/badge/status-live-brightgreen)
 ![Version](https://img.shields.io/badge/version-5.0-orange)
@@ -15,7 +15,7 @@ MOMENTUM is a technical analysis simulator. Nothing on this site constitutes fin
 
 ## Features
 
-- **105 stocks** across 3 markets — US (50), Europe (30), Brazil (25)
+- **105 stocks** across 3 markets — US (51), Europe (30), Emerging (44)
 - **Full technical stack** — RSI, MACD, ADX, SMA 9/20/50/200, Bollinger Bands, ATR
 - **Auto signal engine** — BUY / NEUTRAL / SELL based on multi-indicator scoring
 - **Chart pattern detection** — Ascending/Descending Triangles, H&S, Double Tops/Bottoms, Flags, Channels
@@ -24,7 +24,7 @@ MOMENTUM is a technical analysis simulator. Nothing on this site constitutes fin
 - **Signal history** — Every BUY signal logged with timestamp and price
 - **Correlation matrix** — Pearson correlation between top stocks by volume
 - **Economic calendar** — Upcoming Fed, GDP, PCE, jobless claims events
-- **News sentiment** — Latest Yahoo Finance news per stock
+- **News sentiment** — Latest market news per stock
 - **Adjustable chart periods** — 1D · 1M · 3M · 6M · 1Y · 5Y
 
 ## Quick Start
@@ -59,11 +59,11 @@ tailscale ip -4
 ## How It Works
 
 ```
-Your browser ──→ Node.js proxy (port 8080) ──→ Yahoo Finance API
+Your browser ──→ Node.js proxy (port 8080) ──→ market data API
    (all calculations happen in your browser — no LLM costs)
 ```
 
-1. **SCAN** fetches 5 years of daily OHLCV data from Yahoo Finance
+1. **SCAN** fetches 5 years of daily OHLCV data from market data
 2. All technical indicators calculate **client-side** in JavaScript
 3. BUY signals display with full analysis, charts, and targets
 4. **Track** picks you like → monitor P&L on subsequent scans
@@ -74,7 +74,7 @@ Your browser ──→ Node.js proxy (port 8080) ──→ Yahoo Finance API
 | Tab | Description |
 |-----|-------------|
 | **SCAN** | Main view — up to 3 BUY signals per market |
-| **🇺🇸🇪🇺🇧🇷** | Switch between US, Europe, Brazil universes |
+| **🇺🇸🇪🇺🌍** | Switch between US, Europe, Emerging Markets universes |
 | **📋 TRACKED** | Your tracked picks with live P&L, status, days held |
 | **📋 UNIVERSE** | Full stock list per market with signals |
 | **📁 PORTFOLIO** | Manual position tracking (shares × entry price) |
@@ -111,7 +111,7 @@ Signal = RSI(45-65: +1) + MACD(>0: +1) + ADX(>22: +0.5) + Price > SMA50(+1) + RS
 |--------|-------|----------|
 | 🇺🇸 US | 50 | S&P 500 — Tech, Semis, Financials, Healthcare, Consumer |
 | 🇪🇺 Europe | 30 | STOXX 600 — Germany, France, UK, Netherlands, Italy, Spain |
-| 🇧🇷 Brazil | 25 | Bovespa — Petrobras, Vale, Banks, Utilities, Commodities |
+| 🌍 Emerging | 44 | Brazil (24), Mexico (6), India (5), China (5), South Africa (2), Chile, Poland |
 
 ## Configuration
 
@@ -125,7 +125,7 @@ Edit `server.js` to customize:
 
 - **Backend:** Node.js (zero dependencies — built-in `http`, `fs`, `path`, `fetch`)
 - **Frontend:** Vanilla JavaScript, Canvas API
-- **Data:** Yahoo Finance public API (free, no key required)
+- **Data:** financial data API (free, no key required) (free, no key required)
 
 ## Files
 

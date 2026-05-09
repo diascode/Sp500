@@ -138,6 +138,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 .status-badge.waiting{background:rgba(255,193,7,0.1);color:var(--yellow-neutral);border:1px solid rgba(255,193,7,0.2)}
 .tracked-ticker{color:var(--text-primary);text-decoration:none;cursor:pointer}
 .tracked-ticker:hover{color:var(--accent-amber)}
+.dropdown-item:hover{background:var(--bg-card-hover)}
 </style>
 </head>
 <body>
@@ -145,7 +146,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 <header class="header">
   <div>
     <div class="brand-logo">MOMENTUM <span class="cursor">▌</span></div>
-    <div class="brand-sub">// stock scanner · live yahoo finance · by jerry</div>
+    <div class="brand-sub">// stock scanner · live market data · by jerry</div>
   </div>
   <div class="header-controls">
     <div class="last-update">LAST SCAN<br><span id="updateTime">--:--:-- UTC</span></div>
@@ -153,11 +154,24 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
     <button class="btn" id="themeBtn" onclick="toggleTheme()">☀/🌙</button>
     <button class="btn" id="portfolioBtn" onclick="showPortfolioModal()">📁 PORTFOLIO</button>
     <div id="authSection" style="display:flex;gap:6px;align-items:center">
-      <span id="userTierBadge" style="display:none;font-family:var(--font-mono);font-size:10px;padding:4px 8px;border-radius:3px;background:rgba(76,175,80,0.15);color:var(--green-bull);border:1px solid rgba(76,175,80,0.3)">FREE</span>
       <button class="btn" id="loginBtn" onclick="showAuthModal()" style="font-size:10px">🔑 SIGN IN</button>
-      <button class="btn" id="upgradeBtn" onclick="upgradeToPro()" style="display:none;font-size:10px;background:linear-gradient(135deg,rgba(200,90,23,0.2),rgba(200,90,23,0.05));border-color:var(--accent-amber);color:var(--accent-amber)">⬆ PRO</button>
-      <button class="btn" id="logoutBtn" onclick="logout()" style="display:none;font-size:10px;color:var(--text-dim)">SIGN OUT</button>
-
+      <div id="userMenu" style="display:none;position:relative">
+        <button class="btn" id="userAvatar" onclick="toggleUserMenu()" style="font-size:12px;padding:4px 10px;border-radius:20px;display:flex;align-items:center;gap:6px">
+          <span id="userAvatarIcon">👤</span>
+          <span id="userEmailShort" style="font-size:10px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+          <span id="userTierBadge" style="font-size:8px;padding:2px 6px;border-radius:10px;background:rgba(76,175,80,0.15);color:var(--green-bull);border:1px solid rgba(76,175,80,0.3)">FREE</span>
+        </button>
+        <div id="userDropdown" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;min-width:200px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.4)">
+          <div style="padding:10px 14px;border-bottom:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:600" id="dropdownEmail">user@email.com</div>
+            <div style="font-size:10px;color:var(--text-dim);margin-top:2px" id="dropdownTier">Free tier</div>
+          </div>
+          <div class="dropdown-item" onclick="showChangePassword()" style="padding:8px 14px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">🔑 Change Password</div>
+          <div class="dropdown-item" id="upgradeBtn2" onclick="upgradeToPro()" style="padding:8px 14px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">⭐ Go Pro</div>
+          <div class="dropdown-item" id="adminBtn2" onclick="showAdminView()" style="display:none;padding:8px 14px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border);align-items:center;gap:8px">👑 Admin Panel</div>
+          <div class="dropdown-item" onclick="logout()" style="padding:8px 14px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:8px;color:var(--red-bear)">🚪 Sign Out</div>
+        </div>
+      </div>
     </div>
   </div>
 </header>
@@ -165,20 +179,35 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 <div class="market-tabs" id="marketTabs">
   <button class="btn active-market" data-market="us" onclick="switchMarket('us')">🇺🇸 US (50)</button>
   <button class="btn" data-market="europe" onclick="switchMarket('europe')">🇪🇺 Europe (30)</button>
-  <button class="btn" data-market="brazil" onclick="switchMarket('brazil')">🇧🇷 Brazil (25)</button>
+  <button class="btn" data-market="emerging" onclick="switchMarket('emerging')">🌍 Emerging</button>
   <button class="btn" id="scanAllBtn" onclick="scanAllMarkets()" style="margin-left:auto">⟳ SCAN ALL MARKETS</button>
   <button class="btn" onclick="showTrackedView()" id="trackedTabBtn">📋 TRACKED (<span id="trackedCount">0</span>)</button>
   <button class="btn" onclick="showUniverseView()" id="universeTabBtn">📋 UNIVERSE</button>
+  <button class="btn" onclick="showEducationView()" id="patternsTabBtn" style="display:none">📘 EDUCATION</button>
+  <button class="btn" onclick="showSimulateView()" id="simulateTabBtn" style="display:none">🎲 SIMULATE</button>
 </div>
 
 <div class="goal-card">
   <h2>⏎ PAPER TRADING SIMULATOR</h2>
-  <p><strong>Educational tool.</strong> Technical analysis screen across <strong>🇺🇸 US · 🇪🇺 Europe · 🇧🇷 Brazil</strong>. Filters to high-scoring signals. Each scan re-fetches live Yahoo Finance data — RSI, MACD, ADX, SMA crossovers, Bollinger, pattern detection. <strong>Paper trading only. Not financial advice.</strong></p>
+  <p><strong>Educational tool.</strong> Technical analysis screen across <strong>🇺🇸 US · 🇪🇺 Europe · 🌍 Emerging Markets</strong>. Filters to high-scoring signals. Each scan re-fetches live market data — RSI, MACD, ADX, SMA crossovers, Bollinger, pattern detection. <strong>Paper trading only. Not financial advice.</strong></p>
   <div class="stats" id="marketStats">
     <div>UNIVERSE: <span id="universeCount">0</span> stocks</div>
     <div>BUY SIGNALS: <span id="buyCount">0</span></div>
     <div>HOLD: <span id="holdCount">0</span></div>
     <div>SELL: <span id="sellCount">0</span></div>
+  </div>
+  <div id="proUpsell" style="display:none;margin:0 auto 16px;max-width:1400px;border-radius:10px;border:1px solid rgba(255,193,7,0.3);background:linear-gradient(135deg,rgba(255,193,7,0.08),rgba(200,90,23,0.12));padding:16px 20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+      <div>
+        <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent-amber);letter-spacing:0.5px">⭐ UNLOCK FULL ACCESS — GO PRO</div>
+        <div style="margin-top:6px;font-size:12px;color:var(--text-secondary);line-height:1.6">
+          See all <strong>105+ stocks</strong> across US, Europe &amp; Emerging Markets.<br>
+          Unlimited tracking, all indicators, full universe, priority scanning,<br>
+          20 chart patterns reference &amp; unlimited portfolio positions.
+        </div>
+      </div>
+      <button class="btn" onclick="upgradeToPro()" style="font-size:12px;padding:10px 22px;background:linear-gradient(135deg,#ff8c00,#c85a17);color:#fff;border:none;font-weight:700;letter-spacing:1px;white-space:nowrap;box-shadow:0 0 20px rgba(200,90,23,0.3)">⬆ GO PRO — €9/MO</button>
+    </div>
   </div>
 </div>
 
@@ -225,7 +254,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 </div>
 
 <footer class="footer">
-  <div><strong>MOMENTUM</strong> · v5.0 · live from Yahoo Finance</div>
+  <div><strong>MOMENTUM</strong> · v5.0 · live from market data</div>
   <div class="disclaimer"><strong>⚠ PAPER TRADING — EDUCATIONAL PURPOSES ONLY.</strong> MOMENTUM is a technical analysis simulator. Nothing on this site constitutes financial advice, investment recommendation, or solicitation to buy or sell securities. All trades are simulated. Past performance does not guarantee future results. Consult a qualified financial advisor before making real investment decisions. <strong>By using this app you agree these are paper trades only.</strong></div>
 </footer>
 
@@ -253,6 +282,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 <div class="modal-overlay" id="portfolioModal">
   <div class="modal">
     <h2>📁 PORTFOLIO MANAGER</h2>
+    <div id="portfolioLimitNote" style="font-size:10px;color:var(--text-dim);margin-bottom:8px">Free tier: max 3 positions. <span style="color:var(--accent-amber);cursor:pointer" onclick="upgradeToPro()">Upgrade to Pro</span> for unlimited.</div>
     <div style="margin-bottom:12px">
       <input class="search-input" id="portfolioTicker" placeholder="TICKER" style="width:100px">
       <input class="search-input" id="portfolioShares" placeholder="SHARES" type="number" style="width:80px">
@@ -302,35 +332,93 @@ async function checkAuth() {
   } catch { authUser = null; updateAuthUI(); }
 }
 
-function updateAuthUI() {
+function toggleUserMenu() {
+  const dd = document.getElementById('userDropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  const menu = document.getElementById('userMenu');
+  const dd = document.getElementById('userDropdown');
+  if (menu && dd && !menu.contains(e.target)) dd.style.display = 'none';
+});
+
+async function updateAuthUI() {
   const loginBtn = document.getElementById('loginBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const upgradeBtn = document.getElementById('upgradeBtn');
+  const userMenu = document.getElementById('userMenu');
+  const dropdownEmail = document.getElementById('dropdownEmail');
+  const dropdownTier = document.getElementById('dropdownTier');
+  const userEmailShort = document.getElementById('userEmailShort');
   const tierBadge = document.getElementById('userTierBadge');
-  const limitDisplay = document.getElementById('scanLimitDisplay');
+  const upgradeBtn2 = document.getElementById('upgradeBtn2');
+  const adminBtn2 = document.getElementById('adminBtn2');
   if (!loginBtn) return;
   if (authUser) {
     loginBtn.style.display = 'none';
-    logoutBtn.style.display = 'inline-block';
-    tierBadge.style.display = 'inline-block';
-    tierBadge.textContent = authUser.tier === 'pro' ? '⭐ PRO' : 'FREE';
+    userMenu.style.display = 'block';
+    const short = authUser.email.length > 20 ? authUser.email.slice(0,18)+'…' : authUser.email;
+    userEmailShort.textContent = short;
+    document.getElementById('userAvatarIcon').textContent = authUser.tier === 'pro' ? '⭐' : '👤';
+    dropdownEmail.textContent = authUser.email;
+    dropdownTier.textContent = authUser.tier === 'pro' ? '⭐ Pro subscriber' : 'Free tier';
+    tierBadge.textContent = authUser.tier === 'pro' ? 'PRO' : 'FREE';
     tierBadge.style.background = authUser.tier === 'pro' ? 'rgba(255,193,7,0.15)' : 'rgba(76,175,80,0.15)';
     tierBadge.style.color = authUser.tier === 'pro' ? 'var(--yellow-neutral)' : 'var(--green-bull)';
     tierBadge.style.borderColor = authUser.tier === 'pro' ? 'rgba(255,193,7,0.3)' : 'rgba(76,175,80,0.3)';
-    if (authUser.tier === 'free') {
-      upgradeBtn.style.display = 'inline-block';
-      upgradeBtn.textContent = '⬆ UPGRADE';
-    } else {
-      upgradeBtn.style.display = 'inline-block';
-      upgradeBtn.textContent = '⚙ MANAGE';
+    upgradeBtn2.textContent = authUser.tier === 'pro' ? '⚙ Manage Subscription' : '⭐ Go Pro';
+    // Admin check
+    if (adminBtn2) {
+      try {
+        const data = await apiGet('/api/admin/users');
+        adminBtn2.style.display = data.error ? 'none' : 'flex';
+      } catch { adminBtn2.style.display = 'none'; }
     }
-
+    // Show pro upsell for free users
+    const upsell = document.getElementById('proUpsell');
+    if (upsell) upsell.style.display = authUser.tier === 'pro' ? 'none' : 'block';
+    // Show patterns tab for pro users
+    const patternsBtn = document.getElementById('patternsTabBtn');
+    if (patternsBtn) patternsBtn.style.display = authUser.tier === 'pro' ? 'inline-block' : 'none';
+    const simBtn = document.getElementById('simulateTabBtn');
+    if (simBtn) simBtn.style.display = authUser.tier === 'pro' ? 'inline-block' : 'none';
   } else {
     loginBtn.style.display = 'inline-block';
-    logoutBtn.style.display = 'none';
-    upgradeBtn.style.display = 'none';
-    tierBadge.style.display = 'none';
+    userMenu.style.display = 'none';
+    const upsell = document.getElementById('proUpsell');
+    if (upsell) upsell.style.display = 'none';
   }
+}
+
+async function showChangePassword() {
+  document.getElementById('userDropdown').style.display = 'none';
+  const container = document.getElementById('dashboard');
+  container.innerHTML = `
+    <div class="card" style="max-width:400px;margin:40px auto">
+      <h3 style="font-family:var(--font-mono);color:var(--accent-amber);margin-bottom:12px">🔑 CHANGE PASSWORD</h3>
+      <input class="search-input" id="cpOld" type="password" placeholder="Current password" style="width:100%;margin-bottom:8px;font-size:13px">
+      <input class="search-input" id="cpNew" type="password" placeholder="New password (min 6 chars)" style="width:100%;margin-bottom:8px;font-size:13px">
+      <input class="search-input" id="cpConfirm" type="password" placeholder="Confirm new password" style="width:100%;margin-bottom:12px;font-size:13px">
+      <div style="display:flex;gap:8px">
+        <button class="btn primary" onclick="submitChangePassword()" style="flex:1">UPDATE</button>
+        <button class="btn" onclick="renderDashboard()">CANCEL</button>
+      </div>
+      <div id="cpError" style="margin-top:8px;font-size:11px;color:var(--red-bear);display:none"></div>
+    </div>`;
+}
+
+async function submitChangePassword() {
+  const old = document.getElementById('cpOld').value;
+  const pw = document.getElementById('cpNew').value;
+  const confirm = document.getElementById('cpConfirm').value;
+  const errEl = document.getElementById('cpError');
+  if (!old || !pw) { errEl.textContent = 'Fill all fields'; errEl.style.display='block'; return; }
+  if (pw.length < 6) { errEl.textContent = 'Password must be at least 6 chars'; errEl.style.display='block'; return; }
+  if (pw !== confirm) { errEl.textContent = 'Passwords do not match'; errEl.style.display='block'; return; }
+  errEl.style.display = 'none';
+  const data = await apiPost('/api/auth/change-password', { oldPassword: old, newPassword: pw });
+  if (data.ok) { alert('Password changed!'); renderDashboard(); }
+  else { errEl.textContent = data.error || 'Failed'; errEl.style.display='block'; }
 }
 
 function showAuthModal() {
@@ -392,27 +480,66 @@ function logout() {
 async function upgradeToPro() {
   if (!authUser) { showAuthModal(); return; }
   if (authUser.tier === 'pro') {
-    // Redirect to billing portal
     const data = await apiGet('/api/stripe/create-portal');
-    if (data.url) window.location.href = data.url;
-    else alert('Manage subscription coming soon.');
+    if (data.url) { window.location.href = data.url; return; }
+    showComingSoon();
     return;
   }
-  const btn = document.getElementById('upgradeBtn');
-  btn.textContent = '⏳ REDIRECTING...';
-  btn.disabled = true;
   try {
     const data = await apiGet('/api/stripe/create-checkout');
-    if (data.url) window.location.href = data.url;
-    else alert(data.error || 'Upgrade not available yet');
-  } catch { alert('Connection error'); }
-  btn.textContent = '⬆ UPGRADE';
-  btn.disabled = false;
+    if (data.url) { window.location.href = data.url; return; }
+  } catch {}
+  showComingSoon();
+}
+
+function showComingSoon() {
+  const container = document.getElementById('dashboard');
+  container.innerHTML = `
+    <div class="card" style="max-width:450px;margin:60px auto;text-align:center;padding:32px">
+      <div style="font-size:48px;margin-bottom:12px">⭐</div>
+      <h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">Pro Subscription — Coming Soon</h2>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:20px">
+        We're setting up payment processing. In the meantime, enjoy the full app for free!
+      </p>
+      <div style="background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.2);border-radius:8px;padding:14px;margin-bottom:16px;text-align:left">
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-bottom:6px">⚡ <strong style="color:var(--accent-amber)">Pro benefits (€9/month)</strong></div>
+        <div style="font-size:11px;color:var(--text-dim);line-height:1.8">
+          ✓ All stocks across all markets<br>
+          ✓ Unlimited tracking &amp; portfolio<br>
+          ✓ Priority scanning (faster)<br>
+          ✓ Email/Telegram alerts<br>
+          ✓ Export to CSV
+        </div>
+      </div>
+      <button class="btn" onclick="renderDashboard()" style="font-size:11px">← BACK</button>
+    </div>`;
+}
+
+// ─── ADMIN ───────────────────────────────────────────────────────────────
+async function showAdminView() {
+  const data = await apiGet('/api/admin/users');
+  if (data.error) { alert(data.error); return; }
+  const container = document.getElementById('dashboard');
+  let html = '<div class="card" style="padding:0;overflow-x:auto">';
+  html += '<div style="padding:10px 14px;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:11px">👑 <strong>ADMIN</strong> — User Management</div>';
+  html += '<div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;gap:20px;font-size:11px;font-family:var(--font-mono)">';
+  html += '👤 Total: <strong>'+data.stats.total+'</strong>';
+  html += ' | 🟢 Free: <strong>'+data.stats.free+'</strong>';
+  html += ' | ⭐ Pro: <strong>'+data.stats.pro+'</strong>';
+  html += ' | 💳 Active subs: <strong>'+data.stats.activeSubscriptions+'</strong>';
+  html += '</div>';
+  html += '<table class="tracked-table"><thead><tr><th>#</th><th>EMAIL</th><th>TIER</th><th>SINCE</th><th>SUB END</th></tr></thead><tbody>';
+  data.users.forEach(u => {
+    html += `<tr><td style="color:var(--text-dim)">${u.id}</td><td>${u.email}</td><td><span class="status-badge ${u.tier === 'pro' ? 'tp' : 'active'}">${u.tier.toUpperCase()}</span></td><td style="color:var(--text-dim)">${u.createdAt.slice(0,10)}</td><td style="color:var(--text-dim)">${u.subscriptionEnd ? u.subscriptionEnd.slice(0,10) : '—'}</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  html += '<div style="margin-top:8px;display:flex;gap:8px"><button class="btn" onclick="renderDashboard()" style="font-size:10px">← BACK</button></div>';
+  container.innerHTML = html;
 }
 
 // ─── API ────────────────────────────────────────────────────────────────
 async function api(path) { const token = getToken(); const r = await fetch(path, { headers: token ? {'Authorization':'Bearer '+token} : {} }); return r.json(); }
-async function apiPost(path, data) { await fetch(path, { method:'POST', body:JSON.stringify(data), headers:{'Content-Type':'application/json'} }); }
+async function apiPost(path, data) { const token = getToken(); const headers = {'Content-Type':'application/json'}; if (token) headers['Authorization'] = 'Bearer ' + token; const r = await fetch(path, { method:'POST', body:JSON.stringify(data), headers }); return r.json(); }
 
 // ─── YAHOO DATA ────────────────────────────────────────────────────────
 async function fetchHistory(ticker) {
@@ -433,8 +560,11 @@ async function fetchNews(ticker) {
 
 async function loadUniverse(market) {
   if (state.universeCache[market]) return state.universeCache[market];
-  const stocks = await api('/api/universe/' + market);
+  const resp = await api('/api/universe/' + market);
+  const stocks = resp.stocks || resp;
   state.universeCache[market] = stocks;
+  state._universeMeta = state._universeMeta || {};
+  state._universeMeta[market] = { total: resp.total || stocks.length, visible: resp.visible || stocks.length, tier: resp.tier || 'Free' };
   return stocks;
 }
 
@@ -494,6 +624,14 @@ function drawChart(canvas, candles, extra) {
   // TP / SL target bands
   if (extra.tp) { ctx.strokeStyle='rgba(76,175,80,0.5)'; ctx.lineWidth=1; ctx.setLineDash([6,4]); ctx.beginPath(); const ty=y(extra.tp); ctx.moveTo(pad.l,ty); ctx.lineTo(W-pad.r,ty); ctx.stroke(); ctx.fillStyle='rgba(76,175,80,0.6)'; ctx.font='8px var(--font-mono)'; ctx.textAlign='right'; ctx.fillText('TP +15% $'+extra.tp.toFixed(2),W-pad.r-2,ty-2); ctx.setLineDash([]); }
   if (extra.sl) { ctx.strokeStyle='rgba(229,57,53,0.5)'; ctx.lineWidth=1; ctx.setLineDash([6,4]); ctx.beginPath(); const sy=y(extra.sl); ctx.moveTo(pad.l,sy); ctx.lineTo(W-pad.r,sy); ctx.stroke(); ctx.fillStyle='rgba(229,57,53,0.6)'; ctx.font='8px var(--font-mono)'; ctx.textAlign='right'; ctx.fillText('SL -7% $'+extra.sl.toFixed(2),W-pad.r-2,sy+10); ctx.setLineDash([]); }
+  // Pattern lines
+  if (extra.patternLines) {
+    extra.patternLines.forEach(function(pl) {
+      ctx.strokeStyle=pl.color||'#ff8c00';ctx.lineWidth=pl.width||1.5;ctx.setLineDash(pl.dash||[6,4]);
+      ctx.beginPath();ctx.moveTo(x(pl.x1||0),y(pl.y1));ctx.lineTo(x(pl.x2||candles.length-1),y(pl.y2));ctx.stroke();ctx.setLineDash([]);
+      if(pl.label){ctx.fillStyle=pl.color||'#ff8c00';ctx.font='bold 9px var(--font-mono)';ctx.textAlign='left';ctx.fillText(pl.label,Math.min(x(pl.x2||candles.length-1)+2,W-50),y(pl.y2)-4);ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(Math.min(x(pl.x2||candles.length-1)+1,W-52),y(pl.y2)-12,ctx.measureText(pl.label).width+6,12);ctx.fillStyle=pl.color||'#ff8c00';ctx.fillText(pl.label,Math.min(x(pl.x2||candles.length-1)+4,W-48),y(pl.y2)-4);}
+    });
+  }
   // Candles
   const bw=Math.max(1.5,(cw/candles.length)*0.6);
   candles.forEach((c,i)=>{const cx=x(i);ctx.fillStyle=c.c>=c.o?'#4caf50':'#e53935';ctx.strokeStyle=ctx.fillStyle;ctx.lineWidth=0.8;ctx.beginPath();ctx.moveTo(cx,y(c.h));ctx.lineTo(cx,y(c.l));ctx.stroke();const t=y(Math.max(c.o,c.c)),b=y(Math.min(c.o,c.c));ctx.fillRect(cx-bw/2,t,bw,Math.max(1,b-t))});
@@ -510,25 +648,32 @@ async function scanMarket(market) {
   const stocks = await loadUniverse(market);
   const results = [];
   let completed = 0;
-  for (const s of stocks) {
-    try {
-      const c = await fetchHistory(s.t);
-      if (c.length > 100) {
-        const a = analyze(s.t, s.n, s.s||'', c);
-        // Fetch news in parallel for buy signals
-        if (a.signal === 'buy' || a.signal === 'neutral') {
-          fetchNews(s.t).then(news => { a.news = news; renderDashboard(); }).catch(()=>{});
-        }
-        results.push(a);
+  // Use recursive setTimeout to yield to UI between each stock
+  return new Promise(resolve => {
+    function next(idx) {
+      if (idx >= stocks.length) {
+        state.analyzed[market] = results;
+        logSignals(results, market);
+        resolve(results);
+        return;
       }
-    } catch(e) { /* skip */ }
-    completed++;
-    document.getElementById('scanStatus').textContent = `SCANNING ${market.toUpperCase()} (${completed}/${stocks.length})`;
-    await new Promise(r => setTimeout(r, 80));
-  }
-  state.analyzed[market] = results;
-  logSignals(results, market);
-  return results;
+      const s = stocks[idx];
+      fetchHistory(s.t).then(c => {
+        if (c.length > 100) {
+          const a = analyze(s.t, s.n, s.s||'', c);
+          if (a.signal === 'buy' || a.signal === 'neutral') {
+            fetchNews(s.t).then(news => { a.news = news; renderDashboard(); }).catch(()=>{});
+          }
+          results.push(a);
+        }
+      }).catch(() => {}).finally(() => {
+        completed++;
+        document.getElementById('scanStatus').textContent = `SCANNING ${market.toUpperCase()} (${completed}/${stocks.length})`;
+        setTimeout(() => next(idx + 1), 80);
+      });
+    }
+    next(0);
+  });
 }
 
 async function scanAll() {
@@ -549,8 +694,8 @@ async function scanAllMarkets() {
   if (!authUser) { showAuthModal(); return; }
   document.getElementById('scanAllBtn').textContent = '⟳ SCANNING ALL...';
   document.getElementById('scanAllBtn').disabled = true;
-  for (const m of ['us','europe','brazil']) {
-    document.getElementById('activeMarketLabel').textContent = m === 'us' ? '🇺🇸 US' : m === 'europe' ? '🇪🇺 Europe' : '🇧🇷 Brazil';
+  for (const m of ['us','europe','emerging']) {
+    document.getElementById('activeMarketLabel').textContent = m === 'us' ? '🇺🇸 US' : m === 'europe' ? '🇪🇺 Europe' : '🌍 Emerging';
     await scanMarket(m);
   }
   document.getElementById('activeMarketLabel').textContent = '🇺🇸 US';
@@ -569,7 +714,7 @@ function switchMarket(market) {
   document.getElementById('universeTabBtn').style.color = '';
   document.querySelectorAll('.market-tabs .btn[data-market]').forEach(b => b.classList.remove('active-market'));
   document.querySelector(`.market-tabs .btn[data-market="${market}"]`).classList.add('active-market');
-  const labels = {us:'🇺🇸 US',europe:'🇪🇺 Europe',brazil:'🇧🇷 Brazil'};
+  const labels = {us:'🇺🇸 US',europe:'🇪🇺 Europe',brazil:'🌍 Emerging'};
   document.getElementById('activeMarketLabel').textContent = labels[market] || market;
   renderDashboard();
   updateStats();
@@ -623,7 +768,7 @@ function renderDashboard() {
         <div style="display:flex;gap:4px;padding:4px 6px">
           <button class="btn chart-period-btn" data-idx="${idx}" data-period="1" onclick="changeChartPeriod(${idx},1)" style="font-size:8px;padding:3px 6px">1D</button>
           <button class="btn chart-period-btn" data-idx="${idx}" data-period="22" onclick="changeChartPeriod(${idx},22)" style="font-size:8px;padding:3px 6px">1M</button>
-          <button class="btn chart-period-btn active" data-idx="${idx}" data-period="55" onclick="changeChartPeriod(${idx},55)" style="font-size:8px;padding:3px 6px">3M</button>
+          <button class="btn chart-period-btn active-period" data-idx="${idx}" data-period="55" onclick="changeChartPeriod(${idx},55)" style="font-size:8px;padding:3px 6px">3M</button>
           <button class="btn chart-period-btn" data-idx="${idx}" data-period="110" onclick="changeChartPeriod(${idx},110)" style="font-size:8px;padding:3px 6px">6M</button>
           <button class="btn chart-period-btn" data-idx="${idx}" data-period="252" onclick="changeChartPeriod(${idx},252)" style="font-size:8px;padding:3px 6px">1Y</button>
           <button class="btn chart-period-btn" data-idx="${idx}" data-period="1260" onclick="changeChartPeriod(${idx},1260)" style="font-size:8px;padding:3px 6px">5Y</button>
@@ -686,6 +831,11 @@ function addPortfolioPosition() {
   const s = parseFloat(document.getElementById('portfolioShares').value);
   const p = parseFloat(document.getElementById('portfolioPrice').value);
   if (!t || !s || !p) { alert('Fill all fields'); return; }
+  // Free tier limit: max 3 portfolio positions
+  if ((!authUser || authUser.tier !== 'pro') && state.portfolio.length >= 3) {
+    alert('Free tier limited to 3 portfolio positions. Upgrade to Pro for unlimited.');
+    return;
+  }
   state.portfolio.push({ ticker:t, shares:s, entry:p, date:new Date().toISOString().slice(0,10) });
   document.getElementById('portfolioTicker').value = '';
   document.getElementById('portfolioShares').value = '';
@@ -698,7 +848,7 @@ function renderPortfolioTable() {
   const el = document.getElementById('portfolioTable');
   if (state.portfolio.length === 0) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">No positions yet.</div>'; return; }
   el.innerHTML = state.portfolio.map((p,i) => {
-    const cur = state.analyzed.us?.find(s => s.ticker === p.ticker) || state.analyzed.europe?.find(s => s.ticker === p.ticker) || state.analyzed.brazil?.find(s => s.ticker === p.ticker);
+    const cur = state.analyzed.us?.find(s => s.ticker === p.ticker) || state.analyzed.europe?.find(s => s.ticker === p.ticker) || state.analyzed.emerging?.find(s => s.ticker === p.ticker);
     const currPrice = cur ? cur.price : p.entry;
     const pnl = ((currPrice - p.entry) / p.entry * 100);
     return `<div class="portfolio-row">
@@ -727,7 +877,7 @@ function updatePortfolioSidebar() {
   if (state.portfolio.length === 0) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">No positions. Add via 📁 Portfolio.</div>'; return; }
   let total = 0;
   el.innerHTML = state.portfolio.map(p => {
-    const cur = state.analyzed.us?.find(s => s.ticker === p.ticker) || state.analyzed.europe?.find(s => s.ticker === p.ticker) || state.analyzed.brazil?.find(s => s.ticker === p.ticker);
+    const cur = state.analyzed.us?.find(s => s.ticker === p.ticker) || state.analyzed.europe?.find(s => s.ticker === p.ticker) || state.analyzed.emerging?.find(s => s.ticker === p.ticker);
     const currPrice = cur ? cur.price : p.entry;
     const pnl = ((currPrice - p.entry) / p.entry * 100);
     total += (currPrice - p.entry) * p.shares;
@@ -781,7 +931,7 @@ async function loadCalendar() {
 function calcCorrelation() {
   const el = document.getElementById('correlationContent');
   // Gather all analyzed stocks with price data
-  const all = [...(state.analyzed.us||[]), ...(state.analyzed.europe||[]), ...(state.analyzed.brazil||[])];
+  const all = [...(state.analyzed.us||[]), ...(state.analyzed.europe||[]), ...(state.analyzed.emerging||[])];
   const withData = all.filter(d => d.candles && d.candles.length > 20);
   if (withData.length < 2) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">Scan at least 2 tickers to show correlation.</div>'; return; }
   // Take top 6 by volume
@@ -896,7 +1046,7 @@ function updateTrackedCount() {
 }
 
 function getCurrentPrice(ticker) {
-  for (const m of ['us','europe','brazil']) {
+  for (const m of ['us','europe','emerging']) {
     const found = (state.analyzed[m] || []).find(s => s.ticker === ticker);
     if (found) return found.price;
   }
@@ -992,7 +1142,7 @@ let universeData = {};
 
 async function loadUniverseData(market) {
   const stocks = await loadUniverse(market);
-  const labels = {us:'🇺🇸 S&P 500 — Tech, Semis, Financials, Healthcare, Consumer', europe:'🇪🇺 STOXX 600 — Germany, France, UK, Netherlands, Italy, Spain', brazil:'🇧🇷 Bovespa — Petrobras, Vale, Banks, Utilities, Commodities'};
+  const labels = {us:'🇺🇸 S&P 500 — Tech, Semis, Financials, Healthcare, Consumer', europe:'🇪🇺 STOXX 600 — Germany, France, UK, Netherlands, Italy, Spain', emerging:'🌍 Emerging Markets — Brazil, Mexico, India, China, South Africa, Chile, Poland'};
   const desc = labels[market] || market;
   return { stocks, desc };
 }
@@ -1017,39 +1167,117 @@ async function renderUniverseView() {
   const { stocks, desc } = await loadUniverseData(market);
   const analyzed = state.analyzed[market] || [];
   universeData[market] = stocks;
+  state._universeFilteredStocks = stocks;
+  
+  // Extract unique sectors and regions
+  const sectors = [...new Set(stocks.map(s => s.s).filter(Boolean))].sort();
+  const regions = [...new Set(stocks.map(s => s.r).filter(Boolean))].sort();
+  
+  const meta = state._universeMeta[market] || { total: stocks.length, visible: stocks.length };
+  const isLimited = meta.visible < meta.total;
   let html = `<div class="card" style="padding:0;overflow-x:auto">
     <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">
-      ${desc} — <strong style="color:var(--accent-amber)">${stocks.length}</strong> stocks
+      ${desc} — <strong style="color:var(--accent-amber)">${stocks.length}</strong> stocks ${isLimited ? `<span style="color:var(--text-dim);font-size:10px;margin-left:8px">(showing ${meta.visible} / ${meta.total})</span>` : ''}
     </div>
-    <table class="tracked-table"><thead><tr>
-      <th>#</th><th>TICKER</th><th>NAME</th><th>SECTOR</th><th>PRICE</th><th>SIGNAL</th>
-    </tr></thead><tbody>`;
-  stocks.forEach((s, i) => {
-    const found = analyzed.find(a => a.ticker === s.t);
-    const price = found ? '$' + found.price.toFixed(2) : '—';
-    const signal = found ? `<span class="card-signal ${found.signal}">${found.signal.toUpperCase()}</span>` : '<span style="color:var(--text-dim);font-size:10px">not scanned</span>';
-    const marketFlag = market === 'us' ? '🇺🇸' : market === 'europe' ? '🇪🇺' : '🇧🇷';
-    html += `<tr>
-      <td style="color:var(--text-dim)">${i+1}</td>
-      <td class="tkr">${marketFlag} ${s.t}</td>
-      <td style="color:var(--text-secondary);font-size:11px">${s.n}</td>
-      <td style="color:var(--text-dim);font-size:10px">${s.s||''}</td>
-      <td>${price}</td>
-      <td>${signal}</td>
-    </tr>`;
-  });
-  const buyCount = analyzed.filter(a => a.signal === 'buy').length;
-  const holdCount = analyzed.filter(a => a.signal === 'neutral').length;
-  const sellCount = analyzed.filter(a => a.signal === 'sell').length;
-  html += '</tbody></table></div>';
-  html += `<div style="margin-top:8px;display:flex;gap:16px;font-family:var(--font-mono);font-size:11px">
-    <span>🟢 Buy: <strong style="color:var(--green-bull)">${buyCount}</strong></span>
-    <span>◈ Hold: <strong style="color:var(--yellow-neutral)">${holdCount}</strong></span>
-    <span>🔴 Sell: <strong style="color:var(--red-bear)">${sellCount}</strong></span>
-    <span>📊 Scanned: <strong>${analyzed.length}</strong> / ${stocks.length}</span>
-    <button class="btn" onclick="showUniverseView();switchMarket(state.market)" style="margin-left:auto;font-size:10px">← BACK TO SCAN</button>
-  </div>`;
+    ${isLimited ? `<div style="padding:8px 14px;border-bottom:1px solid var(--border);background:rgba(200,90,23,0.08);display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:11px;color:var(--text-secondary)">⭐ <strong style="color:var(--accent-amber)">Upgrade to Pro</strong> to see all stocks and unlock full universe</span>
+      <button class="btn primary" onclick="upgradeToPro()" style="font-size:10px;white-space:nowrap">GO PRO</button>
+    </div>` : ''}
+    <div style="padding:8px 10px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <input class="search-input" id="univSearch" placeholder="🔍 Search ticker / name..." style="width:160px;font-size:11px" oninput="filterUniverse()">`;
+  // Sector filter pills
+  if (sectors.length > 0) {
+    html += sectors.map(s => `<button class="btn univ-filter-btn" data-filter="sector-${s}" onclick="toggleUnivFilter('sector','${s}')" style="font-size:8px;padding:2px 8px">${s}</button>`).join('');
+    html += `<button class="btn" onclick="clearUnivFilters()" style="font-size:8px;padding:2px 8px;color:var(--text-dim)">✕ clear</button>`;
+  }
+  // Region filter (emerging markets only)
+  if (market === 'emerging' && regions.length > 0) {
+    html += '<span style="color:var(--text-dim);font-size:9px;margin:0 2px">|</span>';
+    html += regions.map(r => `<button class="btn univ-filter-btn" data-filter="region-${r}" onclick="toggleUnivFilter('region','${r}')" style="font-size:8px;padding:2px 8px">${r}</button>`).join('');
+  }
+  html += `</div>
+    <div style="overflow-x:auto"><table class="tracked-table" id="univTable"><thead><tr>
+      <th>#</th><th>TICKER</th><th>NAME</th><th>SECTOR</th>${market==='emerging'?'<th>REGION</th>':''}<th>PRICE</th><th>SIGNAL</th><th></th>
+    </tr></thead><tbody id="univBody">`;
+  state._univFilter = { sector: null, region: null, search: '' };
+  function renderRows() {
+    let filtered = [...stocks];
+    const f = state._univFilter;
+    if (f.sector) filtered = filtered.filter(s => s.s === f.sector);
+    if (f.region) filtered = filtered.filter(s => s.r === f.region);
+    if (f.search) {
+      const q = f.search.toLowerCase();
+      filtered = filtered.filter(s => s.t.toLowerCase().includes(q) || s.n.toLowerCase().includes(q));
+    }
+    let rows = '';
+    const marketFlag = market === 'us' ? '🇺🇸' : market === 'europe' ? '🇪🇺' : '🌍';
+    filtered.forEach((s, i) => {
+      const found = analyzed.find(a => a.ticker === s.t);
+      const price = found ? '$' + found.price.toFixed(2) : '—';
+      const signal = found ? `<span class="card-signal ${found.signal}">${found.signal.toUpperCase()}</span>` : '<span style="color:var(--text-dim);font-size:10px">not scanned</span>';
+      const tracked = state.trackedPicks.find(p => p.ticker === s.t && p.status === 'active');
+      const trackBtn = tracked ? '<span style="color:var(--green-bull);font-size:10px">📌</span>' : `<button class="btn" onclick="trackFromUniv('${s.t}','${market}',${found?.price||0})" style="font-size:8px;padding:2px 6px">+ TRACK</button>`;
+      rows += `<tr class="univ-row" data-sector="${s.s||''}" data-region="${s.r||''}">
+        <td style="color:var(--text-dim)">${i+1}</td>
+        <td class="tkr">${marketFlag} ${s.t}</td>
+        <td style="color:var(--text-secondary);font-size:11px">${s.n}</td>
+        <td style="color:var(--text-dim);font-size:10px">${s.s||''}</td>`;
+      if (market==='emerging') rows += `<td style="color:var(--text-dim);font-size:10px">${s.r||''}</td>`;
+      rows += `<td>${price}</td>
+        <td>${signal}</td>
+        <td>${trackBtn}</td>
+      </tr>`;
+    });
+    document.getElementById('univBody').innerHTML = rows;
+    // Update counts
+    const buyC = analyzed.filter(a => a.signal === 'buy').length;
+    const holdC = analyzed.filter(a => a.signal === 'neutral').length;
+    const sellC = analyzed.filter(a => a.signal === 'sell').length;
+    const summaryEl = document.getElementById('univSummary');
+    if (summaryEl) summaryEl.innerHTML = `🟢 Buy: <strong style="color:var(--green-bull)">${buyC}</strong> ◈ Hold: <strong style="color:var(--yellow-neutral)">${holdC}</strong> 🔴 Sell: <strong style="color:var(--red-bear)">${sellC}</strong> 📊 Scanned: <strong>${analyzed.length}</strong> / ${stocks.length} | Showing: <strong>${filtered.length}</strong>`;
+  }
+  window._univRenderRows = renderRows;
+  html += '</tbody></table></div></div>';
+  html += `<div id="univSummary" style="margin-top:8px;display:flex;gap:12px;font-family:var(--font-mono);font-size:11px">`;
+  html += `<button class="btn" onclick="showUniverseView();switchMarket(state.market)" style="font-size:10px">← BACK TO SCAN</button></div>`;
   container.innerHTML = html;
+  // Initial render
+  renderRows();
+}
+
+function filterUniverse() {
+  state._univFilter.search = document.getElementById('univSearch').value;
+  if (window._univRenderRows) window._univRenderRows();
+}
+
+function toggleUnivFilter(type, val) {
+  const key = type === 'sector' ? 'sector' : 'region';
+  if (state._univFilter[key] === val) state._univFilter[key] = null;
+  else state._univFilter[key] = val;
+  // Update button styling
+  document.querySelectorAll('.univ-filter-btn').forEach(b => {
+    const f = b.dataset.filter;
+    const [ftype, fval] = [f.split('-')[0], f.split('-').slice(1).join('-')];
+    if (state._univFilter[ftype] === fval) b.style.borderColor = 'var(--accent-amber)';
+    else b.style.borderColor = '';
+  });
+  if (window._univRenderRows) window._univRenderRows();
+}
+
+function clearUnivFilters() {
+  state._univFilter = { sector: null, region: null, search: '' };
+  document.getElementById('univSearch').value = '';
+  document.querySelectorAll('.univ-filter-btn').forEach(b => b.style.borderColor = '');
+  if (window._univRenderRows) window._univRenderRows();
+}
+
+function trackFromUniv(ticker, market, price) {
+  if (!authUser) { showAuthModal(); return; }
+  if (!price || price === 0) { alert('Scan this market first to get prices.'); return; }
+  const tp = parseFloat((price * 1.15).toFixed(2));
+  const sl = parseFloat((price * 0.93).toFixed(2));
+  trackPick(ticker, market, price, tp, sl);
+  if (window._univRenderRows) window._univRenderRows();
 }
 
 // ─── CHART PERIOD ──────────────────────────────────────────────────────
@@ -1080,7 +1308,548 @@ function changeChartPeriod(idx, period) {
   drawChart(canvas, chartCandles, { sma9, sma20, sma50, sma200, bbU:bb.upper.slice(-count), bbL:bb.lower.slice(-count), tp: d.tp, sl: d.sl });
 }
 
-// ─── THEME ──────────────────────────────────────────────────────────────
+// ─── PATTERNS ────────────────────────────────────────────────────────────
+const _S='stroke-width:2;fill:none;stroke-linecap:round', _T='stroke-dasharray:5,4;stroke-width:1.2;fill:none', _G='stroke:#4caf50', _R='stroke:#e53935', _A='stroke:#e8a846';
+const PATTERNS = [
+  {name:'Ascending Triangle',dir:'bull',
+   svg:`<path d="M10,50 L30,44 L45,46 L60,38 L75,40 L90,32 L105,34 L120,26 L135,28 L150,20 L170,16 L190,14" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Higher lows converging on flat resistance. Breakout above confirms uptrend.',play:'Buy on breakout above resistance with volume.'},
+  {name:'Descending Triangle',dir:'bear',
+   svg:`<path d="M10,12 L25,18 L40,14 L55,22 L70,18 L85,26 L100,22 L115,30 L130,28 L145,36 L160,40 L190,48" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Lower highs converging on flat support. Breakdown below confirms downtrend.',play:'Short on breakdown below support.'},
+  {name:'Symmetrical Triangle',dir:'neutral',
+   svg:`<path d="M10,36 L25,32 L40,38 L55,28 L70,34 L85,26 L100,30 L115,26 L130,28 L150,30 L170,32 L190,34" stroke="#e8a846" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Converging trendlines — direction unknown until breakout.',play:'Wait for breakout with volume confirmation.'},
+  {name:'Rising Channel',dir:'bull',
+   svg:`<path d="M10,50 L30,44 L45,46 L60,38 L75,40 L90,32 L105,34 L120,26 L135,28 L150,20 L170,16 L190,14" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Price bouncing between two parallel rising lines. Trend is up.',play:'Buy dips near support line.'},
+  {name:'Falling Channel',dir:'bear',
+   svg:`<path d="M10,12 L25,18 L40,14 L55,22 L70,18 L85,26 L100,22 L115,30 L130,28 L150,36 L170,42 L190,46" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Price bouncing between parallel falling lines. Trend is down.',play:'Sell rallies near resistance line.'},
+  {name:'Head and Shoulders',dir:'bear',
+   svg:`<path d="M10,30 L25,16 L40,26 L55,40 L75,6 L90,20 L105,38 L120,14 L135,24 L150,40 L170,48 L190,52" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Three peaks: left shoulder, higher head, right shoulder. Break of neckline = downtrend.',play:'Short on neckline break.'},
+  {name:'Inverse H&S',dir:'bull',
+   svg:`<path d="M10,36 L25,50 L40,40 L55,24 L75,56 L90,38 L105,24 L120,50 L135,36 L150,22 L170,14 L190,10" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Three troughs: left, deeper head, right. Break of neckline = uptrend.',play:'Buy on neckline break.'},
+  {name:'Double Top',dir:'bear',
+   svg:`<path d="M10,34 L25,4 L40,22 L55,40 L75,4 L90,22 L105,38 L125,46 L145,52 L165,56 L190,58" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Price hits same high twice, fails to break through. Reversal down.',play:'Short below valley low.'},
+  {name:'Double Bottom',dir:'bull',
+   svg:`<path d="M10,30 L25,56 L40,36 L55,18 L75,56 L90,34 L105,16 L125,10 L145,8 L165,6 L190,4" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Price hits same low twice, fails to break through. Reversal up.',play:'Buy above peak high.'},
+  {name:'Triple Top',dir:'bear',
+   svg:`<path d="M8,30 L20,4 L32,28 L44,42 L56,4 L68,26 L80,42 L92,4 L104,28 L116,40 L130,46 L150,52 L170,56 L190,58" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Three attempts at same resistance. Stronger reversal than Double Top.',play:'Short below lowest valley.'},
+  {name:'Triple Bottom',dir:'bull',
+   svg:`<path d="M8,34 L20,56 L32,30 L44,18 L56,56 L68,28 L80,14 L92,56 L104,26 L116,12 L130,8 L150,6 L170,4 L190,4" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Three touches of same support. Stronger reversal than Double Bottom.',play:'Buy above highest peak.'},
+  {name:'Bull Flag',dir:'bull',
+   svg:`<path d="M10,52 L25,48 L40,44 L55,40 L70,8 L85,12 L100,8 L115,12 L130,8 L145,12 L160,8 L175,6 L190,4" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Sharp rally (flagpole) then consolidation. Continuation up.',play:'Buy on flag breakout above consolidation.'},
+  {name:'Bear Flag',dir:'bear',
+   svg:`<path d="M10,12 L25,16 L40,12 L55,18 L70,50 L85,46 L100,50 L115,46 L130,48 L145,44 L160,46 L175,50 L190,52" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Sharp drop (flagpole) then consolidation. Continuation down.',play:'Short on flag breakdown below consolidation.'},
+  {name:'Cup and Handle',dir:'bull',
+   svg:`<path d="M10,10 C30,14 50,18 65,40 C80,56 110,56 125,40 C140,18 155,14 170,12 L175,18 L180,14 L190,8" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'U-shaped rounding bottom + handle consolidation. Continuation up.',play:'Buy on handle breakout above cup rim.'},
+  {name:'Inverted Cup and Handle',dir:'bear',
+   svg:`<path d="M10,52 C30,48 50,42 65,22 C80,6 110,6 125,22 C140,42 155,48 170,50 L175,46 L180,48 L190,52" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Inverted U top + downward handle. Bearish continuation.',play:'Short on handle breakdown.'},
+  {name:'Rising Wedge',dir:'bear',
+   svg:`<path d="M10,48 L25,42 L40,44 L55,36 L70,40 L85,32 L100,36 L115,30 L130,34 L150,30 L170,36 L190,40" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Both trendlines slope up but converging. Bearish reversal.',play:'Short on breakdown below support.'},
+  {name:'Falling Wedge',dir:'bull',
+   svg:`<path d="M10,16 L25,22 L40,18 L55,26 L70,22 L85,30 L100,26 L115,32 L130,28 L150,26 L170,22 L190,18" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Both trendlines slope down but converging. Bullish reversal.',play:'Buy on breakout above resistance.'},
+  {name:'Rounding Bottom',dir:'bull',
+   svg:`<path d="M10,8 C30,40 50,52 70,56 C90,56 110,52 130,42 C150,28 170,16 190,8" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Gradual U-shaped bottom. Slow transition to uptrend. High reliability.',play:'Buy above rounding top on uptrend confirmation.'},
+  {name:'Rounding Top',dir:'bear',
+   svg:`<path d="M10,52 C30,20 50,8 70,4 C90,4 110,8 130,18 C150,32 170,44 190,52" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Gradual inverted U-shaped top. Slow transition to downtrend.',play:'Short below rounding bottom on downtrend confirmation.'},
+  {name:'Pennant',dir:'neutral',
+   svg:`<path d="M10,50 L25,46 L40,42 L55,38 L70,10 L82,14 L90,10 L98,14 L105,10 L112,14 L120,12 L135,8 L150,6 L170,4 L190,4" stroke="#e8a846" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+   desc:'Small triangle after sharp move. Brief consolidation before trend continues.',play:'Trade in prior move direction on breakout.'},
+];
+
+
+let _eduTopic = 'rsi';
+
+// ─── SIMULATE ─────────────────────────────────────────────────────────────
+let _simPattern = 'Random Walk';
+const PAT_NAMES = ['Random Walk','Ascending Triangle','Descending Triangle','Symmetrical Triangle','Rising Channel','Falling Channel','Head and Shoulders','Inverse Head and Shoulders','Double Top','Double Bottom','Bull Flag','Bear Flag','Cup and Handle','Rounding Bottom','Rounding Top'];
+
+function candle(o_, c_, h_, l_, v_) {
+  return { o:o_, c:c_, h:Math.max(h_,c_,o_)+0.01, l:Math.max(0.01,Math.min(l_,c_,o_)-0.01), v:v_||Math.floor(1e6+Math.random()*1e7), d:new Date() };
+}
+
+function genAscTri(n) {
+  const base = 100 + Math.random()*30, res = base + 15 + Math.random()*10;
+  const c = []; let price = base + 3;
+  for(let i=0;i<n;i++){
+    const prog = i/n, support = base + prog*12, rng = res - support;
+    const pos = Math.random(), bounce = pos < 0.45 ? -1 : pos < 0.9 ? 1 : 1.5;
+    price = support + rng * (0.2 + Math.random()*0.5) * bounce;
+    if(i>n*0.85) price = res + 1 + Math.random()*3;
+    const body = Math.random()*rng*0.3, wick = body*(0.2+Math.random()*0.3);
+    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
+  }
+  return c;
+}
+function genDescTri(n) {
+  const base = 100 + Math.random()*30, sup = base + 5;
+  const c = []; let price = base + 15;
+  for(let i=0;i<n;i++){
+    const prog = i/n, res = base + 15 - prog*12, rng = res - sup;
+    const pos = Math.random(), bounce = pos < 0.45 ? 1 : pos < 0.9 ? -1 : -1.5;
+    price = sup + rng * (0.2 + Math.random()*0.5) * bounce;
+    if(i>n*0.85) price = sup - 1 - Math.random()*3;
+    const body = Math.random()*rng*0.3, wick = body*(0.2+Math.random()*0.3);
+    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
+  }
+  return c;
+}
+function genSymTri(n) {
+  const mid = 110 + Math.random()*20;
+  const c = []; let price = mid + 10;
+  for(let i=0;i<n;i++){
+    const prog = i/n, range = 12 - prog*10;
+    price = mid + (Math.random()-0.5)*range*2;
+    const body = Math.random()*range*0.3, wick = body*(0.2+Math.random()*0.3);
+    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
+    if(i>n*0.85) price = mid + (Math.random()-0.5)*5;
+  }
+  return c;
+}
+function genRisingChan(n) {
+  const c = []; let price = 90+Math.random()*10;
+  for(let i=0;i<n;i++){
+    const prog = i/n, base = 90+prog*25, top = base+12;
+    price = base + Math.random()*12;
+    const body = 0.5+Math.random()*3, wick = body*(0.2+Math.random()*0.2);
+    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
+  }
+  return c;
+}
+function genFallingChan(n) {
+  const c = []; let price = 130+Math.random()*10;
+  for(let i=0;i<n;i++){
+    const prog = i/n, top = 130-prog*25, base = top-12;
+    price = base + Math.random()*12;
+    const body = 0.5+Math.random()*3, wick = body*(0.2+Math.random()*0.2);
+    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
+  }
+  return c;
+}
+function genHnS(n) {
+  const c=[], base=100, peak=130, neck=110;
+  let t1=Math.floor(n*0.25), t2=Math.floor(n*0.45), t3=Math.floor(n*0.65), t4=Math.floor(n*0.85);
+  for(let i=0;i<n;i++){
+    let p = base;
+    if(i<t1) p = base + (peak-base)*Math.sin(i*Math.PI/t1);
+    else if(i<t2) p = neck + (peak-neck)*Math.sin((i-t1)*Math.PI/(t2-t1));
+    else if(i<t3) p = neck + (peak-5-neck)*Math.sin((i-t2)*Math.PI/(t3-t2));
+    else if(i<t4) p = neck + (peak-5-neck)*0.5*(1-Math.sin((i-t3)*Math.PI/(t4-t3)));
+    else p = base - (i-t4)*0.3;
+    const body = 0.5+Math.random()*2.5, wick = body*(0.3+Math.random()*0.3);
+    c.push(candle(p-body/2, p+body/2, p+body/2+wick, p-body/2-wick));
+  }
+  return c;
+}
+function genInvHnS(n) {
+  const c=[], base=130, valley=100, neck=120;
+  let t1=Math.floor(n*0.25), t2=Math.floor(n*0.45), t3=Math.floor(n*0.65), t4=Math.floor(n*0.85);
+  for(let i=0;i<n;i++){
+    let p = base;
+    if(i<t1) p = base - (base-valley)*Math.sin(i*Math.PI/t1);
+    else if(i<t2) p = neck - (neck-valley)*Math.sin((i-t1)*Math.PI/(t2-t1));
+    else if(i<t3) p = neck - (neck-valley+5)*Math.sin((i-t2)*Math.PI/(t3-t2));
+    else if(i<t4) p = neck + (i-t4)*0.5;
+    else p = base + (i-t4)*0.5;
+    const body = 0.5+Math.random()*2.5, wick = body*(0.3+Math.random()*0.3);
+    c.push(candle(p-body/2, p+body/2, p+body/2+wick, p-body/2-wick));
+  }
+  return c;
+}
+function genDoubleTop(n) {
+  const base=100, peak=125, bottom=105;
+  let t1=Math.floor(n*0.25), t2=Math.floor(n*0.5), t3=Math.floor(n*0.75);
+  const c=[];
+  for(let i=0;i<n;i++){
+    let p;
+    if(i<t1) p = base + (peak-base)*Math.sin(i*Math.PI/(2*t1));
+    else if(i<t2) p = bottom + (peak-bottom)*Math.sin((i-t1)*Math.PI/(t2-t1));
+    else if(i<t3) p = base - 5 + (peak-bottom)*0.5*(1+Math.cos((i-t2)*Math.PI/(t3-t2)));
+    else p = base - 10 - (i-t3)*0.2;
+    const body=0.5+Math.random()*2, wick=body*(0.3+Math.random()*0.3);
+    c.push(candle(p-body/2, p+body/2, p+body/2+wick, p-body/2-wick));
+  }
+  return c;
+}
+function genDoubleBottom(n) {
+  const base=130, valley=100, mid=115;
+  let t1=Math.floor(n*0.25), t2=Math.floor(n*0.5), t3=Math.floor(n*0.75);
+  const c=[];
+  for(let i=0;i<n;i++){
+    let p;
+    if(i<t1) p = base - (base-valley)*Math.sin(i*Math.PI/(2*t1));
+    else if(i<t2) p = mid - (mid-valley)*Math.sin((i-t1)*Math.PI/(t2-t1));
+    else if(i<t3) p = base + (base-valley)*0.5*(1+Math.cos((i-t2)*Math.PI/(t3-t2)));
+    else p = base + 10 + (i-t3)*0.2;
+    const body=0.5+Math.random()*2, wick=body*(0.3+Math.random()*0.3);
+    c.push(candle(p-body/2, p+body/2, p+body/2+wick, p-body/2-wick));
+  }
+  return c;
+}
+function genBullFlag(n) {
+  const c=[]; let price=100+Math.random()*10;
+  const poleEnd=Math.floor(n*0.3);
+  for(let i=0;i<n;i++){
+    if(i<poleEnd) price+=2+Math.random()*1.5;
+    else { const drift=(Math.random()-0.5)*0.8; price+=drift; }
+    const body=0.3+Math.random()*2, wick=body*(0.2+Math.random()*0.3);
+    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
+    if(i===poleEnd-1){const b=price; for(let j=i+1;j<n;j++)price=b+5+(Math.random()-0.5)*3;}
+  }
+  return c;
+}
+function genBearFlag(n) {
+  const c=[]; let price=150+Math.random()*10;
+  const poleEnd=Math.floor(n*0.3);
+  for(let i=0;i<n;i++){
+    if(i<poleEnd) price-=2+Math.random()*1.5;
+    else { const drift=(Math.random()-0.5)*0.8; price+=drift; }
+    const body=0.3+Math.random()*2, wick=body*(0.2+Math.random()*0.3);
+    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
+    if(i===poleEnd-1){const b=price; for(let j=i+1;j<n;j++)price=b-5+(Math.random()-0.5)*3;}
+  }
+  return c;
+}
+function genCupHandle(n) {
+  const c=[]; let price=120+Math.random()*10;
+  const mid=Math.floor(n*0.6);
+  for(let i=0;i<n;i++){
+    const prog=i/n;
+    const curve=prog<0.6 ? Math.sin(prog/0.6*Math.PI) : 1-(prog-0.6)/0.4*0.3;
+    price=120 - 20*Math.sin(prog*Math.PI) + (Math.random()-0.5)*2;
+    if(prog>0.6) price=105-10*(prog-0.6)+Math.random()*2;
+    if(prog>0.9) price=102+3*Math.sin((prog-0.9)*10)+Math.random();
+    const body=0.3+Math.random()*2, wick=body*(0.2+Math.random()*0.3);
+    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
+  }
+  return c;
+}
+function genRoundingBottom(n) {
+  const c=[]; let price=110+Math.random()*10;
+  for(let i=0;i<n;i++){
+    const prog=i/n;
+    price=105 - 25*Math.sin(prog*Math.PI/2) + 5*(1-Math.cos(prog*Math.PI)) + (Math.random()-0.5)*2;
+    if(prog>0.7) price+=8*(prog-0.7);
+    const body=0.3+Math.random()*2, wick=body*(0.2+Math.random()*0.3);
+    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
+  }
+  return c;
+}
+function genRoundingTop(n) {
+  const c=[]; let price=130+Math.random()*10;
+  for(let i=0;i<n;i++){
+    const prog=i/n;
+    price=130 + 25*Math.sin(prog*Math.PI/2) - 8*(1-Math.cos(prog*Math.PI)) + (Math.random()-0.5)*2;
+    if(prog>0.7) price-=10*(prog-0.7);
+    const body=0.3+Math.random()*2, wick=body*(0.2+Math.random()*0.3);
+    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
+  }
+  return c;
+}
+function genRandom(n) {
+  const c=[]; let price=100+Math.random()*50, trend=0;
+  for(let i=0;i<n;i++){
+    trend+=(Math.random()-0.48)*0.15; trend=Math.max(-0.5,Math.min(0.5,trend));
+    const change=(Math.random()-0.5+trend)*3; price+=change;
+    const body=0.3+Math.random()*2, wick=body*(0.2+Math.random()*0.3);
+    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
+  }
+  return c;
+}
+
+function generateSimData(count) {
+  switch(_simPattern) {
+    case 'Ascending Triangle': return genAscTri(count);
+    case 'Descending Triangle': return genDescTri(count);
+    case 'Symmetrical Triangle': return genSymTri(count);
+    case 'Rising Channel': return genRisingChan(count);
+    case 'Falling Channel': return genFallingChan(count);
+    case 'Head and Shoulders': return genHnS(count);
+    case 'Inverse Head and Shoulders': return genInvHnS(count);
+    case 'Double Top': return genDoubleTop(count);
+    case 'Double Bottom': return genDoubleBottom(count);
+    case 'Bull Flag': return genBullFlag(count);
+    case 'Bear Flag': return genBearFlag(count);
+    case 'Cup and Handle': return genCupHandle(count);
+    case 'Rounding Bottom': return genRoundingBottom(count);
+    case 'Rounding Top': return genRoundingTop(count);
+    default: return genRandom(count);
+  }
+}
+
+function showSimulateView() {
+  state.showTracked = false; state.showUniverse = false;
+  if (!authUser || authUser.tier !== 'pro') {
+    document.getElementById('dashboard').innerHTML = '<div class="card" style="max-width:400px;margin:60px auto;text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:12px">🎲</div><h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">Pro Feature</h2><p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">Sign in with a Pro account.<br><button class="btn primary" onclick="showAuthModal()" style="font-size:12px;margin-top:8px">🔑 SIGN IN</button></p></div>';
+    return;
+  }
+  renderSim();
+}
+
+function renderSim() {
+  const container = document.getElementById('dashboard');
+  const candles = generateSimData(260);
+  _simCandles = candles;
+  const price = candles[candles.length-1].c;
+  const s9 = calcSMA(candles,9), s20 = calcSMA(candles,20), s50 = calcSMA(candles,50), s200 = calcSMA(candles,200);
+  const sma9=s9[s9.length-1]||price, sma20=s20[s20.length-1]||price, sma50=s50[s50.length-1]||price, sma200=s200[s200.length-1]||price;
+  const rsiA=calcRSI(candles,14), rsi=parseFloat(rsiA[rsiA.length-1]?.toFixed(1))||50;
+  const macdA=calcMACD(candles), macd=parseFloat(macdA[macdA.length-1]?.toFixed(2))||0;
+  const adxA=calcADX(candles,14), adx=parseFloat(adxA[adxA.length-1]?.toFixed(1))||20;
+  const bb=calcBB(candles,14,2), bbM=bb.mid[bb.mid.length-1]||price;
+  const pA9=price>sma9, pA20=price>sma20, pA50=price>sma50, pA200=price>sma200;
+  const masAbove=[pA9,pA20,pA50,pA200].filter(Boolean).length;
+  const maAlign=masAbove>=3?'BULL ALIGNED':masAbove===0?'BEAR ALIGNED':'PARTIAL';
+  const rsiD=rsi>55?'bull':rsi<40?'bear':'neutral', macdD=macd>0?'bull':'bear', adxD=adx>25?'bull':'neutral';
+  
+  // Compute pattern lines for visualization
+  const candlesLen = candles.length;
+  const patName = _simPattern === 'Random Walk' ? '—' : _simPattern;
+  let patternLines = [];
+  if (_simPattern === 'Ascending Triangle') {
+    const res = Math.max.apply(null, candles.map(c=>c.h)) - 2;
+    const sup1 = candles[0].l;
+    const sup2 = candles[candlesLen-1].l;
+    patternLines = [{x1:0,y1:res,x2:candlesLen-1,y2:res,color:'#ff8c00',dash:[4,3],width:1.5,label:'RES'},{x1:0,y1:sup1,x2:candlesLen-1,y2:sup2,color:'#4caf50',dash:[4,3],width:1.5,label:'SUP'}];
+  } else if (_simPattern === 'Descending Triangle') {
+    const sup = Math.min.apply(null, candles.map(c=>c.l)) + 2;
+    const res1 = candles[0].h;
+    const res2 = candles[candlesLen-1].h;
+    patternLines = [{x1:0,y1:sup,x2:candlesLen-1,y2:sup,color:'#4caf50',dash:[4,3],width:1.5,label:'SUP'},{x1:0,y1:res1,x2:candlesLen-1,y2:res2,color:'#e53935',dash:[4,3],width:1.5,label:'RES'}];
+  } else if (_simPattern === 'Symmetrical Triangle') {
+    patternLines = [{x1:0,y1:candles[0].h,x2:candlesLen-1,y2:candles[candlesLen-1].h,color:'#ff8c00',dash:[4,3],width:1.2,label:'RES'},{x1:0,y1:candles[0].l,x2:candlesLen-1,y2:candles[candlesLen-1].l,color:'#4caf50',dash:[4,3],width:1.2,label:'SUP'}];
+  } else if (_simPattern === 'Rising Channel') {
+    patternLines = [{x1:0,y1:candles[0].h,x2:candlesLen-1,y2:candles[candlesLen-1].h,color:'#ff8c00',dash:[4,3],width:1.2},{x1:0,y1:candles[0].l,x2:candlesLen-1,y2:candles[candlesLen-1].l,color:'#4caf50',dash:[4,3],width:1.2}];
+  } else if (_simPattern === 'Falling Channel') {
+    patternLines = [{x1:0,y1:candles[0].h,x2:candlesLen-1,y2:candles[candlesLen-1].h,color:'#ff8c00',dash:[4,3],width:1.2},{x1:0,y1:candles[0].l,x2:candlesLen-1,y2:candles[candlesLen-1].l,color:'#4caf50',dash:[4,3],width:1.2}];
+  } else if (_simPattern === 'Head and Shoulders') {
+    const neck = (candles[Math.floor(candlesLen*0.25)].l + candles[Math.floor(candlesLen*0.65)].l) / 2;
+    patternLines = [{x1:Math.floor(candlesLen*0.2),y1:neck,x2:Math.floor(candlesLen*0.7),y2:neck,color:'#e8a846',dash:[5,3],width:1.5,label:'NECK'}];
+  } else if (_simPattern === 'Inverse Head and Shoulders') {
+    const neck = (candles[Math.floor(candlesLen*0.25)].h + candles[Math.floor(candlesLen*0.65)].h) / 2;
+    patternLines = [{x1:Math.floor(candlesLen*0.2),y1:neck,x2:Math.floor(candlesLen*0.7),y2:neck,color:'#e8a846',dash:[5,3],width:1.5,label:'NECK'}];
+  } else if (_simPattern === 'Double Top') {
+    const peak = (candles[Math.floor(candlesLen*0.2)].h + candles[Math.floor(candlesLen*0.5)].h) / 2;
+    patternLines = [{x1:Math.floor(candlesLen*0.15),y1:peak,x2:Math.floor(candlesLen*0.55),y2:peak,color:'#ff8c00',dash:[4,3],width:1.3,label:'RES'}];
+  } else if (_simPattern === 'Double Bottom') {
+    const valley = (candles[Math.floor(candlesLen*0.2)].l + candles[Math.floor(candlesLen*0.5)].l) / 2;
+    patternLines = [{x1:Math.floor(candlesLen*0.15),y1:valley,x2:Math.floor(candlesLen*0.55),y2:valley,color:'#4caf50',dash:[4,3],width:1.3,label:'SUP'}];
+  } else if (_simPattern === 'Bull Flag') {
+    const poleTop = Math.max.apply(null, candles.slice(0,Math.floor(candlesLen*0.35)).map(c=>c.h));
+    const flagHi = Math.max.apply(null, candles.slice(Math.floor(candlesLen*0.35)).map(c=>c.h));
+    const flagLo = Math.min.apply(null, candles.slice(Math.floor(candlesLen*0.35)).map(c=>c.l));
+    const mid = Math.floor(candlesLen*0.35);
+    patternLines = [{x1:mid,y1:flagHi,x2:candlesLen-1,y2:flagHi,color:'#4caf50',dash:[3,3],width:1,label:'FLAG RES'},{x1:mid,y1:flagLo,x2:candlesLen-1,y2:flagLo,color:'#e53935',dash:[3,3],width:1,label:'FLAG SUP'}];
+  } else if (_simPattern === 'Bear Flag') {
+    const poleBot = Math.min.apply(null, candles.slice(0,Math.floor(candlesLen*0.35)).map(c=>c.l));
+    const mid = Math.floor(candlesLen*0.35);
+    const flagHi = Math.max.apply(null, candles.slice(mid).map(c=>c.h));
+    const flagLo = Math.min.apply(null, candles.slice(mid).map(c=>c.l));
+    patternLines = [{x1:mid,y1:flagHi,x2:candlesLen-1,y2:flagHi,color:'#e53935',dash:[3,3],width:1,label:'FLAG RES'},{x1:mid,y1:flagLo,x2:candlesLen-1,y2:flagLo,color:'#4caf50',dash:[3,3],width:1,label:'FLAG SUP'}];
+  } else if (_simPattern === 'Cup and Handle') {
+    const rim = (candles[0].h + candles[candlesLen-1].h) / 2;
+    patternLines = [{x1:0,y1:rim,x2:Math.floor(candlesLen*0.85),y2:rim,color:'#4caf50',dash:[4,3],width:1.2,label:'RIM'}];
+  }
+  
+  let html = '<div class="card" style="padding:0;overflow:hidden">';
+  html += `<div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div><span style="font-family:var(--font-mono);font-size:14px;color:var(--accent-amber);font-weight:700">🎲 SIMULATOR</span> <span style="font-size:10px;color:var(--text-dim);font-family:var(--font-mono)">${patName}</span></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="simPatternSelect" onchange="_simPattern=this.value;renderSim()" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:6px 8px;border-radius:4px;font-family:var(--font-mono);font-size:10px">
+        ${PAT_NAMES.map(p => `<option value="${p}" ${p===_simPattern?'selected':''}>${p}</option>`).join('')}
+      </select>
+      <button class="btn primary" onclick="renderSim()" style="font-size:11px">🎲 GENERATE</button>
+      <button class="btn" onclick="renderDashboard()" style="font-size:10px">← BACK</button>
+    </div>
+  </div>`;
+  html += `<div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;font-family:var(--font-mono);font-size:11px">
+    <span><span style="color:var(--text-dim)">Price:</span> <strong style="color:var(--text-primary)">$${price.toFixed(2)}</strong></span>
+    <span><span style="color:var(--text-dim)">RSI:</span> <strong style="color:${rsiD==='bull'?'var(--green-bull)':rsiD==='bear'?'var(--red-bear)':'var(--yellow-neutral)'}">${rsi}</strong></span>
+    <span><span style="color:var(--text-dim)">MACD:</span> <strong style="color:${macdD==='bull'?'var(--green-bull)':'var(--red-bear)'}">${macd.toFixed(2)}</strong></span>
+    <span><span style="color:var(--text-dim)">ADX:</span> <strong style="color:${adxD==='bull'?'var(--green-bull)':'var(--yellow-neutral)'}">${adx.toFixed(1)}</strong></span>
+    <span><span style="color:var(--text-dim)">MA:</span> <strong style="color:${masAbove>=3?'var(--green-bull)':masAbove===0?'var(--red-bear)':'var(--yellow-neutral)'}">${maAlign}</strong></span>
+    <span><span style="color:var(--text-dim)">SMA9:</span> <strong style="color:${pA9?'var(--green-bull)':'var(--red-bear)'}">$${sma9.toFixed(2)}</strong></span>
+    <span><span style="color:var(--text-dim)">SMA20:</span> <strong style="color:${pA20?'var(--green-bull)':'var(--red-bear)'}">$${sma20.toFixed(2)}</strong></span>
+    <span><span style="color:var(--text-dim)">SMA50:</span> <strong style="color:${pA50?'var(--green-bull)':'var(--red-bear)'}">$${sma50.toFixed(2)}</strong></span>
+    <span><span style="color:var(--text-dim)">SMA200:</span> <strong style="color:${pA200?'var(--green-bull)':'var(--red-bear)'}">$${sma200.toFixed(2)}</strong></span>
+  </div>`;
+  html += '<div class="chart-container" style="margin:0"><canvas id="simChart" style="height:400px"></canvas></div>';
+  html += `<div style="padding:10px 14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;font-size:10px;color:var(--text-dim);font-family:var(--font-mono)">
+    <span>${candles.length} days &bull; Pattern: ${patName}</span>
+  </div></div>`;
+  container.innerHTML = html;
+  
+  requestAnimationFrame(() => {
+    const cv = document.getElementById('simChart');
+    if (cv) {
+      const chartCandles = candles.slice(-55);
+      const bbFull = calcBB(candles,14,2);
+      drawChart(cv, chartCandles, {
+        sma9: candles.length>9 ? calcSMA(candles,9).slice(-55) : [],
+        sma20: candles.length>20 ? calcSMA(candles,20).slice(-55) : [],
+        sma50: candles.length>50 ? calcSMA(candles,50).slice(-55) : [],
+        sma200: candles.length>200 ? calcSMA(candles,200).slice(-55) : [],
+        bbU: bbFull.upper.slice(-55), bbL: bbFull.lower.slice(-55),
+        patternLines: patternLines,
+      });
+      const parent = cv.parentElement;
+      const btnBar = document.createElement('div');
+      btnBar.style.cssText = 'display:flex;gap:4px;padding:4px 6px';
+      btnBar.innerHTML = '<button class="btn chart-period-btn" onclick="changeSimPeriod(1)" style="font-size:8px;padding:3px 6px">1D</button><button class="btn chart-period-btn" onclick="changeSimPeriod(22)" style="font-size:8px;padding:3px 6px">1M</button><button class="btn chart-period-btn active-period" onclick="changeSimPeriod(55)" style="font-size:8px;padding:3px 6px">3M</button><button class="btn chart-period-btn" onclick="changeSimPeriod(110)" style="font-size:8px;padding:3px 6px">6M</button><button class="btn chart-period-btn" onclick="changeSimPeriod(260)" style="font-size:8px;padding:3px 6px">ALL</button>';
+      parent.insertBefore(btnBar, parent.firstChild);
+    }
+  });
+}
+
+let _simCandles = [];
+function changeSimPeriod(period) {
+  const cv = document.getElementById('simChart');
+  if (!cv) return;
+  const candles = _simCandles.length > 0 ? _simCandles : generateSimData(260);
+  const count = Math.min(period, candles.length);
+  const chartCandles = candles.slice(-count);
+  const bbFull = calcBB(candles,14,2);
+  const parent = cv.parentElement;
+  parent.querySelectorAll('.chart-period-btn').forEach(b => b.classList.remove('active-period'));
+  parent.querySelectorAll('.chart-period-btn').forEach(b => { if(b.getAttribute('onclick')?.includes('changeSimPeriod('+period+')')) b.classList.add('active-period'); });
+  drawChart(cv, chartCandles, {
+    sma9: candles.length>9 ? calcSMA(candles,9).slice(-count) : [],
+    sma20: candles.length>20 ? calcSMA(candles,20).slice(-count) : [],
+    sma50: candles.length>50 ? calcSMA(candles,50).slice(-count) : [],
+    sma200: candles.length>200 ? calcSMA(candles,200).slice(-count) : [],
+    bbU: bbFull.upper.slice(-count),
+    bbL: bbFull.lower.slice(-count),
+  });
+}
+
+function showEducationView() {
+  try {
+    state.showTracked = false; state.showUniverse = false;
+    if (!authUser || authUser.tier !== 'pro') { 
+      const d = document.getElementById('dashboard');
+      d.innerHTML = '<div class="card" style="max-width:400px;margin:60px auto;text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:12px">📘</div><h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">Pro Feature</h2><p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:20px">Sign in with a Pro account to access Education.<br><br><button class="btn primary" onclick="showAuthModal()" style="font-size:12px">🔑 SIGN IN</button></p></div>';
+      return;
+    }
+    renderEdu();
+  } catch(e) { console.error('Education error:', e); }
+}
+
+function renderEdu() {
+  const container = document.getElementById('dashboard');
+  
+  const topics = [
+    { id:'rsi', icon:'📈', name:'RSI', color:'#22d3ee',
+      title:'RSI — Relative Strength Index',
+      subtitle:'Measures the speed and magnitude of recent price changes.',
+      body:'The RSI ranges from <strong>0 to 100</strong> and identifies overbought and oversold conditions.<br><br><strong>Reading RSI:</strong><br>• <strong>Above 70</strong> = overbought — price may reverse down<br>• <strong>Below 30</strong> = oversold — price may reverse up<br>• <strong>45-65 with uptrend</strong> = bullish momentum<br>• <strong>Divergence:</strong> when price makes new high but RSI does not = weakening trend<br><br><strong>How MOMENTUM scores it:</strong><br>• RSI between 45-65 &rarr; <strong>+1 point</strong> (healthy momentum)<br>• RSI below 35 &rarr; <strong>+0.5</strong> (oversold bounce potential)<br>• RSI above 70 or below 25 &rarr; <strong>-0.5</strong> (extreme, may reverse)',
+      svg:'<rect x="2" y="34" width="6" height="20" fill="#4caf50" opacity="0.4" rx="1"/><rect x="12" y="30" width="6" height="24" fill="#4caf50" opacity="0.4" rx="1"/><rect x="22" y="26" width="6" height="28" fill="#4caf50" opacity="0.6" rx="1"/><rect x="32" y="22" width="6" height="32" fill="#4caf50" rx="1"/><rect x="42" y="18" width="6" height="36" fill="#4caf50" opacity="0.5" rx="1"/><rect x="52" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="62" y="20" width="6" height="34" fill="#e53935" opacity="0.5" rx="1"/><rect x="72" y="16" width="6" height="38" fill="#4caf50" rx="1"/><rect x="82" y="12" width="6" height="42" fill="#4caf50" rx="1"/><rect x="92" y="22" width="6" height="32" fill="#e53935" opacity="0.5" rx="1"/><rect x="102" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="112" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="122" y="8" width="6" height="46" fill="#4caf50" rx="1"/><rect x="132" y="16" width="6" height="38" fill="#4caf50" opacity="0.5" rx="1"/><rect x="142" y="12" width="6" height="42" fill="#4caf50" rx="1"/><rect x="152" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="162" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="172" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="182" y="4" width="6" height="50" fill="#4caf50" rx="1"/><line x1="2" y1="8" x2="188" y2="8" stroke="#ff8c00" stroke-dasharray="3,3" stroke-width="1" opacity="0.5"/><line x1="2" y1="48" x2="188" y2="48" stroke="#ff8c00" stroke-dasharray="3,3" stroke-width="1" opacity="0.5"/><text x="2" y="6" fill="#ff8c00" font-size="6" font-family="monospace">70</text><text x="2" y="58" fill="#ff8c00" font-size="6" font-family="monospace">30</text>' },
+    { id:'macd', icon:'🔄', name:'MACD', color:'#4caf50',
+      title:'MACD - Moving Average Convergence Divergence',
+      subtitle:'Shows the relationship between two moving averages.',
+      body:'MACD = <strong>12-day EMA</strong> minus <strong>26-day EMA</strong>. The <strong>Signal Line</strong> = 9-day EMA of MACD.<br><br><strong>Reading MACD:</strong><br>• MACD <strong>above</strong> signal line = bullish momentum<br>• MACD <strong>below</strong> signal line = bearish momentum<br>• MACD above <strong>zero</strong> = upward trend bias<br>• MACD <strong>crossing above</strong> zero = momentum shift up<br>• <strong>Histogram widening</strong> = momentum accelerating<br><br><strong>How MOMENTUM scores it:</strong><br>• MACD > 0 &rarr; <strong>+1 point</strong> (positive momentum)<br>• Combined with other indicators for overall signal strength',
+      svg:'<rect x="2" y="20" width="6" height="34" fill="#4caf50" opacity="0.3" rx="1"/><rect x="12" y="18" width="6" height="36" fill="#4caf50" opacity="0.4" rx="1"/><rect x="22" y="22" width="6" height="32" fill="#4caf50" opacity="0.4" rx="1"/><rect x="32" y="16" width="6" height="38" fill="#4caf50" opacity="0.5" rx="1"/><rect x="42" y="18" width="6" height="36" fill="#4caf50" opacity="0.5" rx="1"/><rect x="52" y="12" width="6" height="42" fill="#4caf50" rx="1"/><rect x="62" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="72" y="8" width="6" height="46" fill="#4caf50" rx="1"/><rect x="82" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="92" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="102" y="8" width="6" height="46" fill="#4caf50" rx="1"/><rect x="112" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="122" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="132" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="142" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="152" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="162" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="172" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="182" y="2" width="6" height="52" fill="#4caf50" rx="1"/><polyline points="2,44 10,40 20,38 30,34 40,32 50,28 60,26 70,22 80,20 90,16 100,14 110,12 120,10 130,8 140,6 150,6 160,4 170,4 180,4 190,4" stroke="#22d3ee" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-dasharray="3,3"/>' },
+    { id:'adx', icon:'📊', name:'ADX', color:'#e8a846',
+      title:'ADX - Average Directional Index',
+      subtitle:'Measures trend strength regardless of direction.',
+      body:'ADX ranges from <strong>0 to 100</strong>. The higher the ADX, the stronger the trend - up or down.<br><br><strong>Reading ADX:</strong><br>• <strong>Above 25</strong> = strong trend (trend following works)<br>• <strong>Below 20</strong> = weak/ranging market (avoid trend strategies)<br>• <strong>Rising ADX</strong> = trend strengthening<br>• <strong>Falling ADX</strong> = trend weakening<br>• <strong>+DI & -DI lines</strong> show trend direction<br><br><strong>How MOMENTUM scores it:</strong><br>• ADX > 25 &rarr; <strong>+0.5 points</strong> (confirms trend strength)<br>• Helps filter out noise in sideways markets',
+      svg:'<rect x="2" y="40" width="6" height="14" fill="#e53935" opacity="0.4" rx="1"/><rect x="12" y="38" width="6" height="16" fill="#e53935" opacity="0.4" rx="1"/><rect x="22" y="36" width="6" height="18" fill="#e53935" opacity="0.4" rx="1"/><rect x="32" y="34" width="6" height="20" fill="#e53935" opacity="0.4" rx="1"/><rect x="42" y="30" width="6" height="24" fill="#e53935" opacity="0.4" rx="1"/><rect x="52" y="28" width="6" height="26" fill="#e53935" rx="1"/><rect x="62" y="26" width="6" height="28" fill="#e53935" rx="1"/><rect x="72" y="22" width="6" height="32" fill="#e53935" opacity="0.6" rx="1"/><rect x="82" y="20" width="6" height="34" fill="#e53935" opacity="0.6" rx="1"/><rect x="92" y="18" width="6" height="36" fill="#e53935" rx="1"/><rect x="102" y="16" width="6" height="38" fill="#e53935" rx="1"/><rect x="112" y="14" width="6" height="40" fill="#e53935" rx="1"/><rect x="122" y="12" width="6" height="42" fill="#e53935" rx="1"/><rect x="132" y="10" width="6" height="44" fill="#e53935" rx="1"/><rect x="142" y="10" width="6" height="44" fill="#e53935" rx="1"/><rect x="152" y="8" width="6" height="46" fill="#e53935" rx="1"/><rect x="162" y="8" width="6" height="46" fill="#e53935" rx="1"/><rect x="172" y="8" width="6" height="46" fill="#e53935" rx="1"/><rect x="182" y="6" width="6" height="48" fill="#e53935" rx="1"/><line x1="2" y1="28" x2="188" y2="28" stroke="#ff8c00" stroke-dasharray="4,3" stroke-width="1" opacity="0.6"/><text x="2" y="26" fill="#ff8c00" font-size="6" font-family="monospace">25</text>' },
+    { id:'sma', icon:'‰️', name:'SMA Crossovers', color:'#ff6a00',
+      title:'SMA Crossovers - Moving Average Alignment',
+      subtitle:'Four moving averages tracking different timeframes.',
+      body:'<strong>SMA 9:</strong> Ultra-short momentum (~9 sessions)<br><strong>SMA 20:</strong> Short-term trend (~1 month)<br><strong>SMA 50:</strong> Medium-term trend (~3 months)<br><strong>SMA 200:</strong> Long-term bull/bear line (~1 year)<br><br><strong>Reading MA Alignment:</strong><br>• Price <strong>above</strong> more MAs = stronger trend<br>• <strong>4/4 above</strong> = BULL ALIGNED (full uptrend)<br>• <strong>0/4 above</strong> = BEAR ALIGNED (full downtrend)<br>• <strong>Golden Cross:</strong> SMA50 above SMA200 = long-term bullish<br>• <strong>Death Cross:</strong> SMA50 below SMA200 = long-term bearish<br><br><strong>How MOMENTUM scores it:</strong><br>• Each MA above price = partial credit<br>• Price above SMA50 &rarr; <strong>+1 point</strong><br>• 3+ above = strong bull alignment',
+      svg:'<rect x="2" y="20" width="6" height="34" fill="#4caf50" opacity="0.5" rx="1"/><rect x="12" y="16" width="6" height="38" fill="#4caf50" opacity="0.5" rx="1"/><rect x="22" y="18" width="6" height="36" fill="#e53935" rx="1"/><rect x="32" y="20" width="6" height="34" fill="#4caf50" rx="1"/><rect x="42" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="52" y="12" width="6" height="42" fill="#4caf50" rx="1"/><rect x="62" y="16" width="6" height="38" fill="#e53935" rx="1"/><rect x="72" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="82" y="8" width="6" height="46" fill="#4caf50" rx="1"/><rect x="92" y="12" width="6" height="42" fill="#4caf50" rx="1"/><rect x="102" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="112" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="122" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="132" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="142" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="152" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="162" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="172" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="182" y="2" width="6" height="52" fill="#4caf50" rx="1"/><polyline points="2,36 20,32 40,28 60,22 80,18 100,14 120,10 140,8 160,6 180,4" stroke="#22d3ee" stroke-width="1.2" fill="none" stroke-linecap="round"/><polyline points="2,40 20,38 40,36 60,32 80,30 100,28 120,26 140,24 160,22 180,20" stroke="#4caf50" stroke-width="1" fill="none" stroke-linecap="round"/><polyline points="2,44 20,42 40,40 60,38 80,36 100,34 120,32 140,30 160,28 180,26" stroke="#ff8c00" stroke-width="1" fill="none" stroke-linecap="round" stroke-dasharray="3,2"/><text x="178" y="4" fill="#22d3ee" font-size="5" font-family="monospace">9</text><text x="178" y="20" fill="#4caf50" font-size="5" font-family="monospace">20</text><text x="178" y="26" fill="#ff8c00" font-size="5" font-family="monospace">50</text>' },
+    { id:'bb', icon:'📉', name:'Bollinger', color:'#c85a17',
+      title:'Bollinger Bands - Volatility Measurement',
+      subtitle:'Three bands that expand and contract with volatility.',
+      body:'<strong>Middle band:</strong> 20-day SMA<br><strong>Upper band:</strong> Middle + 2 standard deviations<br><strong>Lower band:</strong> Middle - 2 standard deviations<br><br><strong>Reading Bollinger Bands:</strong><br>• Price touching <strong>upper band</strong> = overextended (possible pullback)<br>• Price touching <strong>lower band</strong> = oversold (possible bounce)<br>• <strong>Squeeze:</strong> bands narrowing = low volatility about to explode<br>• <strong>Walk:</strong> price walking up the upper band = strong uptrend<br><br><strong>How MOMENTUM uses it:</strong><br>• Price at upper band = bearish signal (extended)<br>• Price at lower band = bullish signal (oversold)<br>• Used as secondary confirmation, not scored',
+      svg:'<rect x="2" y="22" width="6" height="32" fill="#4caf50" opacity="0.5" rx="1"/><rect x="12" y="18" width="6" height="36" fill="#4caf50" opacity="0.5" rx="1"/><rect x="22" y="20" width="6" height="34" fill="#4caf50" opacity="0.5" rx="1"/><rect x="32" y="16" width="6" height="38" fill="#4caf50" rx="1"/><rect x="42" y="12" width="6" height="42" fill="#4caf50" rx="1"/><rect x="52" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="62" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="72" y="8" width="6" height="46" fill="#4caf50" rx="1"/><rect x="82" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="92" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="102" y="8" width="6" height="46" fill="#4caf50" rx="1"/><rect x="112" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="122" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="132" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="142" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="152" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="162" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="172" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="182" y="2" width="6" height="52" fill="#4caf50" rx="1"/><polyline points="2,16 20,12 40,8 60,6 80,4 100,4 120,4 140,2 160,2 180,2" stroke="#ff8c00" stroke-width="0.8" fill="none" stroke-linecap="round" stroke-dasharray="3,3"/><polyline points="2,52 20,48 40,44 60,40 80,38 100,36 120,34 140,32 160,30 180,28" stroke="#ff8c00" stroke-width="0.8" fill="none" stroke-linecap="round" stroke-dasharray="3,3"/>' },
+    { id:'patterns', icon:'📐', name:'Patterns', color:'#4caf50',
+      title:'Chart Patterns - Technical Formations',
+      subtitle:'20 common patterns detected from swing highs and lows.',
+      body:'Each pattern provides a directional <strong>bias</strong> that confirms or contradicts the signal engine.<br><br><strong>Using Patterns:</strong><br>• BUY signal + bullish pattern = <strong>strong conviction</strong><br>• BUY signal + bearish pattern = <strong>conflicting - skip</strong><br>• NEUTRAL signal + bullish pattern = <strong>watch for entry</strong><br><br><strong>Patterns are detected automatically on your charts.</strong>',
+      svg:'<rect x="2" y="8" width="6" height="46" fill="#4caf50" opacity="0.6" rx="1"/><rect x="12" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="22" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="32" y="22" width="6" height="32" fill="#e53935" rx="1"/><rect x="42" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="52" y="26" width="6" height="28" fill="#e53935" opacity="0.5" rx="1"/><rect x="62" y="8" width="6" height="46" fill="#4caf50" rx="1"/><rect x="72" y="18" width="6" height="36" fill="#4caf50" rx="1"/><rect x="82" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="92" y="20" width="6" height="34" fill="#e53935" rx="1"/><rect x="102" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="112" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="122" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="132" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="142" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="152" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="162" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="172" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="182" y="2" width="6" height="52" fill="#4caf50" rx="1"/>' },
+  ];
+
+  const current = topics.find(t => t.id === _eduTopic) || topics[0];
+  
+  let html = '<div class="card" style="padding:0;overflow-x:auto">';
+  html += '<div style="padding:12px 16px;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:13px;color:var(--accent-amber);font-weight:700">📘 EDUCATION — Pro Reference</div>';
+  
+  // Sub-navigation
+  html += '<div style="padding:8px 10px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:4px">';
+  topics.forEach(t => {
+    const active = t.id === _eduTopic ? 'background:rgba(200,90,23,0.2);border-color:var(--accent-amber);color:var(--accent-amber)' : '';
+    html += `<button class="btn" onclick="switchEduTopic('${t.id}')" style="font-size:10px;padding:4px 10px;${active}">${t.icon} ${t.name}</button>`;
+  });
+  html += '</div>';
+  
+  // Content
+  html += `<div style="padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+      <div style="flex-shrink:0;width:220px;height:68px">
+        <svg viewBox="0 0 200 62" style="width:220px;height:68px;border-radius:6px;background:#0d0906;border:1px solid var(--border)">
+          <line x1="0" y1="31" x2="200" y2="31" stroke="#2a2018" stroke-width="1.5"/>
+          ${current.svg || ''}
+        </svg>
+      </div>
+      <div style="flex:1;min-width:250px">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:${current.color}">${current.icon} ${current.title}</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:2px">${current.subtitle}</div>
+        <div style="margin-top:10px;font-size:12px;color:var(--text-secondary);line-height:1.8">${current.body}</div>
+      </div>
+    </div>`;
+  
+  // If patterns tab, show pattern grid
+  if (current.id === 'patterns') {
+    html += '<div style="padding:8px 14px;background:rgba(0,0,0,0.1);font-family:var(--font-mono);font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px">PATTERN REFERENCE</div>';
+    ['bull','bear','neutral'].forEach(dir => {
+      const items = PATTERNS.filter(p => p.dir === dir);
+      if (!items.length) return;
+      const label = dir === 'bull' ? '🟢 BULLISH' : dir === 'bear' ? '🔴 BEARISH' : '◈ NEUTRAL';
+      const color = dir === 'bull' ? 'var(--green-bull)' : dir === 'bear' ? 'var(--red-bear)' : 'var(--yellow-neutral)';
+      html += `<div style="padding:5px 14px;font-size:9px;color:var(--text-dim);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid var(--border)">${label}</div>`;
+      html += '<div style="display:flex;flex-wrap:wrap">';
+      items.forEach(p => {
+        html += `<div style="width:50%;padding:8px 12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);display:flex;gap:10px;align-items:center">
+          <svg viewBox="0 0 200 62" style="width:50px;height:20px;flex-shrink:0;border-radius:2px;background:#0d0906">
+            <line x1="0" y1="31" x2="200" y2="31" stroke="#1f1812" stroke-width="0.5"/>
+            ${p.svg || ''}
+          </svg>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:${color}">${p.name}</div>
+            <div style="font-size:8px;color:var(--text-dim)">${p.play.slice(0,40)}</div>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+    });
+  }
+  
+  html += '</div><div style="margin-top:8px"><button class="btn" onclick="renderDashboard()" style="font-size:10px">← DASHBOARD</button></div>';
+  container.innerHTML = html;
+}
+
+function switchEduTopic(id) {
+  _eduTopic = id;
+  renderEdu();
+}
+
+// ─── THEME ───// ─── THEME ───// ─── THEME ──────────────────────────────────────────────────────────────
 function toggleTheme() {
   const theme = document.documentElement.getAttribute('data-theme');
   if (theme === 'light') { document.documentElement.removeAttribute('data-theme'); localStorage.setItem('jerry_theme','dark'); }
@@ -1089,29 +1858,36 @@ function toggleTheme() {
 
 // ─── INIT ───────────────────────────────────────────────────────────────
 async function init() {
-  // Check auth
-  await checkAuth();
-  // Theme
+  // UI first — everything async happens in background
   const savedTheme = localStorage.getItem('jerry_theme');
   if (savedTheme === 'light') document.documentElement.setAttribute('data-theme','light');
   // Load saved portfolio, tracked picks & signals
   try { const p = localStorage.getItem('jerry_portfolio'); if (p) state.portfolio = JSON.parse(p); } catch {}
   try { const s = localStorage.getItem('jerry_signals'); if (s) state.signalHistory = JSON.parse(s); } catch {}
-  loadTrackedPicks();
-  loadPortfolio();
-  renderSignalHistory();
-  loadCalendar();
-  // Universe count
-  const us = await loadUniverse('us');
-  document.querySelector('[data-market="us"]').textContent = `🇺🇸 US (${us.length})`;
-  const eu = await loadUniverse('europe');
-  document.querySelector('[data-market="europe"]').textContent = `🇪🇺 Europe (${eu.length})`;
-  const br = await loadUniverse('brazil');
-  document.querySelector('[data-market="brazil"]').textContent = `🇧🇷 Brazil (${br.length})`;
-  document.getElementById('universeCount').textContent = us.length;
-  // Auto-scan on first load
-  await scanAll();
-  calcCorrelation();
+  loadTrackedPicks(); loadPortfolio(); renderSignalHistory(); loadCalendar();
+  
+  // Background: auth check, universe data, then scan
+  // Phase 1: Auth immediately (non-blocking)
+  setTimeout(async () => { await checkAuth(); }, 10);
+  // Phase 2: Universe counts after auth settles  
+  setTimeout(async () => {
+    try {
+      const us = await loadUniverse('us');
+      const eu = await loadUniverse('europe');
+      const em = await loadUniverse('emerging');
+      const usMeta = state._universeMeta.us;
+      document.querySelector('[data-market="us"]').textContent = `🇺🇸 US (${usMeta.visible}/${usMeta.total})`;
+      const euMeta = state._universeMeta.europe;
+      document.querySelector('[data-market="europe"]').textContent = `🇪🇺 Europe (${euMeta.visible}/${euMeta.total})`;
+      const emMeta = state._universeMeta.emerging;
+      document.querySelector('[data-market="emerging"]').textContent = `🌍 Emerging (${emMeta.visible}/${emMeta.total})`;
+      document.getElementById('universeCount').textContent = us.length;
+    } catch(e) { console.log('Universe load error:', e); }
+  }, 50);
+  // Phase 3: Scan after everything else is settled
+  setTimeout(async () => {
+    try { await scanAll(); calcCorrelation(); } catch(e) { console.log('Scan error:', e); }
+  }, 300);
   // Close modal on overlay click
   // Track pick delegation on the dashboard container
   document.getElementById('dashboard').addEventListener('click', function(e) {

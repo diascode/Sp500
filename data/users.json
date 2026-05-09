@@ -2,7 +2,7 @@
   {
     "id": 1,
     "email": "test@test.com",
-    "password": "02b2343ac2e123bde2a147001bbbf88b:957d323ee681d005c380a900e5eb4e2baaac4b9a7a231b9c93fa2586fe2f815ff0d3c01c6274c5fe2b5e271b44d4d9d5626a8b8e0aa70573a279ba163ac7fce6",
+    "password": "69c0403c54b250f6833cc6621caa2772:1c76d6fe46a36636ff2ea49ec8b6ec22087bde3d2359b0fed6df1de2784409205cdf00a21a4428d5eb4ca19568722714cc52c62a8c597816d6be93dcf95e3d27",
     "tier": "free",
     "createdAt": "2026-05-08T21:50:47.166Z",
     "subscriptionId": null,
@@ -21,8 +21,26 @@
     "id": 3,
     "email": "thiagotupa@hotmail.com",
     "password": "f9e0533d69ac17779002c983c785bb4d:951cc0822e972b7fa6fc56e05ba400c191c89ceff9b7b8a40d2b4808357ce65a1dd7822b984c68c0e3593e1350369e8ab5b2ebcbdffc3febc925afd34e980329",
-    "tier": "free",
+    "tier": "pro",
     "createdAt": "2026-05-08T22:04:04.237Z",
+    "subscriptionId": null,
+    "subscriptionEnd": "2030-01-01T00:00:00.000Z"
+  },
+  {
+    "id": 4,
+    "email": "thivieira_dias@iclould.com",
+    "password": "5f8f691dec79f9da947b8db52fc3e661:28d25182623063e9c1a8abeb30edcd4e413a279e3c9e322e60ab30c90ddfe8c199eb1aa0bd833ce6a268a35e5966f2725b109645dcb6c005d8dff3d0bef9b755",
+    "tier": "free",
+    "createdAt": "2026-05-08T23:02:39.502Z",
+    "subscriptionId": null,
+    "subscriptionEnd": null
+  },
+  {
+    "id": 5,
+    "email": "thivieira_dias@icloud.com",
+    "password": "9b8b1c37c97e8d90cc97f4a8f9a97f1c:7092632012c54b40833ff62744787cac4c2ab979332cd04cc986121a355e85d0424bd4a1305f206738bc950aa07a9b3d2ee0f43a1e785e3c97fb841c96b39654",
+    "tier": "free",
+    "createdAt": "2026-05-08T23:35:20.976Z",
     "subscriptionId": null,
     "subscriptionEnd": null
   }
