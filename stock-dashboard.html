@@ -1932,6 +1932,8 @@ function toggleTheme() {
   if (t) document.documentElement.setAttribute('data-theme', t);
   else document.documentElement.removeAttribute('data-theme');
   localStorage.setItem('jerry_theme', t || 'dark');
+  document.getElementById('themeDot').style.background = THEME_COLORS[t || 'dark'];
+  document.getElementById('themeLabel').textContent = THEME_LABELS[t || 'dark'];
 }
 
 // ─── INIT ───────────────────────────────────────────────────────────────
