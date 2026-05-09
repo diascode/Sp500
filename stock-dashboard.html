@@ -157,7 +157,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
     <div class="last-update">LAST SCAN<br><span id="updateTime">--:--:-- UTC</span></div>
     <button class="btn primary" id="refreshBtn" onclick="scanAll()">⟳ SCAN</button>
     <button class="btn" id="themeBtn" onclick="toggleTheme()" style="font-size:10px;display:flex;align-items:center;gap:4px;padding:4px 8px"><span id="themeDot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--accent-amber);border:1px solid var(--border-light)"></span><span id="themeLabel" style="font-size:8px">Dark</span></button>
-    <button class="btn" onclick="changeFontSize(1)" id="fontPlusBtn" style="font-size:10px;padding:4px 6px">A+</button><button class="btn" onclick="changeFontSize(-1)" id="fontMinusBtn" style="font-size:10px;padding:4px 6px">A-</button><select id="langSelect" onchange="switchLang(this.value)" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:4px 6px;border-radius:4px;font-family:var(--font-mono);font-size:10px">
+    <button class="btn" onclick="changeFontSize(1)" id="fontPlusBtn" style="font-size:10px;padding:4px 6px">A+</button><button class="btn" onclick="changeFontSize(-1)" id="fontMinusBtn" style="font-size:10px;padding:4px 6px">A-</button><select id="langSelect" onchange="switchLang(this.value)" style="display:none;background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:4px 6px;border-radius:4px;font-family:var(--font-mono);font-size:10px">
       <option value="en">EN</option>
       <option value="pt">PT</option>
     </select>
@@ -415,12 +415,12 @@ async function updateAuthUI() {
     if (patternsBtn) patternsBtn.style.display = authUser.tier === 'admin' ? 'inline-block' : 'none';
     const simBtn = document.getElementById('simulateTabBtn');
     if (simBtn) simBtn.style.display = authUser.tier === 'admin' ? 'inline-block' : 'none';
-    // Language & theme: all users
+    // Language: admin only; theme & font: all users
     const langSel = document.getElementById('langSelect');
     const themeBtnEl = document.getElementById('themeBtn');
     const fontPlusEl = document.getElementById('fontPlusBtn');
     const fontMinusEl = document.getElementById('fontMinusBtn');
-    if (langSel) langSel.style.display = 'inline-block';
+    if (langSel) langSel.style.display = authUser.tier === 'admin' ? 'inline-block' : 'none';
     if (themeBtnEl) themeBtnEl.style.display = 'inline-block';
     if (fontPlusEl) fontPlusEl.style.display = 'inline-block';
     if (fontMinusEl) fontMinusEl.style.display = 'inline-block';
@@ -434,6 +434,9 @@ async function updateAuthUI() {
     if (corrLock) corrLock.style.display = 'block';
     const corrSec = document.getElementById('correlationSection');
     if (corrSec) corrSec.style.display = 'none';
+    // Hide language selector when logged out
+    const langSelOut = document.getElementById('langSelect');
+    if (langSelOut) langSelOut.style.display = 'none';
   }
 }
 
