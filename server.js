@@ -410,6 +410,33 @@ async function handleRequest(req, res) {
       return sendJSON(res, 200, { ok: true, email: targetEmail, tier: targetUser.tier });
     }
 
+    if (pathname === '/api/admin/set-tier' && req.method === 'POST') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
+      const body = await readBody(req);
+      const targetEmail = (body.email || '').toLowerCase();
+      const newTier = body.tier;
+      if (!['free', 'pro'].includes(newTier)) return sendError(res, 400, 'tier must be free or pro');
+      if (targetEmail === ADMIN_EMAIL) return sendError(res, 400, 'Cannot change admin tier');
+      const targetUser = findUser(targetEmail);
+      if (!targetUser) return sendError(res, 404, 'User not found');
+      targetUser.tier = newTier;
+      if (newTier === 'pro') {
+        // Grant 1 year from today if no active subscription end date exists
+        const existingEnd = targetUser.subscriptionEnd ? new Date(targetUser.subscriptionEnd) : null;
+        if (!existingEnd || existingEnd <= new Date()) {
+          const end = new Date();
+          end.setFullYear(end.getFullYear() + 1);
+          targetUser.subscriptionEnd = end.toISOString();
+        }
+      } else {
+        targetUser.subscriptionEnd = null;
+      }
+      saveUsers(users);
+      return sendJSON(res, 200, { ok: true, email: targetEmail, tier: targetUser.tier, subscriptionEnd: targetUser.subscriptionEnd });
+    }
+
     // ─── STRIPE ──────────────────────────────────────────────────
     if (pathname === '/api/stripe/create-checkout') {
       if (!stripe) return sendError(res, 503, 'Stripe not configured');

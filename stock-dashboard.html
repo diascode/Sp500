@@ -587,11 +587,22 @@ async function showAdminView() {
   html += ' | 👑 Admin: <strong>'+(data.stats.admin||0)+'</strong>';
   html += ' | 💳 Active subs: <strong>'+data.stats.activeSubscriptions+'</strong>';
   html += '</div>';
-  html += '<table class="tracked-table"><thead><tr><th>#</th><th>EMAIL</th><th>TIER</th><th>ADMIN</th><th>SINCE</th><th>SUB END</th><th></th></tr></thead><tbody>';
+  html += '<table class="tracked-table"><thead><tr><th>#</th><th>EMAIL</th><th>TIER</th><th>SUB END</th><th>SINCE</th><th>PRO</th><th>ADMIN</th></tr></thead><tbody>';
   data.users.forEach(u => {
-    const adminBadge = u.tier === 'admin' ? '<span class="status-badge active" style="background:rgba(200,90,23,0.15);color:var(--accent-amber);border-color:rgba(200,90,23,0.3)">👑 ADMIN</span>' : '<span style="color:var(--text-dim);font-family:var(--font-mono);font-size:9px">user</span>';
-    const adminBtn = u.tier === 'admin' ? '<span style="color:var(--text-dim);font-size:10px">—</span>' : '<button class="btn" onclick="setAdmin(\'' + u.email + '\')" style="font-size:9px;padding:2px 8px;color:var(--accent-amber)">👑 Make Admin</button>';
-    html += `<tr><td style="color:var(--text-dim)">${u.id}</td><td>${u.email}</td><td><span class="status-badge ${u.tier === 'pro' ? 'tp' : 'active'}">${u.tier.toUpperCase()}</span></td><td>${adminBadge}</td><td style="color:var(--text-dim)">${u.createdAt.slice(0,10)}</td><td style="color:var(--text-dim)">${u.subscriptionEnd ? u.subscriptionEnd.slice(0,10) : '—'}</td><td>${adminBtn}</td></tr>`;
+    const tierBadge = u.tier === 'admin'
+      ? '<span class="status-badge active" style="background:rgba(200,90,23,0.15);color:var(--accent-amber);border-color:rgba(200,90,23,0.3)">👑 ADMIN</span>'
+      : u.tier === 'pro'
+        ? '<span class="status-badge tp">⭐ PRO</span>'
+        : '<span class="status-badge active" style="opacity:0.6">FREE</span>';
+    const proBtn = u.tier === 'admin'
+      ? '<span style="color:var(--text-dim);font-size:10px">—</span>'
+      : u.tier === 'pro'
+        ? '<button class="btn" onclick="setUserTier(\'' + u.email + '\',\'free\')" style="font-size:9px;padding:2px 8px;color:var(--red-bear)">↓ Revoke Pro</button>'
+        : '<button class="btn" onclick="setUserTier(\'' + u.email + '\',\'pro\')" style="font-size:9px;padding:2px 8px;color:var(--green-bull)">⭐ Make Pro</button>';
+    const adminBtn = u.tier === 'admin'
+      ? '<span style="color:var(--text-dim);font-size:10px">—</span>'
+      : '<button class="btn" onclick="setAdmin(\'' + u.email + '\')" style="font-size:9px;padding:2px 8px;color:var(--accent-amber)">👑 Make Admin</button>';
+    html += `<tr><td style="color:var(--text-dim)">${u.id}</td><td>${u.email}</td><td>${tierBadge}</td><td style="color:var(--text-dim)">${u.subscriptionEnd ? u.subscriptionEnd.slice(0,10) : '—'}</td><td style="color:var(--text-dim)">${u.createdAt.slice(0,10)}</td><td>${proBtn}</td><td>${adminBtn}</td></tr>`;
   });
   html += '</tbody></table></div>';
   html += '<div style="margin-top:8px;display:flex;gap:8px"><button class="btn" onclick="renderDashboard()" style="font-size:10px">' + t('nav_back') + '</button></div>';
@@ -603,6 +614,16 @@ async function setAdmin(email) {
   const result = await apiPost('/api/admin/set-admin', { email, admin: true });
   if (result.ok) showAdminView();
   else alert(result.error || 'Failed to set admin');
+}
+
+async function setUserTier(email, tier) {
+  const msg = tier === 'pro'
+    ? 'Upgrade ' + email + ' to PRO? (grants 1 year subscription)'
+    : 'Revoke PRO from ' + email + ' and downgrade to FREE?';
+  if (!confirm(msg)) return;
+  const result = await apiPost('/api/admin/set-tier', { email, tier });
+  if (result.ok) showAdminView();
+  else alert(result.error || 'Failed to update tier');
 }
 
 // ─── API ────────────────────────────────────────────────────────────────
