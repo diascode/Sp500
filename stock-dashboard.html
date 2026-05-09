@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MOMENTUM · by Jerry</title>
 <style>
-:root{--font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono',monospace;--font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;--bg-deep:#0f0b08;--bg-main:#1a1410;--bg-card:#231b14;--bg-card-hover:#2d2218;--bg-term:#0d0906;--accent-burnt:#c85a17;--accent-amber:#e8a846;--accent-pumpkin:#ff8c00;--accent-rust:#8b3a0f;--accent-ember:#ff6a00;--text-primary:#e8d5b7;--text-secondary:#b8a080;--text-dim:#7a6650;--green-bull:#4caf50;--red-bear:#e53935;--yellow-neutral:#ffc107;--border:#3d2e1c;--border-light:#5a4428;--glow-orange:rgba(200,90,23,0.15)}
+:root{--font-size:1;--font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono',monospace;--font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;--bg-deep:#0f0b08;--bg-main:#1a1410;--bg-card:#231b14;--bg-card-hover:#2d2218;--bg-term:#0d0906;--accent-burnt:#c85a17;--accent-amber:#e8a846;--accent-pumpkin:#ff8c00;--accent-rust:#8b3a0f;--accent-ember:#ff6a00;--text-primary:#e8d5b7;--text-secondary:#b8a080;--text-dim:#7a6650;--green-bull:#4caf50;--red-bear:#e53935;--yellow-neutral:#ffc107;--border:#3d2e1c;--border-light:#5a4428;--glow-orange:rgba(200,90,23,0.15)}
 [data-theme=light]{--bg-deep:#f5f0eb;--bg-main:#faf7f4;--bg-card:#fffcf8;--bg-card-hover:#fdf9f4;--bg-term:#f0ebe5;--text-primary:#2d2218;--text-secondary:#5a4a38;--text-dim:#9a8870;--accent-burnt:#c85a17;--accent-amber:#e8a846;--border:#d4c8b8;--border-light:#b8a898;--glow-orange:rgba(200,90,23,0.08)}
 [data-theme=dracula]{--bg-deep:#120a08;--bg-main:#1a100c;--bg-card:#231814;--bg-card-hover:#2d2018;--bg-term:#0a0604;--text-primary:#e8c8b8;--text-secondary:#c8a088;--text-dim:#8a6050;--accent-burnt:#e85530;--accent-amber:#ff7040;--accent-pumpkin:#ff5530;--accent-rust:#8a3010;--accent-ember:#ff4500;--green-bull:#6aaf50;--red-bear:#e53935;--yellow-neutral:#ffc107;--border:#3d2218;--border-light:#5a3220;--glow-orange:rgba(232,85,48,0.22)}
 [data-theme=monokai]{--bg-deep:#1a1a1a;--bg-main:#272822;--bg-card:#2d2d2d;--bg-card-hover:#383830;--bg-term:#0f0f0f;--text-primary:#f8f8f2;--text-secondary:#cfcfc2;--text-dim:#75715e;--accent-burnt:#fd971f;--accent-amber:#e6db74;--accent-pumpkin:#f92672;--accent-rust:#a05200;--accent-ember:#ff6a00;--green-bull:#a6e22e;--red-bear:#f92672;--yellow-neutral:#e6db74;--border:#3e3d32;--border-light:#49483e;--glow-orange:rgba(253,151,31,0.18)}
@@ -157,7 +157,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
     <div class="last-update">LAST SCAN<br><span id="updateTime">--:--:-- UTC</span></div>
     <button class="btn primary" id="refreshBtn" onclick="scanAll()">⟳ SCAN</button>
     <button class="btn" id="themeBtn" onclick="toggleTheme()" style="font-size:10px;display:flex;align-items:center;gap:4px;padding:4px 8px"><span id="themeDot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--accent-amber);border:1px solid var(--border-light)"></span><span id="themeLabel" style="font-size:8px">Dark</span></button>
-    <select id="langSelect" onchange="switchLang(this.value)" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:4px 6px;border-radius:4px;font-family:var(--font-mono);font-size:10px">
+    <button class="btn" onclick="changeFontSize(1)" id="fontPlusBtn" style="font-size:10px;padding:4px 6px">A+</button><button class="btn" onclick="changeFontSize(-1)" id="fontMinusBtn" style="font-size:10px;padding:4px 6px">A-</button><select id="langSelect" onchange="switchLang(this.value)" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:4px 6px;border-radius:4px;font-family:var(--font-mono);font-size:10px">
       <option value="en">EN</option>
       <option value="pt">PT</option>
     </select>
@@ -189,7 +189,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
   <button class="btn active-market" data-market="us" onclick="switchMarket('us')">🇺🇸 US (50)</button>
   <button class="btn" data-market="europe" onclick="switchMarket('europe')">🇪🇺 Europe (30)</button>
   <button class="btn" data-market="emerging" onclick="switchMarket('emerging')">🌍 Emerging</button>
-  <button class="btn" id="scanAllBtn" onclick="scanAllMarkets()" style="margin-left:auto">⟳ SCAN ALL MARKETS</button>
+  
   <button class="btn" onclick="showTrackedView()" id="trackedTabBtn">📋 TRACKED (<span id="trackedCount">0</span>)</button>
   <button class="btn" onclick="showUniverseView()" id="universeTabBtn">📋 UNIVERSE</button>
   <button class="btn" onclick="showEducationView()" id="patternsTabBtn" style="display:none">📘 EDUCATION</button>
@@ -198,7 +198,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 
 <div class="goal-card">
   <h2>⏎ PAPER TRADING SIMULATOR</h2>
-  <p><strong>Educational tool.</strong> Technical analysis screen across <strong>🇺🇸 US · 🇪🇺 Europe · 🌍 Emerging Markets</strong>. Filters to high-scoring signals. Each scan re-fetches live market data — RSI, MACD, ADX, SMA crossovers, Bollinger, pattern detection. <strong>Paper trading only. Not financial advice.</strong></p>
+  <p id="missionText"><strong>Educational tool.</strong> Technical analysis screen across <strong>🇺🇸 US · 🇪🇺 Europe · 🌍 Emerging Markets</strong>. Filters to high-scoring signals. Each scan re-fetches live market data — RSI, MACD, ADX, SMA crossovers, Bollinger, pattern detection. <strong>Paper trading only. Not financial advice.</strong></p>
   <div class="stats" id="marketStats">
     <div>UNIVERSE: <span id="universeCount">0</span> stocks</div>
     <div>BUY SIGNALS: <span id="buyCount">0</span></div>
@@ -307,6 +307,10 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 <div class="modal-overlay" id="portfolioModal">
   <div class="modal">
     <h2>📁 PORTFOLIO MANAGER</h2>
+    <div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn" onclick="exportCSV('portfolio')" style="font-size:10px">📥 CSV</button>
+      <button class="btn" onclick="exportMD('portfolio')" style="font-size:10px">📝 MD</button>
+    </div>
     <div id="portfolioLimitNote" style="font-size:10px;color:var(--text-dim);margin-bottom:8px">Free tier: max 3 positions. <span style="color:var(--accent-amber);cursor:pointer" onclick="upgradeToPro()">Upgrade to Pro</span> for unlimited.</div>
     <div style="margin-bottom:12px">
       <input class="search-input" id="portfolioTicker" placeholder="TICKER" style="width:100px">
@@ -738,7 +742,7 @@ async function scanAll() {
   btn.disabled = false;
 }
 
-async function scanAllMarkets() {
+async function scanAllMarkets() { await scanAll();
   if (!authUser) { showAuthModal(); return; }
   document.getElementById('scanAllBtn').textContent = '⟳ SCANNING ALL...';
   document.getElementById('scanAllBtn').disabled = true;
@@ -952,14 +956,12 @@ function logSignals(results, market) {
 function renderSignalHistory() {
   const el = document.getElementById('signalHistoryContent');
   if (state.signalHistory.length === 0) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">No signals yet. Run a scan.</div>'; return; }
-  el.innerHTML = state.signalHistory.slice(0,15).map(s =>
-    `<div class="signal-row">
-      <span style="font-weight:700;color:var(--green-bull)">BUY</span>
-      <span>${s.ticker}</span>
-      <span style="color:var(--text-dim)">$${s.price.toFixed(2)}</span>
-      <span style="color:var(--text-dim);font-size:9px">${s.time}</span>
-    </div>`
-  ).join('');
+  let html = '<div style="overflow-x:auto"><table class="tracked-table"><thead><tr><th>TICKER</th><th>PRICE</th><th>RSI</th><th>MACD</th><th>TIME</th></tr></thead><tbody>';
+  state.signalHistory.slice(0,30).forEach(s => {
+    html += '<tr><td class="tkr" style="color:var(--green-bull)">' + s.ticker + '</td><td>$' + (s.price||0).toFixed(2) + '</td><td style="color:var(--text-dim)">' + (s.rsi||'-') + '</td><td style="color:var(--text-dim)">' + (s.macd||'-') + '</td><td style="color:var(--text-dim);font-size:10px">' + (s.time||'') + '</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
 }
 
 // ─── CALENDAR ───────────────────────────────────────────────────────────
@@ -1444,7 +1446,21 @@ const LANGS = {
   },
 };
 function t(key) { return LANGS[_lang]?.[key] || LANGS.en[key] || key; }
-function switchLang(l) { _lang = l; localStorage.setItem('jerry_lang', l); renderDashboard(); }
+function switchLang(l) { _lang = l; localStorage.setItem('jerry_lang', l); applyLang(); renderDashboard(); }
+function applyLang() {
+  const m = document.getElementById('missionText');
+  if (m) m.innerHTML = t('mission');
+  const b = document.querySelector('.brand-sub');
+  if (b) b.innerHTML = t('brand');
+}
+function changeFontSize(d) {
+  let s = parseFloat(localStorage.getItem('jerry_fontsize') || '1');
+  s = Math.max(0.8, Math.min(1.5, s + d * 0.1));
+  localStorage.setItem('jerry_fontsize', s);
+  document.documentElement.style.setProperty('--font-size', s);
+  document.getElementById('fontPlusBtn').textContent = s >= 1.5 ? 'A+' : 'A+';
+  document.getElementById('fontMinusBtn').textContent = s <= 0.8 ? 'A-' : 'A-';
+}
 
 let _eduTopic = 'rsi';
 
@@ -1921,7 +1937,44 @@ function switchEduTopic(id) {
   renderEdu();
 }
 
-// ─── THEME ───// ─── THEME ───// ─── THEME ──────────────────────────────────────────────────────────────
+// ─── THEME ───// ─── THEME ───// ─── EXPORT ──────────────────────────────────────────────────────────────
+function getPrice(ticker) {
+  for (const m of ['us','europe','emerging']) {
+    const f = (state.analyzed[m]||[]).find(s => s.ticker === ticker);
+    if (f) return f.price;
+  }
+  return null;
+}
+function exportCSV(type) {
+  const data = type === 'portfolio' ? state.portfolio : state.trackedPicks.filter(p => p.status === 'active');
+  let csv = 'Ticker,Entry Price,Current Price,P&L %,Entry Date,Days Held,TP,SL,Status\n';
+  data.forEach(p => {
+    const cur = getPrice(p.ticker) || p.entryPrice || 0;
+    const pnl = cur ? (((cur - (p.entryPrice||p.entry||0)) / (p.entryPrice||p.entry||1)) * 100).toFixed(2) : '0';
+    const days = Math.floor((new Date() - new Date(p.entryDate||p.date)) / (1000*60*60*24));
+    csv += p.ticker + ',' + (p.entryPrice||p.entry||0) + ',' + cur.toFixed(2) + ',' + pnl + '%,' + (p.entryDate||p.date||'') + ',' + days + ',' + (p.tp||'') + ',' + (p.sl||'') + ',' + (p.status||'active') + '\n';
+  });
+  downloadFile(csv, type + '-export.csv', 'text/csv');
+}
+function exportMD(type) {
+  const data = type === 'portfolio' ? state.portfolio : state.trackedPicks.filter(p => p.status === 'active');
+  let md = '# ' + type + ' Export\n| Ticker | Entry | Current | P&L | Days | Status |\n|-------|-------|---------|-----|------|--------|\n';
+  data.forEach(p => {
+    const cur = getPrice(p.ticker) || p.entryPrice || 0;
+    const pnl = cur ? (((cur - (p.entryPrice||p.entry||0)) / (p.entryPrice||p.entry||1)) * 100).toFixed(2) : '0';
+    const days = Math.floor((new Date() - new Date(p.entryDate||p.date)) / (1000*60*60*24));
+    md += '| ' + p.ticker + ' | $' + (p.entryPrice||p.entry||0) + ' | $' + cur.toFixed(2) + ' | ' + pnl + '% | ' + days + 'd | ' + (p.status||'active') + ' |\n';
+  });
+  downloadFile(md, type + '-export.md', 'text/markdown');
+}
+function downloadFile(content, name, mime) {
+  const blob = new Blob([content], {type: mime});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ─── THEME ──────────────────────────────────────────────────────────────
 const THEMES = [null,'light','dracula','monokai','nord','solarized','onedark'];
 const THEME_LABELS = {dark:'Dark',light:'Light',dracula:'Dracula',monokai:'Monokai',nord:'Nord',solarized:'Solarized',onedark:'One Dark'};
 const THEME_COLORS = {dark:'#e8a846',light:'#c85a17',dracula:'#e85530',monokai:'#fd971f',nord:'#88c0d0',solarized:'#cb4b16',onedark:'#e06c75'};
@@ -1950,7 +2003,9 @@ async function init() {
   try { const s = localStorage.getItem('jerry_signals'); if (s) state.signalHistory = JSON.parse(s); } catch {}
     const savedLang = localStorage.getItem('jerry_lang');
   if (savedLang) { _lang = savedLang; document.getElementById('langSelect').value = savedLang; }
-  loadTrackedPicks(); loadPortfolio(); renderSignalHistory(); loadCalendar();
+  const fs = parseFloat(localStorage.getItem('jerry_fontsize') || '1');
+  document.documentElement.style.setProperty('--font-size', fs);
+  loadTrackedPicks(); loadPortfolio(); renderSignalHistory(); loadCalendar(); applyLang();
   
   // Background: auth check, universe data, then scan
   // Phase 1: Auth immediately (non-blocking)
