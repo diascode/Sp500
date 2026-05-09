@@ -156,7 +156,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
   <div class="header-controls">
     <div class="last-update">LAST SCAN<br><span id="updateTime">--:--:-- UTC</span></div>
     <button class="btn primary" id="refreshBtn" onclick="scanAll()">⟳ SCAN</button>
-    <button class="btn" id="themeBtn" onclick="toggleTheme()" style="font-size:10px;display:flex;align-items:center;gap:4px;padding:4px 8px"><span id="themeDot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--accent-amber);border:1px solid var(--border-light)"></span><span id="themeLabel" style="font-size:8px">DRK</span></button>
+    <button class="btn" id="themeBtn" onclick="toggleTheme()" style="font-size:10px;display:flex;align-items:center;gap:4px;padding:4px 8px"><span id="themeDot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--accent-amber);border:1px solid var(--border-light)"></span><span id="themeLabel" style="font-size:8px">Dark</span></button>
     <select id="langSelect" onchange="switchLang(this.value)" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:4px 6px;border-radius:4px;font-family:var(--font-mono);font-size:10px">
       <option value="en">EN</option>
       <option value="pt">PT</option>
@@ -1923,6 +1923,8 @@ function switchEduTopic(id) {
 
 // ─── THEME ───// ─── THEME ───// ─── THEME ──────────────────────────────────────────────────────────────
 const THEMES = [null,'light','dracula','monokai','nord','solarized','onedark'];
+const THEME_LABELS = {dark:'Dark',light:'Light',dracula:'Dracula',monokai:'Monokai',nord:'Nord',solarized:'Solarized',onedark:'One Dark'};
+const THEME_COLORS = {dark:'#e8a846',light:'#c85a17',dracula:'#cba6f7',monokai:'#fd971f',nord:'#88c0d0',solarized:'#cb4b16',onedark:'#e06c75'};
 let _themeIdx = 0;
 function toggleTheme() {
   _themeIdx = (_themeIdx + 1) % THEMES.length;
