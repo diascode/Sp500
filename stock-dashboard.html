@@ -9,6 +9,9 @@
 [data-theme=light]{--bg-deep:#f5f0eb;--bg-main:#faf7f4;--bg-card:#fffcf8;--bg-card-hover:#fdf9f4;--bg-term:#f0ebe5;--text-primary:#2d2218;--text-secondary:#5a4a38;--text-dim:#9a8870;--accent-burnt:#c85a17;--accent-amber:#e8a846;--border:#d4c8b8;--border-light:#b8a898;--glow-orange:rgba(200,90,23,0.08)}
 [data-theme=amber]{--bg-deep:#0e0a05;--bg-main:#1a1308;--bg-card:#231a0c;--bg-card-hover:#2d220e;--bg-term:#0c0803;--text-primary:#f0dda0;--text-secondary:#c8a86a;--text-dim:#8a6a30;--accent-burnt:#e87900;--accent-amber:#ffb800;--accent-pumpkin:#ff9500;--accent-rust:#6a3a00;--accent-ember:#ff6a00;--green-bull:#4caf50;--red-bear:#e53935;--yellow-neutral:#ffc107;--border:#3d2810;--border-light:#5a3a18;--glow-orange:rgba(255,184,0,0.18)}
 [data-theme=emerald]{--bg-deep:#040e06;--bg-main:#0a1810;--bg-card:#0e2214;--bg-card-hover:#142c1a;--bg-term:#030a05;--text-primary:#a0ddb8;--text-secondary:#6aba88;--text-dim:#3a7a50;--accent-burnt:#10b040;--accent-amber:#20d060;--accent-pumpkin:#00e050;--accent-rust:#0a6a20;--accent-ember:#00ff50;--green-bull:#4caf50;--red-bear:#e53935;--yellow-neutral:#ffc107;--border:#143020;--border-light:#1a4a2a;--glow-orange:rgba(16,176,64,0.18)}
+[data-theme=sky]{--bg-deep:#04080e;--bg-main:#0a121a;--bg-card:#0e1a24;--bg-card-hover:#142230;--bg-term:#03060a;--text-primary:#a0c8e0;--text-secondary:#6a9ab8;--text-dim:#3a6a80;--accent-burnt:#0088cc;--accent-amber:#00aaff;--accent-pumpkin:#00bfff;--accent-rust:#0a4a6a;--accent-ember:#00ccff;--green-bull:#4caf50;--red-bear:#e53935;--yellow-neutral:#ffc107;--border:#102a38;--border-light:#183a4a;--glow-orange:rgba(0,136,204,0.18)}
+[data-theme=wicked]{--bg-deep:#0a040e;--bg-main:#14081a;--bg-card:#1e0c26;--bg-card-hover:#281030;--bg-term:#06030a;--text-primary:#d0a0e0;--text-secondary:#a06ab8;--text-dim:#6a3a80;--accent-burnt:#aa00cc;--accent-amber:#cc44ff;--accent-pumpkin:#dd66ff;--accent-rust:#4a0a5a;--accent-ember:#ff66ff;--green-bull:#4caf50;--red-bear:#e53935;--yellow-neutral:#ffc107;--border:#2a1038;--border-light:#3a1a4a;--glow-orange:rgba(170,0,204,0.18)}
+[data-theme=nerd]{--bg-deep:#040a04;--bg-main:#081a08;--bg-card:#0c260c;--bg-card-hover:#103010;--bg-term:#020a02;--text-primary:#80e080;--text-secondary:#50b850;--text-dim:#208020;--accent-burnt:#00cc00;--accent-amber:#33ff33;--accent-pumpkin:#66ff66;--accent-rust:#006a00;--accent-ember:#00ff00;--green-bull:#4caf50;--red-bear:#e53935;--yellow-neutral:#ffc107;--border:#0a300a;--border-light:#104a10;--glow-orange:rgba(0,204,0,0.18)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-sans),sans-serif;min-height:100vh;padding:20px;transition:background .3s,color .3s}
 ::-webkit-scrollbar{width:6px}
@@ -153,7 +156,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
   <div class="header-controls">
     <div class="last-update">LAST SCAN<br><span id="updateTime">--:--:-- UTC</span></div>
     <button class="btn primary" id="refreshBtn" onclick="scanAll()">⟳ SCAN</button>
-    <button class="btn" id="themeBtn" onclick="toggleTheme()" style="font-size:10px">🎨</button>
+    <button class="btn" id="themeBtn" onclick="toggleTheme()" style="font-size:10px;display:flex;align-items:center;gap:4px;padding:4px 8px"><span id="themeDot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--accent-amber);border:1px solid var(--border-light)"></span><span id="themeLabel" style="font-size:8px">DRK</span></button>
     <select id="langSelect" onchange="switchLang(this.value)" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:4px 6px;border-radius:4px;font-family:var(--font-mono);font-size:10px">
       <option value="en">EN</option>
       <option value="pt">PT</option>
@@ -1880,7 +1883,7 @@ function switchEduTopic(id) {
 }
 
 // ─── THEME ───// ─── THEME ───// ─── THEME ──────────────────────────────────────────────────────────────
-const THEMES = [null,'light','amber','emerald'];
+const THEMES = [null,'light','amber','emerald','sky','wicked','nerd'];
 let _themeIdx = 0;
 function toggleTheme() {
   _themeIdx = (_themeIdx + 1) % THEMES.length;
@@ -1897,6 +1900,8 @@ async function init() {
   const idx = THEMES.indexOf(savedTheme === 'dark' ? null : savedTheme);
   if (idx >= 0) _themeIdx = idx;
   if (savedTheme && savedTheme !== 'dark') document.documentElement.setAttribute('data-theme', savedTheme);
+  document.getElementById('themeDot').style.background = THEME_COLORS[savedTheme || 'dark'];
+  document.getElementById('themeLabel').textContent = THEME_LABELS[savedTheme || 'dark'];
   // Load saved portfolio, tracked picks & signals
   try { const p = localStorage.getItem('jerry_portfolio'); if (p) state.portfolio = JSON.parse(p); } catch {}
   try { const s = localStorage.getItem('jerry_signals'); if (s) state.signalHistory = JSON.parse(s); } catch {}
