@@ -245,14 +245,28 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 
 <div class="side-section">
   <div class="side-card">
-    <h3>📊 SIGNAL HISTORY</h3>
-    <div style="font-size:10px;color:var(--text-dim);margin-bottom:8px;line-height:1.4">Every BUY signal detected during scans, logged with timestamp and price.</div>
-    <div id="signalHistoryContent"><div style="color:var(--text-dim);font-size:11px">No signals yet. Run a scan.</div></div>
+    <div id="signalHistorySection" style="display:none">
+      <h3>📊 SIGNAL HISTORY</h3>
+      <div style="font-size:10px;color:var(--text-dim);margin-bottom:8px;line-height:1.4">Every BUY signal detected during scans, logged with timestamp and price.</div>
+      <div id="signalHistoryContent"><div style="color:var(--text-dim);font-size:11px">No signals yet. Run a scan.</div></div>
+    </div>
+    <div id="signalHistoryProLock" style="display:block;text-align:center;padding:16px">
+      <div style="font-size:24px;margin-bottom:8px">⭐</div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px">Signal History is a <strong>Pro feature</strong>.</div>
+      <button class="btn" onclick="upgradeToPro()" style="font-size:10px;color:var(--accent-amber);border-color:var(--accent-amber)">⬆ UPGRADE</button>
+    </div>
   </div>
   <div class="side-card">
-    <h3>🔗 CORRELATION</h3>
-    <div style="font-size:10px;color:var(--text-dim);margin-bottom:8px;line-height:1.4">Measures how stocks move together. 🟢 +0.7 = move in sync. 🔴 -0.3 = move opposite. Diversify across uncorrelated picks.</div>
-    <div id="correlationContent"><div style="color:var(--text-dim);font-size:11px">Scan at least 2 tickers to show correlation.</div></div>
+    <div id="correlationSection" style="display:none">
+      <h3>🔗 CORRELATION</h3>
+      <div style="font-size:10px;color:var(--text-dim);margin-bottom:8px;line-height:1.4">Measures how stocks move together. 🟢 +0.7 = move in sync. 🔴 -0.3 = move opposite. Diversify across uncorrelated picks.</div>
+      <div id="correlationContent"><div style="color:var(--text-dim);font-size:11px">Scan at least 2 tickers to show correlation.</div></div>
+    </div>
+    <div id="correlationProLock" style="display:block;text-align:center;padding:16px">
+      <div style="font-size:24px;margin-bottom:8px">⭐</div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px">Correlation Matrix is a <strong>Pro feature</strong>.</div>
+      <button class="btn" onclick="upgradeToPro()" style="font-size:10px;color:var(--accent-amber);border-color:var(--accent-amber)">⬆ UPGRADE</button>
+    </div>
   </div>
 </div>
 
@@ -386,6 +400,16 @@ async function updateAuthUI() {
     // Show pro upsell for free users
     const upsell = document.getElementById('proUpsell');
     if (upsell) upsell.style.display = authUser.tier === 'pro' ? 'none' : 'block';
+    // Pro-lock Signal History & Correlation
+    const isPro = authUser.tier === 'pro';
+    const shSection = document.getElementById('signalHistorySection');
+    const shLock = document.getElementById('signalHistoryProLock');
+    if (shSection) shSection.style.display = isPro ? 'block' : 'none';
+    if (shLock) shLock.style.display = isPro ? 'none' : 'block';
+    const corrSection = document.getElementById('correlationSection');
+    const corrLock = document.getElementById('correlationProLock');
+    if (corrSection) corrSection.style.display = isPro ? 'block' : 'none';
+    if (corrLock) corrLock.style.display = isPro ? 'none' : 'block';
     // Show patterns tab for pro users
     const patternsBtn = document.getElementById('patternsTabBtn');
     if (patternsBtn) patternsBtn.style.display = authUser.tier === 'pro' ? 'inline-block' : 'none';
@@ -396,6 +420,15 @@ async function updateAuthUI() {
     userMenu.style.display = 'none';
     const upsell = document.getElementById('proUpsell');
     if (upsell) upsell.style.display = 'none';
+    // Hide pro-locked sections for non-auth users
+    const shLock = document.getElementById('signalHistoryProLock');
+    const corrLock = document.getElementById('correlationProLock');
+    if (shLock) shLock.style.display = 'block';
+    if (corrLock) corrLock.style.display = 'block';
+    const shSec = document.getElementById('signalHistorySection');
+    const corrSec = document.getElementById('correlationSection');
+    if (shSec) shSec.style.display = 'none';
+    if (corrSec) corrSec.style.display = 'none';
   }
 }
 
