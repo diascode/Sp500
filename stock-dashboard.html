@@ -6,7 +6,9 @@
 <title>MOMENTUM · by Jerry</title>
 <style>
 :root{--font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono',monospace;--font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;--bg-deep:#0f0b08;--bg-main:#1a1410;--bg-card:#231b14;--bg-card-hover:#2d2218;--bg-term:#0d0906;--accent-burnt:#c85a17;--accent-amber:#e8a846;--accent-pumpkin:#ff8c00;--accent-rust:#8b3a0f;--accent-ember:#ff6a00;--text-primary:#e8d5b7;--text-secondary:#b8a080;--text-dim:#7a6650;--green-bull:#4caf50;--red-bear:#e53935;--yellow-neutral:#ffc107;--border:#3d2e1c;--border-light:#5a4428;--glow-orange:rgba(200,90,23,0.15)}
-[data-theme=light]{--bg-deep:#f5f0eb;--bg-main:#faf7f4;--bg-card:#fffcf8;--bg-card-hover:#fdf9f4;--bg-term:#f0ebe5;--text-primary:#2d2218;--text-secondary:#5a4a38;--text-dim:#9a8870;--border:#d4c8b8;--border-light:#b8a898;--glow-orange:rgba(200,90,23,0.08)}
+[data-theme=light]{--bg-deep:#f5f0eb;--bg-main:#faf7f4;--bg-card:#fffcf8;--bg-card-hover:#fdf9f4;--bg-term:#f0ebe5;--text-primary:#2d2218;--text-secondary:#5a4a38;--text-dim:#9a8870;--accent-burnt:#c85a17;--accent-amber:#e8a846;--border:#d4c8b8;--border-light:#b8a898;--glow-orange:rgba(200,90,23,0.08)}
+[data-theme=amber]{--bg-deep:#0e0a05;--bg-main:#1a1308;--bg-card:#231a0c;--bg-card-hover:#2d220e;--bg-term:#0c0803;--text-primary:#f0dda0;--text-secondary:#c8a86a;--text-dim:#8a6a30;--accent-burnt:#e87900;--accent-amber:#ffb800;--accent-pumpkin:#ff9500;--accent-rust:#6a3a00;--accent-ember:#ff6a00;--green-bull:#4caf50;--red-bear:#e53935;--yellow-neutral:#ffc107;--border:#3d2810;--border-light:#5a3a18;--glow-orange:rgba(255,184,0,0.18)}
+[data-theme=emerald]{--bg-deep:#040e06;--bg-main:#0a1810;--bg-card:#0e2214;--bg-card-hover:#142c1a;--bg-term:#030a05;--text-primary:#a0ddb8;--text-secondary:#6aba88;--text-dim:#3a7a50;--accent-burnt:#10b040;--accent-amber:#20d060;--accent-pumpkin:#00e050;--accent-rust:#0a6a20;--accent-ember:#00ff50;--green-bull:#4caf50;--red-bear:#e53935;--yellow-neutral:#ffc107;--border:#143020;--border-light:#1a4a2a;--glow-orange:rgba(16,176,64,0.18)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-sans),sans-serif;min-height:100vh;padding:20px;transition:background .3s,color .3s}
 ::-webkit-scrollbar{width:6px}
@@ -151,7 +153,11 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
   <div class="header-controls">
     <div class="last-update">LAST SCAN<br><span id="updateTime">--:--:-- UTC</span></div>
     <button class="btn primary" id="refreshBtn" onclick="scanAll()">⟳ SCAN</button>
-    <button class="btn" id="themeBtn" onclick="toggleTheme()">☀/🌙</button>
+    <button class="btn" id="themeBtn" onclick="toggleTheme()" style="font-size:10px">🎨</button>
+    <select id="langSelect" onchange="switchLang(this.value)" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:4px 6px;border-radius:4px;font-family:var(--font-mono);font-size:10px">
+      <option value="en">EN</option>
+      <option value="pt">PT</option>
+    </select>
     <button class="btn" id="portfolioBtn" onclick="showPortfolioModal()">📁 PORTFOLIO</button>
     <div id="authSection" style="display:flex;gap:6px;align-items:center">
       <button class="btn" id="loginBtn" onclick="showAuthModal()" style="font-size:10px">🔑 SIGN IN</button>
@@ -1374,6 +1380,30 @@ const PATTERNS = [
 ];
 
 
+let _lang = 'en';
+const LANGS = {
+  en: {
+    mission: 'Educational tool. Technical analysis screen across <strong>US &middot; Europe &middot; Emerging Markets</strong>. Filters to high-scoring signals. Each scan re-fetches live market data &mdash; RSI, MACD, ADX, SMA crossovers, Bollinger, pattern detection.',
+    brand: 'stock scanner &middot; live market data &middot; by jerry',
+    scan: 'SCAN', scanAll: 'SCAN ALL', signals: 'SIGNALS',
+    universe: 'UNIVERSE', tracked: 'TRACKED', education: 'EDUCATION', simulate: 'SIMULATE',
+    portfolio: 'PORTFOLIO', signIn: 'SIGN IN', signOut: 'SIGN OUT',
+    buy: 'BUY', sell: 'SELL', hold: 'HOLD',
+    upgrade: 'GO PRO', admin: 'ADMIN',
+  },
+  pt: {
+    mission: 'Ferramenta educacional. An&aacute;lise t&eacute;cnica em <strong>EUA &middot; Europa &middot; Mercados Emergentes</strong>. Filtra sinais de alta pontua&ccedil;&atilde;o. Cada varredura busca dados de mercado ao vivo &mdash; RSI, MACD, ADX, m&eacute;dias m&oacute;veis, Bandas de Bollinger, detec&ccedil;&atilde;o de padr&otilde;es.',
+    brand: 'analisador de a&ccedil;&otilde;es &middot; dados ao vivo &middot; por jerry',
+    scan: 'VARRER', scanAll: 'VARRER TUDO', signals: 'SINAIS',
+    universe: 'UNIVERSO', tracked: 'RASTREADOS', education: 'EDUCA&Ccedil;&Atilde;O', simulate: 'SIMULAR',
+    portfolio: 'PORTF&Oacute;LIO', signIn: 'ENTRAR', signOut: 'SAIR',
+    buy: 'COMPRA', sell: 'VENDA', hold: 'MANTER',
+    upgrade: 'PRO', admin: 'ADMIN',
+  },
+};
+function t(key) { return LANGS[_lang]?.[key] || LANGS.en[key] || key; }
+function switchLang(l) { _lang = l; localStorage.setItem('jerry_lang', l); renderDashboard(); }
+
 let _eduTopic = 'rsi';
 
 // ─── SIMULATE ─────────────────────────────────────────────────────────────
@@ -1850,20 +1880,28 @@ function switchEduTopic(id) {
 }
 
 // ─── THEME ───// ─── THEME ───// ─── THEME ──────────────────────────────────────────────────────────────
+const THEMES = [null,'light','amber','emerald'];
+let _themeIdx = 0;
 function toggleTheme() {
-  const theme = document.documentElement.getAttribute('data-theme');
-  if (theme === 'light') { document.documentElement.removeAttribute('data-theme'); localStorage.setItem('jerry_theme','dark'); }
-  else { document.documentElement.setAttribute('data-theme','light'); localStorage.setItem('jerry_theme','light'); }
+  _themeIdx = (_themeIdx + 1) % THEMES.length;
+  const t = THEMES[_themeIdx];
+  if (t) document.documentElement.setAttribute('data-theme', t);
+  else document.documentElement.removeAttribute('data-theme');
+  localStorage.setItem('jerry_theme', t || 'dark');
 }
 
 // ─── INIT ───────────────────────────────────────────────────────────────
 async function init() {
   // UI first — everything async happens in background
-  const savedTheme = localStorage.getItem('jerry_theme');
-  if (savedTheme === 'light') document.documentElement.setAttribute('data-theme','light');
+  const savedTheme = localStorage.getItem('jerry_theme') || 'dark';
+  const idx = THEMES.indexOf(savedTheme === 'dark' ? null : savedTheme);
+  if (idx >= 0) _themeIdx = idx;
+  if (savedTheme && savedTheme !== 'dark') document.documentElement.setAttribute('data-theme', savedTheme);
   // Load saved portfolio, tracked picks & signals
   try { const p = localStorage.getItem('jerry_portfolio'); if (p) state.portfolio = JSON.parse(p); } catch {}
   try { const s = localStorage.getItem('jerry_signals'); if (s) state.signalHistory = JSON.parse(s); } catch {}
+    const savedLang = localStorage.getItem('jerry_lang');
+  if (savedLang) { _lang = savedLang; document.getElementById('langSelect').value = savedLang; }
   loadTrackedPicks(); loadPortfolio(); renderSignalHistory(); loadCalendar();
   
   // Background: auth check, universe data, then scan
