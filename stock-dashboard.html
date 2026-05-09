@@ -161,7 +161,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
       <option value="en">EN</option>
       <option value="pt">PT</option>
     </select>
-    <button class="btn" id="portfolioBtn" onclick="showPortfolioModal()">📁 PORTFOLIO</button>
+    <!-- Portfolio moved to tab bar below -->
     <div id="authSection" style="display:flex;gap:6px;align-items:center">
       <button class="btn" id="loginBtn" onclick="showAuthModal()" style="font-size:10px">🔑 SIGN IN</button>
       <div id="userMenu" style="display:none;position:relative">
@@ -194,6 +194,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
   <button class="btn" onclick="showUniverseView()" id="universeTabBtn">📋 UNIVERSE</button>
   <button class="btn" onclick="showEducationView()" id="patternsTabBtn" style="display:none">📘 EDUCATION</button>
   <button class="btn" onclick="showSimulateView()" id="simulateTabBtn" style="display:none">🎲 SIMULATE</button>
+  <button class="btn" onclick="showPortfolioView()" id="portfolioTabBtn">📊 MY STOCKS AND TAX REPORTS</button>
 </div>
 
 <div class="goal-card">
@@ -206,19 +207,26 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
     <div>SELL: <span id="sellCount">0</span></div>
   </div>
   <div id="proUpsell" style="display:none;margin:0 auto 16px;max-width:1400px;border-radius:10px;border:1px solid rgba(255,193,7,0.3);background:linear-gradient(135deg,rgba(255,193,7,0.08),rgba(200,90,23,0.12));padding:16px 20px">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
-      <div>
-        <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent-amber);letter-spacing:0.5px">⭐ UNLOCK FULL ACCESS — GO PRO</div>
-        <div style="margin-top:6px;font-size:11px;color:var(--text-secondary);line-height:1.8">
-          See all <strong>105+ stocks</strong> across US, Europe &amp; Emerging Markets.<br>
-          Unlimited scans &bull; Full indicators &bull; Signal History &bull; Correlation<br>
-          Education Reference &bull; Simulator with 15 patterns<br>
-          Unlimited tracking &amp; portfolio &bull; Priority scanning<br>
-          All themes &bull; Language options
-        </div>
-      </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent-amber);letter-spacing:0.5px">⭐ UNLOCK FULL ACCESS — GO PRO</div>
       <button class="btn" onclick="upgradeToPro()" style="font-size:12px;padding:10px 22px;background:linear-gradient(135deg,#ff8c00,#c85a17);color:#fff;border:none;font-weight:700;letter-spacing:1px;white-space:nowrap;box-shadow:0 0 20px rgba(200,90,23,0.3)">⬆ GO PRO — €9/MO</button>
     </div>
+    <table style="width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:10px">
+      <thead><tr style="border-bottom:1px solid var(--border)">
+        <th style="padding:6px 8px;text-align:left;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">Feature</th>
+        <th style="padding:6px 8px;text-align:center;color:var(--green-bull);width:80px">🟢 FREE</th>
+        <th style="padding:6px 8px;text-align:center;color:var(--accent-amber);width:80px">⭐ PRO</th>
+      </tr></thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;color:var(--text-secondary)">🔍 Stocks per market</td><td style="padding:5px 8px;text-align:center;color:var(--text-dim)">5</td><td style="padding:5px 8px;text-align:center;color:var(--accent-amber)">Unlimited</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;color:var(--text-secondary)">📌 Tracked picks</td><td style="padding:5px 8px;text-align:center;color:var(--text-dim)">5 max</td><td style="padding:5px 8px;text-align:center;color:var(--accent-amber)">Unlimited</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;color:var(--text-secondary)">📊 MY STOCKS &amp; TAX REPORTS</td><td style="padding:5px 8px;text-align:center;color:var(--red-bear)">❌</td><td style="padding:5px 8px;text-align:center;color:var(--accent-amber)">✅</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;color:var(--text-secondary)">📅 Monthly P&amp;L breakdown</td><td style="padding:5px 8px;text-align:center;color:var(--red-bear)">❌</td><td style="padding:5px 8px;text-align:center;color:var(--accent-amber)">✅</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;color:var(--text-secondary)">💰 Tax report (CSV/MD/PDF)</td><td style="padding:5px 8px;text-align:center;color:var(--red-bear)">❌</td><td style="padding:5px 8px;text-align:center;color:var(--accent-amber)">✅</td></tr>
+        <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;color:var(--text-secondary)">🔗 Correlation matrix</td><td style="padding:5px 8px;text-align:center;color:var(--red-bear)">❌</td><td style="padding:5px 8px;text-align:center;color:var(--accent-amber)">✅</td></tr>
+        <tr><td style="padding:5px 8px;color:var(--text-secondary)">⚡ Priority scanning</td><td style="padding:5px 8px;text-align:center;color:var(--text-dim)">—</td><td style="padding:5px 8px;text-align:center;color:var(--accent-amber)">✅</td></tr>
+      </tbody>
+    </table>
   </div>
 </div>
 
@@ -231,33 +239,13 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 
 <div class="side-section">
   <div class="side-card">
-    <h3>📁 PORTFOLIO</h3>
-    <div id="portfolioContent">
-      <div style="color:var(--text-dim);font-size:11px">No positions. Add via the 📁 Portfolio button above.</div>
-    </div>
-    <div style="margin-top:8px;font-family:var(--font-mono);font-size:10px;color:var(--text-dim)">
-      Total P&L: <span id="totalPnl" style="font-weight:700">$0.00</span>
-    </div>
-  </div>
-  <div class="side-card">
     <h3>📅 ECONOMIC CALENDAR</h3>
     <div id="calendarContent"><div style="color:var(--text-dim);font-size:11px">Loading...</div></div>
   </div>
 </div>
 
 <div class="side-section">
-  <div class="side-card">
-    <div id="signalHistorySection" style="display:none">
-      <h3>📊 SIGNAL HISTORY</h3>
-      <div style="font-size:10px;color:var(--text-dim);margin-bottom:8px;line-height:1.4">Every BUY signal detected during scans, logged with timestamp and price.</div>
-      <div id="signalHistoryContent"><div style="color:var(--text-dim);font-size:11px">No signals yet. Run a scan.</div></div>
-    </div>
-    <div id="signalHistoryProLock" style="display:block;text-align:center;padding:16px">
-      <div style="font-size:24px;margin-bottom:8px">⭐</div>
-      <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px">Signal History is a <strong>Pro feature</strong>.</div>
-      <button class="btn" onclick="upgradeToPro()" style="font-size:10px;color:var(--accent-amber);border-color:var(--accent-amber)">⬆ UPGRADE</button>
-    </div>
-  </div>
+  <!-- Signal History removed -->
   <div class="side-card">
     <div id="correlationSection" style="display:none">
       <h3>🔗 CORRELATION</h3>
@@ -328,7 +316,9 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 
 <script>
 // ─── STATE ─────────────────────────────────────────────────────────────
-let state = { market: 'us', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], signalHistory: [], universeCache: {}, theme: 'dark', showTracked: false, showUniverse: false };
+let state = { market: 'us', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'dark', showTracked: false, showUniverse: false, showPortfolio: false };
+let _portfolioMonthFilter = 'all';
+let _taxReportMonth = '';
 
 // ─── AUTH ────────────────────────────────────────────────────────────────
 const TOKEN_KEY = 'momentum_token';
@@ -388,14 +378,20 @@ async function updateAuthUI() {
     userMenu.style.display = 'block';
     const short = authUser.email.length > 20 ? authUser.email.slice(0,18)+'…' : authUser.email;
     userEmailShort.textContent = short;
-    document.getElementById('userAvatarIcon').textContent = authUser.tier === 'pro' ? '⭐' : '👤';
+    document.getElementById('userAvatarIcon').textContent = authUser.tier === 'admin' ? '👑' : (authUser.tier === 'pro' ? '⭐' : '👤');
     dropdownEmail.textContent = authUser.email;
-    dropdownTier.textContent = authUser.tier === 'pro' ? '⭐ Pro subscriber' : 'Free tier';
-    tierBadge.textContent = authUser.tier === 'pro' ? 'PRO' : 'FREE';
-    tierBadge.style.background = authUser.tier === 'pro' ? 'rgba(255,193,7,0.15)' : 'rgba(76,175,80,0.15)';
-    tierBadge.style.color = authUser.tier === 'pro' ? 'var(--yellow-neutral)' : 'var(--green-bull)';
-    tierBadge.style.borderColor = authUser.tier === 'pro' ? 'rgba(255,193,7,0.3)' : 'rgba(76,175,80,0.3)';
-    upgradeBtn2.textContent = authUser.tier === 'pro' ? '⚙ Manage Subscription' : '⭐ Go Pro';
+    dropdownTier.textContent = authUser.tier === 'admin' ? '👑 Admin' : (authUser.tier === 'pro' ? '⭐ Pro subscriber' : 'Free tier');
+    tierBadge.textContent = authUser.tier === 'admin' ? 'ADMIN' : (authUser.tier === 'pro' ? 'PRO' : 'FREE');
+    tierBadge.style.background = authUser.tier === 'admin' ? 'rgba(200,90,23,0.2)' : (authUser.tier === 'pro' ? 'rgba(255,193,7,0.15)' : 'rgba(76,175,80,0.15)');
+    tierBadge.style.color = authUser.tier === 'admin' ? 'var(--accent-amber)' : (authUser.tier === 'pro' ? 'var(--yellow-neutral)' : 'var(--green-bull)');
+    tierBadge.style.borderColor = authUser.tier === 'admin' ? 'rgba(200,90,23,0.4)' : (authUser.tier === 'pro' ? 'rgba(255,193,7,0.3)' : 'rgba(76,175,80,0.3)');
+    // Hide subscription for admins, show normally for others
+    if (authUser.tier === 'admin') {
+      upgradeBtn2.style.display = 'none';
+    } else {
+      upgradeBtn2.style.display = 'flex';
+      upgradeBtn2.textContent = authUser.tier === 'pro' ? '⚙ Manage Subscription' : '⭐ Go Pro';
+    }
     // Admin check
     if (adminBtn2) {
       try {
@@ -403,37 +399,39 @@ async function updateAuthUI() {
         adminBtn2.style.display = data.error ? 'none' : 'flex';
       } catch { adminBtn2.style.display = 'none'; }
     }
-    // Show pro upsell for free users
+    // Show pro upsell for non-admin users
     const upsell = document.getElementById('proUpsell');
-    if (upsell) upsell.style.display = authUser.tier === 'pro' ? 'none' : 'block';
-    // Pro-lock Signal History & Correlation
-    const isPro = authUser.tier === 'pro';
-    const shSection = document.getElementById('signalHistorySection');
-    const shLock = document.getElementById('signalHistoryProLock');
-    if (shSection) shSection.style.display = isPro ? 'block' : 'none';
-    if (shLock) shLock.style.display = isPro ? 'none' : 'block';
+    if (upsell) upsell.style.display = (authUser.tier === 'admin' || authUser.tier === 'pro') ? 'none' : 'block';
+    // Pro-lock Correlation (admins get full access)
+    const isPro = authUser.tier === 'pro' || authUser.tier === 'admin';
     const corrSection = document.getElementById('correlationSection');
     const corrLock = document.getElementById('correlationProLock');
     if (corrSection) corrSection.style.display = isPro ? 'block' : 'none';
     if (corrLock) corrLock.style.display = isPro ? 'none' : 'block';
-    // Show patterns tab for pro users
+    // Education & Simulator: admin only
     const patternsBtn = document.getElementById('patternsTabBtn');
-    if (patternsBtn) patternsBtn.style.display = authUser.tier === 'pro' ? 'inline-block' : 'none';
+    if (patternsBtn) patternsBtn.style.display = authUser.tier === 'admin' ? 'inline-block' : 'none';
     const simBtn = document.getElementById('simulateTabBtn');
-    if (simBtn) simBtn.style.display = authUser.tier === 'pro' ? 'inline-block' : 'none';
+    if (simBtn) simBtn.style.display = authUser.tier === 'admin' ? 'inline-block' : 'none';
+    // Language & theme: admin only
+    const isAdmin = authUser.tier === 'admin';
+    const langSel = document.getElementById('langSelect');
+    const themeBtnEl = document.getElementById('themeBtn');
+    const fontPlusEl = document.getElementById('fontPlusBtn');
+    const fontMinusEl = document.getElementById('fontMinusBtn');
+    if (langSel) langSel.style.display = isAdmin ? 'inline-block' : 'none';
+    if (themeBtnEl) themeBtnEl.style.display = isAdmin ? 'inline-block' : 'none';
+    if (fontPlusEl) fontPlusEl.style.display = isAdmin ? 'inline-block' : 'none';
+    if (fontMinusEl) fontMinusEl.style.display = isAdmin ? 'inline-block' : 'none';
   } else {
     loginBtn.style.display = 'inline-block';
     userMenu.style.display = 'none';
     const upsell = document.getElementById('proUpsell');
     if (upsell) upsell.style.display = 'none';
     // Hide pro-locked sections for non-auth users
-    const shLock = document.getElementById('signalHistoryProLock');
     const corrLock = document.getElementById('correlationProLock');
-    if (shLock) shLock.style.display = 'block';
     if (corrLock) corrLock.style.display = 'block';
-    const shSec = document.getElementById('signalHistorySection');
     const corrSec = document.getElementById('correlationSection');
-    if (shSec) shSec.style.display = 'none';
     if (corrSec) corrSec.style.display = 'none';
   }
 }
@@ -527,6 +525,7 @@ function logout() {
 
 async function upgradeToPro() {
   if (!authUser) { showAuthModal(); return; }
+  if (authUser.tier === 'admin') { return; }
   if (authUser.tier === 'pro') {
     const data = await apiGet('/api/stripe/create-portal');
     if (data.url) { window.location.href = data.url; return; }
@@ -553,14 +552,14 @@ function showComingSoon() {
         <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-bottom:6px">⚡ <strong style="color:var(--accent-amber)">Pro benefits (€9/month)</strong></div>
         <div style="font-size:11px;color:var(--text-dim);line-height:1.8">
           ✓ All stocks across all markets<br>
-          ✓ Signal History &amp; Correlation Matrix<br>
+          ✓ Correlation Matrix<br>
           ✓ Education Reference &amp; 20 patterns<br>
           ✓ Simulator with 15 pattern types<br>
           ✓ Unlimited tracking &amp; portfolio<br>
           ✓ Priority scanning (faster)<br>
           ✓ Email/Telegram alerts<br>
           ✓ Export to CSV<br>
-          ✓ 7 color themes &amp; language options
+          ✓ Priority scanning
         </div>
       </div>
       <button class="btn" onclick="renderDashboard()" style="font-size:11px">← BACK</button>
@@ -578,15 +577,25 @@ async function showAdminView() {
   html += '👤 Total: <strong>'+data.stats.total+'</strong>';
   html += ' | 🟢 Free: <strong>'+data.stats.free+'</strong>';
   html += ' | ⭐ Pro: <strong>'+data.stats.pro+'</strong>';
+  html += ' | 👑 Admin: <strong>'+(data.stats.admin||0)+'</strong>';
   html += ' | 💳 Active subs: <strong>'+data.stats.activeSubscriptions+'</strong>';
   html += '</div>';
-  html += '<table class="tracked-table"><thead><tr><th>#</th><th>EMAIL</th><th>TIER</th><th>SINCE</th><th>SUB END</th></tr></thead><tbody>';
+  html += '<table class="tracked-table"><thead><tr><th>#</th><th>EMAIL</th><th>TIER</th><th>ADMIN</th><th>SINCE</th><th>SUB END</th><th></th></tr></thead><tbody>';
   data.users.forEach(u => {
-    html += `<tr><td style="color:var(--text-dim)">${u.id}</td><td>${u.email}</td><td><span class="status-badge ${u.tier === 'pro' ? 'tp' : 'active'}">${u.tier.toUpperCase()}</span></td><td style="color:var(--text-dim)">${u.createdAt.slice(0,10)}</td><td style="color:var(--text-dim)">${u.subscriptionEnd ? u.subscriptionEnd.slice(0,10) : '—'}</td></tr>`;
+    const adminBadge = u.tier === 'admin' ? '<span class="status-badge active" style="background:rgba(200,90,23,0.15);color:var(--accent-amber);border-color:rgba(200,90,23,0.3)">👑 ADMIN</span>' : '<span style="color:var(--text-dim);font-family:var(--font-mono);font-size:9px">user</span>';
+    const adminBtn = u.tier === 'admin' ? '<span style="color:var(--text-dim);font-size:10px">—</span>' : '<button class="btn" onclick="setAdmin(\'' + u.email + '\')" style="font-size:9px;padding:2px 8px;color:var(--accent-amber)">👑 Make Admin</button>';
+    html += `<tr><td style="color:var(--text-dim)">${u.id}</td><td>${u.email}</td><td><span class="status-badge ${u.tier === 'pro' ? 'tp' : 'active'}">${u.tier.toUpperCase()}</span></td><td>${adminBadge}</td><td style="color:var(--text-dim)">${u.createdAt.slice(0,10)}</td><td style="color:var(--text-dim)">${u.subscriptionEnd ? u.subscriptionEnd.slice(0,10) : '—'}</td><td>${adminBtn}</td></tr>`;
   });
   html += '</tbody></table></div>';
   html += '<div style="margin-top:8px;display:flex;gap:8px"><button class="btn" onclick="renderDashboard()" style="font-size:10px">← BACK</button></div>';
   container.innerHTML = html;
+}
+
+async function setAdmin(email) {
+  if (!confirm('Make ' + email + ' an admin?')) return;
+  const result = await apiPost('/api/admin/set-admin', { email, admin: true });
+  if (result.ok) showAdminView();
+  else alert(result.error || 'Failed to set admin');
 }
 
 // ─── API ────────────────────────────────────────────────────────────────
@@ -705,7 +714,7 @@ async function scanMarket(market) {
     function next(idx) {
       if (idx >= stocks.length) {
         state.analyzed[market] = results;
-        logSignals(results, market);
+        // Signal logging removed
         resolve(results);
         return;
       }
@@ -760,10 +769,13 @@ function switchMarket(market) {
   state.market = market;
   state.showTracked = false;
   state.showUniverse = false;
+  state.showPortfolio = false;
   document.getElementById('trackedTabBtn').style.borderColor = '';
   document.getElementById('trackedTabBtn').style.color = '';
   document.getElementById('universeTabBtn').style.borderColor = '';
   document.getElementById('universeTabBtn').style.color = '';
+  document.getElementById('portfolioTabBtn').style.borderColor = '';
+  document.getElementById('portfolioTabBtn').style.color = '';
   document.querySelectorAll('.market-tabs .btn[data-market]').forEach(b => b.classList.remove('active-market'));
   document.querySelector(`.market-tabs .btn[data-market="${market}"]`).classList.add('active-market');
   const labels = {us:'🇺🇸 US',europe:'🇪🇺 Europe',brazil:'🌍 Emerging'};
@@ -775,6 +787,7 @@ function switchMarket(market) {
 // ─── RENDER ─────────────────────────────────────────────────────────────
 function renderDashboard() {
   const container = document.getElementById('dashboard');
+  if (state.showPortfolio) { renderPortfolioView(); return; }
   if (state.showUniverse) { renderUniverseView(); return; }
   if (state.showTracked) { renderTrackedPicks(); return; }
   const results = state.analyzed[state.market] || [];
@@ -848,6 +861,7 @@ function renderDashboard() {
       </div>` : ''}
       <div style="display:flex;gap:8px;margin-top:6px">
         <button class="btn track-btn" data-ticker="${d.ticker}" data-market="${state.market}" data-price="${d.price}" data-tp="${d.tp}" data-sl="${d.sl}" style="flex:1;font-size:10px">📌 TRACK PICK</button>
+        <button class="btn portfolio-add-btn" data-ticker="${d.ticker}" data-price="${d.price}" style="flex:1;font-size:10px;color:var(--green-bull);border-color:rgba(76,175,80,0.4)">➕ MY STOCKS</button>
       </div>
       <div class="verdict-bar ${d.signal}">${d.signal === 'buy' ? '✓ TECHNICAL BUY — ' + d.maAlign : d.signal === 'sell' ? '✗ TECHNICAL SELL — AVOID' : '◈ NEUTRAL — CONFLICTING SIGNALS'}</div>
     `;
@@ -884,11 +898,11 @@ function addPortfolioPosition() {
   const p = parseFloat(document.getElementById('portfolioPrice').value);
   if (!t || !s || !p) { alert('Fill all fields'); return; }
   // Free tier limit: max 3 portfolio positions
-  if ((!authUser || authUser.tier !== 'pro') && state.portfolio.length >= 3) {
+  if ((!authUser || (authUser.tier !== 'pro' && authUser.tier !== 'admin')) && state.portfolio.length >= 3) {
     alert('Free tier limited to 3 portfolio positions. Upgrade to Pro for unlimited.');
     return;
   }
-  state.portfolio.push({ ticker:t, shares:s, entry:p, date:new Date().toISOString().slice(0,10) });
+  state.portfolio.push({ ticker:t, quantity:s, buyPrice:p, sellPrice:null, buyDate:new Date().toISOString().slice(0,10), sellDate:null, status:'holding' });
   document.getElementById('portfolioTicker').value = '';
   document.getElementById('portfolioShares').value = '';
   document.getElementById('portfolioPrice').value = '';
@@ -900,19 +914,22 @@ function renderPortfolioTable() {
   const el = document.getElementById('portfolioTable');
   if (state.portfolio.length === 0) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">No positions yet.</div>'; return; }
   el.innerHTML = state.portfolio.map((p,i) => {
-    const cur = state.analyzed.us?.find(s => s.ticker === p.ticker) || state.analyzed.europe?.find(s => s.ticker === p.ticker) || state.analyzed.emerging?.find(s => s.ticker === p.ticker);
-    const currPrice = cur ? cur.price : p.entry;
-    const pnl = ((currPrice - p.entry) / p.entry * 100);
+    const currPrice = getPortfolioPrice(p.ticker);
+    const currentVal = p.status === 'sold' && p.sellPrice ? p.sellPrice : (currPrice || p.buyPrice);
+    const pnl = ((currentVal - p.buyPrice) / p.buyPrice * 100);
+    const pnlDollar = (currentVal - p.buyPrice) * p.quantity;
+    const statusIcon = p.status === 'sold' ? '✅' : '🔵';
     return `<div class="portfolio-row">
       <span class="pos-ticker">${p.ticker}</span>
-      <span>${p.shares} × $${p.entry.toFixed(2)}</span>
-      <span class="pos-pnl ${pnl>=0?'pos':'neg'}">${pnl>=0?'+':''}${pnl.toFixed(2)}%</span>
-      <span style="cursor:pointer;color:var(--red-bear)" onclick="removePosition(${i})">✕</span>
+      <span>${p.quantity} × $${p.buyPrice.toFixed(2)}</span>
+      <span class="pos-pnl ${pnl>=0?'pos':'neg'}">${pnl>=0?'+':''}${pnl.toFixed(2)}% (${pnlDollar>=0?'+':''}$${pnlDollar.toFixed(2)})</span>
+      <span style="font-size:9px;color:var(--text-dim)">${statusIcon}</span>
+      <span style="cursor:pointer;color:var(--red-bear)" onclick="removePortfolioItem(${i})">✕</span>
     </div>`;
   }).join('');
 }
 
-function removePosition(i) { state.portfolio.splice(i,1); renderPortfolioTable(); savePortfolio(); updatePortfolioSidebar(); }
+function removePosition(i) { removePortfolioItem(i); }
 
 async function savePortfolio() {
   localStorage.setItem('jerry_portfolio', JSON.stringify(state.portfolio));
@@ -920,7 +937,19 @@ async function savePortfolio() {
 }
 
 function loadPortfolio() {
-  try { const d = localStorage.getItem('jerry_portfolio'); if (d) state.portfolio = JSON.parse(d); } catch {}
+  try {
+    const d = localStorage.getItem('jerry_portfolio');
+    if (d) {
+      state.portfolio = JSON.parse(d);
+      // Migrate old format (entry/shares) to new format (buyPrice/quantity)
+      state.portfolio = state.portfolio.map(p => {
+        if (p.buyPrice === undefined && p.entry !== undefined) {
+          return { ticker: p.ticker, quantity: p.shares || p.quantity || 1, buyPrice: p.entry || p.buyPrice || 0, sellPrice: p.sellPrice || null, buyDate: p.date || p.buyDate || new Date().toISOString().slice(0,10), sellDate: p.sellDate || null, status: p.status || 'holding' };
+        }
+        return p;
+      });
+    }
+  } catch {}
   updatePortfolioSidebar();
 }
 
@@ -929,40 +958,22 @@ function updatePortfolioSidebar() {
   if (state.portfolio.length === 0) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">No positions. Add via 📁 Portfolio.</div>'; return; }
   let total = 0;
   el.innerHTML = state.portfolio.map(p => {
-    const cur = state.analyzed.us?.find(s => s.ticker === p.ticker) || state.analyzed.europe?.find(s => s.ticker === p.ticker) || state.analyzed.emerging?.find(s => s.ticker === p.ticker);
-    const currPrice = cur ? cur.price : p.entry;
-    const pnl = ((currPrice - p.entry) / p.entry * 100);
-    total += (currPrice - p.entry) * p.shares;
+    const currPrice = getPortfolioPrice(p.ticker);
+    const currentVal = p.status === 'sold' && p.sellPrice ? p.sellPrice : (currPrice || p.buyPrice);
+    const pnl = ((currentVal - p.buyPrice) / p.buyPrice * 100);
+    total += (currentVal - p.buyPrice) * p.quantity;
+    const statusIcon = p.status === 'sold' ? '✅' : '🔵';
     return `<div class="portfolio-row">
       <span class="pos-ticker">${p.ticker}</span>
       <span class="pos-pnl ${pnl>=0?'pos':'neg'}">${pnl>=0?'+':''}${pnl.toFixed(2)}%</span>
+      <span style="font-size:9px;color:var(--text-dim)">${statusIcon}</span>
     </div>`;
   }).join('');
   document.getElementById('totalPnl').textContent = (total>=0?'+':'') + '$' + total.toFixed(2);
   document.getElementById('totalPnl').style.color = total>=0 ? 'var(--green-bull)' : 'var(--red-bear)';
 }
 
-// ─── SIGNAL HISTORY ─────────────────────────────────────────────────────
-function logSignals(results, market) {
-  const now = new Date().toISOString().slice(0,16);
-  results.filter(r => r.signal === 'buy').forEach(r => {
-    state.signalHistory.unshift({ time:now, ticker:r.ticker, market, price:r.price, rsi:r.rsi, macd:r.macd });
-  });
-  if (state.signalHistory.length > 200) state.signalHistory.length = 200;
-  localStorage.setItem('jerry_signals', JSON.stringify(state.signalHistory));
-  renderSignalHistory();
-}
-
-function renderSignalHistory() {
-  const el = document.getElementById('signalHistoryContent');
-  if (state.signalHistory.length === 0) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">No signals yet. Run a scan.</div>'; return; }
-  let html = '<div style="overflow-x:auto"><table class="tracked-table"><thead><tr><th>TICKER</th><th>PRICE</th><th>RSI</th><th>MACD</th><th>TIME</th></tr></thead><tbody>';
-  state.signalHistory.slice(0,30).forEach(s => {
-    html += '<tr><td class="tkr" style="color:var(--green-bull)">' + s.ticker + '</td><td>$' + (s.price||0).toFixed(2) + '</td><td style="color:var(--text-dim)">' + (s.rsi||'-') + '</td><td style="color:var(--text-dim)">' + (s.macd||'-') + '</td><td style="color:var(--text-dim);font-size:10px">' + (s.time||'') + '</td></tr>';
-  });
-  html += '</tbody></table></div>';
-  el.innerHTML = html;
-}
+// ─── SIGNAL HISTORY — REMOVED ──────────────────────────────────────────
 
 // ─── CALENDAR ───────────────────────────────────────────────────────────
 async function loadCalendar() {
@@ -1022,6 +1033,20 @@ function calcCorrelation() {
 }
 
 // ─── TRACKED PICKS ──────────────────────────────────────────────────────
+function showToast(msg, isGood) {
+  const toast = document.createElement('div');
+  toast.textContent = msg;
+  Object.assign(toast.style, {
+    position:'fixed', bottom:'24px', right:'24px', zIndex:'9999',
+    padding:'12px 20px', borderRadius:'8px', fontFamily:'var(--font-mono)', fontSize:'13px', fontWeight:'700',
+    background: isGood ? 'rgba(76,175,80,0.9)' : 'rgba(229,57,53,0.9)',
+    color:'#fff', boxShadow:'0 4px 16px rgba(0,0,0,0.4)',
+    transition:'opacity 0.3s', opacity:'1'
+  });
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2000);
+}
+
 function trackPick(ticker, market, entryPrice, tp, sl) {
   if (state.trackedPicks.find(p => p.ticker === ticker && p.status === 'active')) return;
   state.trackedPicks.unshift({
@@ -1035,11 +1060,15 @@ function trackPick(ticker, market, entryPrice, tp, sl) {
   saveTrackedPicks();
   updateTrackedCount();
   renderTrackedPicks();
+  // Toast notification
+  showToast('✅ ' + ticker + ' TRACKED!', true);
   // Flash feedback on the tracked tab button
   const tab = document.getElementById('trackedTabBtn');
-  tab.textContent = '📋 TRACKED (' + state.trackedPicks.length + ') ✓';
-  tab.style.borderColor = 'var(--green-bull)';
-  setTimeout(() => { tab.style.borderColor = ''; tab.textContent = '📋 TRACKED (' + state.trackedPicks.length + ')'; }, 1500);
+  if (tab) {
+    tab.textContent = '📋 TRACKED (' + state.trackedPicks.length + ') ✓';
+    tab.style.borderColor = 'var(--green-bull)';
+    setTimeout(() => { tab.style.borderColor = ''; tab.textContent = '📋 TRACKED (' + state.trackedPicks.length + ')'; }, 1500);
+  }
 }
 
 function untrackPick(index) {
@@ -1114,8 +1143,11 @@ function checkTrackedStatus(pick) {
 
 function showTrackedView() {
   state.showUniverse = false;
+  state.showPortfolio = false;
   document.getElementById('universeTabBtn').style.borderColor = '';
   document.getElementById('universeTabBtn').style.color = '';
+  document.getElementById('portfolioTabBtn').style.borderColor = '';
+  document.getElementById('portfolioTabBtn').style.color = '';
   state.showTracked = !state.showTracked;
   if (state.showTracked) {
     document.getElementById('trackedTabBtn').style.borderColor = 'var(--accent-amber)';
@@ -1187,6 +1219,728 @@ function renderTrackedPicks() {
   container.innerHTML = html;
 }
 
+// ─── PORTFOLIO / MY STOCKS VIEW ──────────────────────────────────────
+function showPortfolioView() {
+  state.showTracked = false;
+  state.showUniverse = false;
+  state.showPortfolio = !state.showPortfolio;
+  document.getElementById('trackedTabBtn').style.borderColor = '';
+  document.getElementById('trackedTabBtn').style.color = '';
+  document.getElementById('universeTabBtn').style.borderColor = '';
+  document.getElementById('universeTabBtn').style.color = '';
+  document.getElementById('portfolioTabBtn').style.borderColor = state.showPortfolio ? 'var(--accent-amber)' : '';
+  document.getElementById('portfolioTabBtn').style.color = state.showPortfolio ? 'var(--accent-amber)' : '';
+  if (state.showPortfolio) {
+    // Free users: show subscribe prompt instead
+    if (!authUser || (authUser.tier !== 'pro' && authUser.tier !== 'admin')) {
+      const container = document.getElementById('dashboard');
+      container.innerHTML = '<div class="card" style="max-width:450px;margin:60px auto;text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:12px">⭐</div><h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">Pro Feature</h2><p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px">MY STOCKS AND TAX REPORTS is a <strong>Pro feature</strong>.</p><p style="font-size:11px;color:var(--text-dim);margin-bottom:20px">Track your portfolio, see real-time P&amp;L, monthly profit breakdowns, and generate tax reports.</p><button class="btn primary" onclick="upgradeToPro()" style="font-size:13px;padding:10px 24px">⬆ GO PRO — €9/MO</button><br><br><button class="btn" onclick="showPortfolioView();switchMarket(state.market)" style="font-size:10px">← BACK</button></div>';
+      return;
+    }
+    renderPortfolioView();
+  } else renderDashboard();
+}
+
+function getPortfolioPrice(ticker) {
+  for (const m of ['us','europe','emerging']) {
+    const f = (state.analyzed[m]||[]).find(s => s.ticker === ticker);
+    if (f && f.price) return f.price;
+  }
+  return null;
+}
+
+function renderPortfolioView() {
+  if (!state.showPortfolio) return;
+  const container = document.getElementById('dashboard');
+  
+  // Build Add form
+  let html = '<div class="card" style="padding:14px;margin-bottom:14px">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
+  html += '<h3 style="font-family:var(--font-mono);font-size:13px;color:var(--accent-amber);text-transform:uppercase;letter-spacing:1px">📊 MY STOCKS AND TAX REPORTS</h3>';
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  html += '<button class="btn" onclick="exportCSV(\'portfolio\')" style="font-size:10px">📥 CSV</button>';
+  html += '<button class="btn" onclick="exportMD(\'portfolio\')" style="font-size:10px">📝 MD</button>';
+  html += '<button class="btn" onclick="showPortfolioView();switchMarket(state.market)" style="font-size:10px">← BACK</button>';
+  html += '</div></div>';
+  
+  // Add new position form — buy only (sell added later per row)
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px;background:rgba(0,0,0,0.15);border-radius:6px;border:1px solid var(--border)">';
+  html += '<span style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-right:4px">➕ ADD POSITION</span>';
+  html += '<input class="search-input" id="pfTicker" placeholder="TICKER" style="width:80px;font-size:11px">';
+  html += '<input class="search-input" id="pfQty" placeholder="QTY" type="number" step="1" style="width:60px;font-size:11px">';
+  html += '<input class="search-input" id="pfBuyPrice" placeholder="BUY $" type="number" step="0.01" style="width:80px;font-size:11px">';
+  html += '<button class="btn primary" onclick="addPortfolioItem()" style="font-size:10px">+ ADD</button>';
+  html += '</div>';
+  html += '</div>';
+  
+  if (state.portfolio.length === 0) {
+    html += '<div style="text-align:center;padding:60px 20px;color:var(--text-dim);font-family:var(--font-mono)">';
+    html += '<div style="font-size:48px;margin-bottom:12px">📊</div>';
+    html += '<div style="font-size:16px;color:var(--text-secondary)">EMPTY PORTFOLIO</div>';
+    html += '<div style="font-size:12px;margin-top:8px">Add positions above to track your portfolio.</div></div>';
+    container.innerHTML = html;
+    return;
+  }
+  
+  // Portfolio table
+  html += '<div class="card" style="padding:0;overflow-x:auto;margin-bottom:14px">';
+  html += '<table class="tracked-table"><thead><tr>';
+  html += '<th>#</th><th>TICKER</th><th>QTY</th><th>BUY $</th><th>CURRENT/SELL $</th><th>COST BASIS</th><th>VALUE NOW</th><th>P&amp;L %</th><th>P&amp;L $</th><th>STATUS</th><th>MONTH PROFIT</th><th></th><th></th><th></th>';
+  html += '</tr></thead><tbody>';
+  
+  // Track totals for summary
+  let totalCost = 0, totalValue = 0, totalPnL = 0;
+  
+  state.portfolio.forEach((p, i) => {
+    const currPrice = getPortfolioPrice(p.ticker);
+    const hasPrice = currPrice !== null && !isNaN(currPrice);
+    const currentVal = p.status === 'sold' && p.sellPrice ? p.sellPrice : (hasPrice ? currPrice : p.buyPrice);
+    const costBasis = p.buyPrice * p.quantity;
+    const valueNow = currentVal * p.quantity;
+    const pnlDollar = valueNow - costBasis;
+    const pnlPercent = costBasis > 0 ? ((valueNow - costBasis) / costBasis * 100) : 0;
+    totalCost += costBasis;
+    totalValue += valueNow;
+    totalPnL += pnlDollar;
+    
+    // Per-row profit: realized for sold, unrealized for holding
+    const rowProfit = p.status === 'sold' && p.sellPrice ? ((p.sellPrice - p.buyPrice) * p.quantity) : ((hasPrice ? currPrice : p.buyPrice) - p.buyPrice) * p.quantity;
+    const profitLabel = p.status === 'sold' ? '✅' : '🔵';
+    const monthProfitStr = profitLabel + ' ' + (rowProfit >= 0 ? '+' : '') + '$' + rowProfit.toFixed(2);
+    
+    const statusLabel = p.status === 'sold' ? '✅ SOLD' : '🔵 HOLDING';
+    const statusClass = p.status === 'sold' ? 'tp' : 'active';
+    const pnlClass = pnlDollar >= 0 ? 'pnl-up' : 'pnl-dn';
+    
+    html += '<tr>';
+    html += '<td style="color:var(--text-dim)">' + (i+1) + '</td>';
+    html += '<td class="tkr">' + p.ticker + '</td>';
+    html += '<td>' + p.quantity + '</td>';
+    html += '<td>$' + p.buyPrice.toFixed(2) + '</td>';
+    html += '<td>$' + (p.status === 'sold' && p.sellPrice ? p.sellPrice.toFixed(2) : (hasPrice ? currPrice.toFixed(2) : '—')) + '</td>';
+    html += '<td style="color:var(--text-dim)">$' + costBasis.toFixed(2) + '</td>';
+    html += '<td>$' + valueNow.toFixed(2) + '</td>';
+    html += '<td class="' + pnlClass + '">' + (pnlPercent >= 0 ? '+' : '') + pnlPercent.toFixed(2) + '%</td>';
+    html += '<td class="' + pnlClass + '">' + (pnlDollar >= 0 ? '+' : '') + '$' + pnlDollar.toFixed(2) + '</td>';
+    html += '<td><span class="status-badge ' + statusClass + '">' + statusLabel + '</span></td>';
+    html += '<td style="font-weight:600;font-size:10px;' + (rowProfit > 0 ? 'color:var(--green-bull)' : rowProfit < 0 ? 'color:var(--red-bear)' : 'color:var(--text-dim)') + '">' + monthProfitStr + '</td>';
+    html += '<td>' + (p.status === 'holding' ? '<span style="cursor:pointer;color:var(--red-bear);font-size:11px;font-weight:700" onclick="sellPortfolioItem(' + i + ')" title="Sell">💰 SELL</span>' : '') + '</td>';
+    html += '<td><span style="cursor:pointer;color:var(--accent-amber);font-size:13px" onclick="editPortfolioPosition(' + i + ')" title="Edit">✎</span></td>';
+    html += '<td><span style="cursor:pointer;color:var(--red-bear);font-size:14px" onclick="removePortfolioItem(' + i + ')" title="Remove">✕</span></td>';
+    html += '</tr>';
+  });
+  
+  html += '</tbody></table></div>';
+  
+  // Summary
+  const totalPnlClass = totalPnL >= 0 ? 'pnl-up' : 'pnl-dn';
+  const realizedGain = state.portfolio.filter(p => p.status === 'sold' && p.sellPrice).reduce((sum, p) => sum + ((p.sellPrice - p.buyPrice) * p.quantity), 0);
+  const unrealizedGain = state.portfolio.filter(p => p.status === 'holding').reduce((sum, p) => {
+    const cp = getPortfolioPrice(p.ticker);
+    return sum + ((cp || p.buyPrice) - p.buyPrice) * p.quantity;
+  }, 0);
+  const rgClass = realizedGain >= 0 ? 'pnl-up' : 'pnl-dn';
+  const ugClass = unrealizedGain >= 0 ? 'pnl-up' : 'pnl-dn';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:16px;font-family:var(--font-mono);font-size:11px;margin-bottom:14px;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px">';
+  html += '<div><span style="color:var(--text-dim)">Value Bought (Cost Basis):</span> <strong>$' + totalCost.toFixed(2) + '</strong></div>';
+  html += '<div><span style="color:var(--text-dim)">Current Value:</span> <strong>$' + totalValue.toFixed(2) + '</strong></div>';
+  html += '<div><span style="color:var(--text-dim)">Total P&amp;L:</span> <strong class="' + totalPnlClass + '">' + (totalPnL >= 0 ? '+' : '') + '$' + totalPnL.toFixed(2) + '</strong></div>';
+  html += '<div><span style="color:var(--text-dim)">Realized P&amp;L:</span> <strong class="' + rgClass + '">' + (realizedGain >= 0 ? '+' : '') + '$' + realizedGain.toFixed(2) + '</strong></div>';
+  html += '<div><span style="color:var(--text-dim)">Unrealized P&amp;L:</span> <strong class="' + ugClass + '">' + (unrealizedGain >= 0 ? '+' : '') + '$' + unrealizedGain.toFixed(2) + '</strong></div>';
+  html += '<div><span style="color:var(--text-dim)">Positions:</span> <strong>' + state.portfolio.length + '</strong> (' + state.portfolio.filter(p => p.status === 'holding').length + ' holding, ' + state.portfolio.filter(p => p.status === 'sold').length + ' sold)</div>';
+  html += '</div>';
+  
+  // Monthly profit breakdown — realized from sold dates, unrealized shown separately
+  const realizedByMonth = {};
+  const unrealizedByMonth = {};
+  const nowDate = new Date();
+  state.portfolio.forEach(p => {
+    if (p.status === 'sold' && p.sellPrice) {
+      const profit = (p.sellPrice - p.buyPrice) * p.quantity;
+      const sellMonth = p.sellDate ? p.sellDate.slice(0,7) : (p.buyDate ? p.buyDate.slice(0,7) : 'unknown');
+      realizedByMonth[sellMonth] = (realizedByMonth[sellMonth] || 0) + profit;
+    } else if (p.status === 'holding') {
+      const buyMonth = p.buyDate ? p.buyDate.slice(0,7) : 'unknown';
+      const currPrice = getPortfolioPrice(p.ticker);
+      const profit = currPrice ? ((currPrice - p.buyPrice) * p.quantity) : 0;
+      unrealizedByMonth[buyMonth] = (unrealizedByMonth[buyMonth] || 0) + profit;
+    }
+  });
+  
+  // Filter months based on selected range
+  function filterMonths(months, range) {
+    const now = new Date();
+    const cutoff = new Date(now);
+    if (range === '3m') cutoff.setMonth(cutoff.getMonth() - 3);
+    else if (range === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
+    else if (range === '12m') cutoff.setMonth(cutoff.getMonth() - 12);
+    else return months; // 'all'
+    return months.filter(m => {
+      if (m === 'unknown') return true;
+      const d = new Date(m + '-01');
+      return d >= cutoff && d <= now;
+    });
+  }
+  
+  const allRealizedMonths = Object.keys(realizedByMonth).sort();
+  const allUnrealizedMonths = Object.keys(unrealizedByMonth).sort();
+  const filteredRealizedMonths = filterMonths(allRealizedMonths, _portfolioMonthFilter);
+  const filteredUnrealizedMonths = filterMonths(allUnrealizedMonths, _portfolioMonthFilter);
+  
+  const hasProfits = filteredRealizedMonths.length > 0 || filteredUnrealizedMonths.length > 0;
+  if (hasProfits) {
+    html += '<div class="card" style="padding:14px;margin-bottom:14px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
+    html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--accent-amber);text-transform:uppercase;letter-spacing:1px">📅 MONTHLY PROFIT / DEFICIT BREAKDOWN</h3>';
+    html += '<div style="display:flex;gap:4px;flex-wrap:wrap">';
+    const ranges = [{v:'3m',l:'3M'},{v:'6m',l:'6M'},{v:'12m',l:'12M'},{v:'all',l:'ALL'}];
+    ranges.forEach(r => {
+      const active = _portfolioMonthFilter === r.v;
+      html += '<button class="btn" onclick="filterPortfolioMonths(\'' + r.v + '\')" style="font-size:9px;padding:3px 8px;' + (active ? 'background:var(--accent-burnt);border-color:var(--accent-amber);color:#fff' : '') + '">' + r.l + '</button>';
+    });
+    html += '<button class="btn" onclick="generateTaxReport()" style="font-size:10px;color:var(--accent-amber);border-color:var(--accent-amber)">💰 TAX REPORT</button>';
+    html += '</div></div>';
+    
+    // Realized monthly
+    if (filteredRealizedMonths.length > 0) {
+      html += '<div style="font-size:10px;color:var(--green-bull);margin-bottom:6px;font-family:var(--font-mono)">✅ REALIZED (SOLD)</div>';
+      html += '<table class="tracked-table"><thead><tr><th>MONTH</th><th>PROFIT / DEFICIT</th></tr></thead><tbody>';
+      let grandRealized = 0;
+      filteredRealizedMonths.forEach(month => {
+        const profit = realizedByMonth[month];
+        grandRealized += profit;
+        const profitClass = profit >= 0 ? 'pnl-up' : 'pnl-dn';
+        html += '<tr><td style="color:var(--text-dim)">' + month + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td></tr>';
+      });
+      const grClass = grandRealized >= 0 ? 'pnl-up' : 'pnl-dn';
+      html += '<tr><td style="font-weight:700;color:var(--text-primary)">TOTAL REALIZED</td><td class="' + grClass + '" style="font-weight:700">' + (grandRealized >= 0 ? '+' : '') + '$' + grandRealized.toFixed(2) + '</td></tr>';
+      html += '</tbody></table>';
+    }
+    
+    // Unrealized monthly
+    if (filteredUnrealizedMonths.length > 0) {
+      html += '<div style="font-size:10px;color:var(--yellow-neutral);margin:8px 0 6px;font-family:var(--font-mono)">🔵 UNREALIZED (HOLDING)</div>';
+      html += '<table class="tracked-table"><thead><tr><th>MONTH</th><th>EST. PROFIT / DEFICIT</th></tr></thead><tbody>';
+      let grandUnrealized = 0;
+      filteredUnrealizedMonths.forEach(month => {
+        const profit = unrealizedByMonth[month];
+        grandUnrealized += profit;
+        const profitClass = profit >= 0 ? 'pnl-up' : 'pnl-dn';
+        html += '<tr><td style="color:var(--text-dim)">' + month + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td></tr>';
+      });
+      const gurClass = grandUnrealized >= 0 ? 'pnl-up' : 'pnl-dn';
+      html += '<tr><td style="font-weight:700;color:var(--text-primary)">TOTAL UNREALIZED</td><td class="' + gurClass + '" style="font-weight:700">' + (grandUnrealized >= 0 ? '+' : '') + '$' + grandUnrealized.toFixed(2) + '</td></tr>';
+      html += '</tbody></table>';
+    }
+    
+    html += '</div>';
+  }
+  
+  // Tax report note
+  html += '<div style="padding:10px 14px;background:rgba(200,90,23,0.08);border:1px solid rgba(200,90,23,0.2);border-radius:6px;font-size:10px;color:var(--text-dim);line-height:1.6">';
+  html += '⚠️ Tax reports are estimated based on your entries. Sold positions with a sell price are treated as <strong>realized gains/losses</strong>. Holding positions show <strong>unrealized gains/losses</strong> based on current market prices. Consult a tax professional for actual tax filing.';
+  html += '</div>';
+  
+  container.innerHTML = html;
+  updatePortfolioSidebar();
+}
+
+function addPortfolioItem() {
+  const ticker = document.getElementById('pfTicker').value.toUpperCase().trim();
+  const quantity = parseFloat(document.getElementById('pfQty').value);
+  const buyPrice = parseFloat(document.getElementById('pfBuyPrice').value);
+  if (!ticker || !quantity || !buyPrice) { alert('Fill TICKER, QTY, and BUY $'); return; }
+  state.portfolio.push({
+    ticker,
+    quantity,
+    buyPrice,
+    sellPrice: null,
+    buyDate: new Date().toISOString().slice(0,10),
+    sellDate: null,
+    status: 'holding'
+  });
+  document.getElementById('pfTicker').value = '';
+  document.getElementById('pfQty').value = '';
+  document.getElementById('pfBuyPrice').value = '';
+  savePortfolio();
+  renderPortfolioView();
+}
+
+function sellPortfolioItem(index) {
+  const p = state.portfolio[index];
+  const container = document.getElementById('dashboard');
+  
+  let html = '<div class="card" style="max-width:450px;margin:40px auto">';
+  html += '<h3 style="font-family:var(--font-mono);font-size:13px;color:var(--accent-amber);margin-bottom:14px">💰 SELL — ' + p.ticker + '</h3>';
+  html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px;margin-bottom:12px;font-family:var(--font-mono);font-size:11px;line-height:1.8">';
+  html += '<div>Quantity: <strong>' + p.quantity + '</strong></div>';
+  html += '<div>Bought at: <strong>$' + p.buyPrice.toFixed(2) + '</strong></div>';
+  html += '<div>Cost Basis: <strong>$' + (p.buyPrice * p.quantity).toFixed(2) + '</strong></div>';
+  // Show current market price if available
+  const curPrice = getPortfolioPrice(p.ticker);
+  if (curPrice) {
+    html += '<div>Market Price: <strong>$' + curPrice.toFixed(2) + '</strong></div>';
+  }
+  html += '</div>';
+  html += '<div style="margin-bottom:12px">';
+  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">SELL PRICE ($)</label>';
+  html += '<input class="search-input" id="sellPriceInput" type="number" step="0.01" value="' + (curPrice ? curPrice.toFixed(2) : '') + '" style="width:100%;font-size:14px;margin-bottom:10px">';
+  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">SELL DATE</label>';
+  html += '<input class="search-input" id="sellDateInput" type="date" value="' + new Date().toISOString().slice(0,10) + '" style="width:100%;font-size:14px;margin-bottom:10px">';
+  html += '</div>';
+  html += '<div id="sellPreview" style="font-family:var(--font-mono);font-size:12px;padding:8px 10px;border-radius:4px;margin-bottom:12px;background:rgba(0,0,0,0.1)"></div>';
+  html += '<div style="display:flex;gap:8px">';
+  html += '<button class="btn primary" onclick="confirmSell(' + index + ')" style="flex:1;background:rgba(229,57,53,0.2);border-color:var(--red-bear);color:var(--red-bear)">✅ CONFIRM SALE</button>';
+  html += '<button class="btn" onclick="renderPortfolioView()">CANCEL</button>';
+  html += '</div>';
+  html += '<div id="sellError" style="margin-top:8px;font-size:11px;color:var(--red-bear);display:none"></div>';
+  html += '</div>';
+  container.innerHTML = html;
+  
+  // Live preview
+  document.getElementById('sellPriceInput').addEventListener('input', function() {
+    updateSellPreview(index);
+  });
+  updateSellPreview(index);
+}
+
+function updateSellPreview(index) {
+  const p = state.portfolio[index];
+  const sellPrice = parseFloat(document.getElementById('sellPriceInput').value);
+  const previewEl = document.getElementById('sellPreview');
+  if (!sellPrice || isNaN(sellPrice)) {
+    previewEl.innerHTML = '<span style="color:var(--text-dim)">Enter a sell price to see preview</span>';
+    return;
+  }
+  const profit = (sellPrice - p.buyPrice) * p.quantity;
+  const profitPct = p.buyPrice > 0 ? ((sellPrice - p.buyPrice) / p.buyPrice * 100) : 0;
+  const realized = profit;
+  previewEl.innerHTML = '';
+  previewEl.innerHTML += '<div>Realized P&amp;L: <strong class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + ' (' + (profitPct >= 0 ? '+' : '') + profitPct.toFixed(2) + '%)</strong></div>';
+  previewEl.innerHTML += '<div style="margin-top:4px;font-size:10px;color:var(--text-dim)">This will be recorded as a closed position and added to your monthly profit/deficit.</div>';
+}
+
+function confirmSell(index) {
+  const p = state.portfolio[index];
+  const sellPrice = parseFloat(document.getElementById('sellPriceInput').value);
+  const sellDate = document.getElementById('sellDateInput').value;
+  const errEl = document.getElementById('sellError');
+  
+  if (!sellPrice || isNaN(sellPrice) || sellPrice <= 0) {
+    errEl.textContent = 'Enter a valid sell price';
+    errEl.style.display = 'block';
+    return;
+  }
+  
+  state.portfolio[index] = {
+    ticker: p.ticker,
+    quantity: p.quantity,
+    buyPrice: p.buyPrice,
+    sellPrice: sellPrice,
+    buyDate: p.buyDate,
+    sellDate: sellDate || new Date().toISOString().slice(0,10),
+    status: 'sold'
+  };
+  savePortfolio();
+  renderPortfolioView();
+  updatePortfolioSidebar();
+}
+
+function filterPortfolioMonths(range) {
+  _portfolioMonthFilter = range;
+  renderPortfolioView();
+}
+
+function removePortfolioItem(index) {
+  if (!confirm('Remove ' + state.portfolio[index].ticker + ' from portfolio?')) return;
+  state.portfolio.splice(index, 1);
+  savePortfolio();
+  renderPortfolioView();
+  updatePortfolioSidebar();
+}
+
+function editPortfolioPosition(index) {
+  const p = state.portfolio[index];
+  const container = document.getElementById('dashboard');
+  
+  let html = '<div class="card" style="max-width:500px;margin:40px auto">';
+  html += '<h3 style="font-family:var(--font-mono);font-size:13px;color:var(--accent-amber);margin-bottom:14px">✎ EDIT POSITION — ' + p.ticker + '</h3>';
+  html += '<div style="margin-bottom:12px">';
+  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">TICKER</label>';
+  html += '<input class="search-input" id="editTicker" value="' + p.ticker + '" style="width:100%;font-size:13px;margin-bottom:10px">';
+  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">QUANTITY</label>';
+  html += '<input class="search-input" id="editQty" type="number" step="1" value="' + p.quantity + '" style="width:100%;font-size:13px;margin-bottom:10px">';
+  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">BUY PRICE ($)</label>';
+  html += '<input class="search-input" id="editBuyPrice" type="number" step="0.01" value="' + p.buyPrice.toFixed(2) + '" style="width:100%;font-size:13px;margin-bottom:10px">';
+  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">SELL PRICE ($) — leave blank if holding</label>';
+  html += '<input class="search-input" id="editSellPrice" type="number" step="0.01" value="' + (p.sellPrice ? p.sellPrice.toFixed(2) : '') + '" style="width:100%;font-size:13px;margin-bottom:10px">';
+  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">STATUS</label>';
+  html += '<select id="editStatus" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:8px;border-radius:4px;font-family:var(--font-mono);font-size:13px;width:100%;margin-bottom:10px">';
+  html += '<option value="holding" ' + (p.status === 'holding' ? 'selected' : '') + '>🔵 HOLDING</option>';
+  html += '<option value="sold" ' + (p.status === 'sold' ? 'selected' : '') + '>✅ SOLD</option>';
+  html += '</select>';
+  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">SELL DATE (optional)</label>';
+  html += '<input class="search-input" id="editSellDate" type="date" value="' + (p.sellDate || '') + '" style="width:100%;font-size:13px;margin-bottom:10px">';
+  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">BUY DATE</label>';
+  html += '<input class="search-input" id="editBuyDate" type="date" value="' + (p.buyDate || '') + '" style="width:100%;font-size:13px;margin-bottom:10px">';
+  html += '</div>';
+  html += '<div style="display:flex;gap:8px">';
+  html += '<button class="btn primary" onclick="savePortfolioEdit(' + index + ')" style="flex:1">💾 SAVE</button>';
+  html += '<button class="btn" onclick="renderPortfolioView()">CANCEL</button>';
+  html += '</div>';
+  html += '<div id="editError" style="margin-top:8px;font-size:11px;color:var(--red-bear);display:none"></div>';
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function savePortfolioEdit(index) {
+  const ticker = document.getElementById('editTicker').value.toUpperCase().trim();
+  const quantity = parseFloat(document.getElementById('editQty').value);
+  const buyPrice = parseFloat(document.getElementById('editBuyPrice').value);
+  const sellInput = document.getElementById('editSellPrice').value.trim();
+  const sellPrice = sellInput ? parseFloat(sellInput) : null;
+  const status = document.getElementById('editStatus').value;
+  const buyDate = document.getElementById('editBuyDate').value || new Date().toISOString().slice(0,10);
+  const sellDate = document.getElementById('editSellDate').value || null;
+  
+  const errEl = document.getElementById('editError');
+  if (!ticker || !quantity || !buyPrice) {
+    errEl.textContent = 'TICKER, QTY, and BUY $ are required';
+    errEl.style.display = 'block';
+    return;
+  }
+  
+  state.portfolio[index] = {
+    ticker,
+    quantity,
+    buyPrice,
+    sellPrice: status === 'sold' && sellPrice ? sellPrice : null,
+    buyDate,
+    sellDate: status === 'sold' ? sellDate || new Date().toISOString().slice(0,10) : null,
+    status
+  };
+  savePortfolio();
+  renderPortfolioView();
+  updatePortfolioSidebar();
+}
+
+function generateTaxReport() {
+  const container = document.getElementById('dashboard');
+  
+  // Build month selector options
+  const months = [];
+  const now = new Date();
+  for (let i = 0; i < 24; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const val = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    const label = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+    months.push({ val, label });
+  }
+  const selectedMonth = _taxReportMonth || now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  
+  // Filter portfolio by selected month
+  function monthMatch(dateStr, targetMonth) {
+    if (!targetMonth || targetMonth === 'all') return true;
+    return dateStr && dateStr.slice(0,7) === targetMonth;
+  }
+  
+  // Sold items: match by sell date OR buy date within the month
+  // For a single-month report: show positions where sell happened in that month
+  const soldItems = state.portfolio.filter(p => {
+    if (p.status !== 'sold' || !p.sellPrice) return false;
+    const sellMatch = monthMatch(p.sellDate, selectedMonth);
+    const buyMatch = monthMatch(p.buyDate, selectedMonth) && !p.sellDate; // if no sell date, use buy month
+    return sellMatch || buyMatch;
+  });
+  const holdingItems = state.portfolio.filter(p => {
+    if (p.status !== 'holding') return false;
+    return monthMatch(p.buyDate, selectedMonth);
+  });
+  
+  let html = '<div class="card" style="padding:0;overflow:hidden">';
+  html += '<div style="padding:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">';
+  html += '<span style="font-family:var(--font-mono);font-size:14px;color:var(--accent-amber);font-weight:700">💰 TAX REPORT</span>';
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  html += '<button class="btn" onclick="downloadTaxCSV()" style="font-size:10px">📥 CSV</button>';
+  html += '<button class="btn" onclick="downloadTaxMD()" style="font-size:10px">📝 MD</button>';
+  html += '<button class="btn" onclick="downloadTaxPDF()" style="font-size:10px">📄 PDF</button>';
+  html += '<button class="btn" onclick="renderPortfolioView()" style="font-size:10px">← BACK</button>';
+  html += '</div></div>';
+  
+  // Month selector
+  html += '<div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
+  html += '<label style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">📅 Select Month:</label>';
+  html += '<select id="taxMonthSelect" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:6px 8px;border-radius:4px;font-family:var(--font-mono);font-size:11px">';
+  html += '<option value="all">All Time</option>';
+  months.forEach(m => {
+    const sel = m.val === selectedMonth ? ' selected' : '';
+    html += '<option value="' + m.val + '"' + sel + '>' + m.label + '</option>';
+  });
+  html += '</select>';
+  html += '<button class="btn" onclick="updateTaxReportMonth()" style="font-size:10px;padding:4px 10px">🔄 UPDATE</button>';
+  html += '</div>';
+  
+  // Realized gains/losses (sold)
+  html += '<div style="padding:14px;border-bottom:1px solid var(--border)">';
+  html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--green-bull);margin-bottom:10px">✅ REALIZED GAINS/LOSSES (SOLD)</h3>';
+  if (soldItems.length === 0) {
+    html += '<div style="color:var(--text-dim);font-size:11px">No closed positions this period.</div>';
+  } else {
+    html += '<table class="tracked-table"><thead><tr><th>TICKER</th><th>QTY</th><th>BUY $</th><th>SELL $</th><th>GAIN/LOSS</th><th>BUY DATE</th><th>SELL DATE</th></tr></thead><tbody>';
+    let totalRealized = 0;
+    soldItems.forEach(p => {
+      const profit = (p.sellPrice - p.buyPrice) * p.quantity;
+      totalRealized += profit;
+      const profitClass = profit >= 0 ? 'pnl-up' : 'pnl-dn';
+      html += '<tr><td class="tkr">' + p.ticker + '</td><td>' + p.quantity + '</td><td>$' + p.buyPrice.toFixed(2) + '</td><td>$' + p.sellPrice.toFixed(2) + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td><td style="color:var(--text-dim)">' + (p.buyDate || '—') + '</td><td style="color:var(--text-dim)">' + (p.sellDate || '—') + '</td></tr>';
+    });
+    const trClass = totalRealized >= 0 ? 'pnl-up' : 'pnl-dn';
+    html += '<tr><td style="font-weight:700">TOTAL REALIZED</td><td></td><td></td><td></td><td class="' + trClass + '" style="font-weight:700">' + (totalRealized >= 0 ? '+' : '') + '$' + totalRealized.toFixed(2) + '</td><td></td><td></td></tr>';
+    html += '</tbody></table></div>';
+  }
+  
+  // Unrealized gains/losses (holding)
+  html += '<div style="padding:14px;border-bottom:1px solid var(--border)">';
+  html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--yellow-neutral);margin-bottom:10px">🔵 UNREALIZED GAINS/LOSSES (HOLDING)</h3>';
+  if (holdingItems.length === 0) {
+    html += '<div style="color:var(--text-dim);font-size:11px">All positions closed.</div>';
+  } else {
+    html += '<table class="tracked-table"><thead><tr><th>TICKER</th><th>QTY</th><th>BUY $</th><th>CURRENT $</th><th>UNREALIZED P&amp;L</th><th>BUY DATE</th></tr></thead><tbody>';
+    let totalUnrealized = 0;
+    holdingItems.forEach(p => {
+      const currPrice = getPortfolioPrice(p.ticker);
+      const price = currPrice || p.buyPrice;
+      const profit = (price - p.buyPrice) * p.quantity;
+      totalUnrealized += profit;
+      const profitClass = profit >= 0 ? 'pnl-up' : 'pnl-dn';
+      html += '<tr><td class="tkr">' + p.ticker + '</td><td>' + p.quantity + '</td><td>$' + p.buyPrice.toFixed(2) + '</td><td>' + (currPrice ? '$' + currPrice.toFixed(2) : '<span style="color:var(--text-dim)">—</span>') + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td><td style="color:var(--text-dim)">' + (p.buyDate || '—') + '</td></tr>';
+    });
+    const turClass = totalUnrealized >= 0 ? 'pnl-up' : 'pnl-dn';
+    html += '<tr><td style="font-weight:700">TOTAL UNREALIZED</td><td></td><td></td><td></td><td class="' + turClass + '" style="font-weight:700">' + (totalUnrealized >= 0 ? '+' : '') + '$' + totalUnrealized.toFixed(2) + '</td><td></td></tr>';
+    html += '</tbody></table></div>';
+  }
+  
+  // Tax estimate
+  const totalRealizedGain = soldItems.reduce((sum, p) => sum + ((p.sellPrice - p.buyPrice) * p.quantity), 0);
+  const taxRate = parseFloat(localStorage.getItem('jerry_tax_rate') || '30');
+  const taxAmount = totalRealizedGain > 0 ? totalRealizedGain * (taxRate / 100) : 0;
+  const netAfterTax = totalRealizedGain - taxAmount;
+  html += '<div style="padding:14px">';
+  html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--accent-amber);margin-bottom:10px">📊 TAX ESTIMATE (Realized Gains Only)</h3>';
+  html += '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">';
+  html += '<label style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">Tax Rate:</label>';
+  html += '<input id="taxRateInput" type="number" step="0.1" min="0" max="100" value="' + taxRate + '" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:6px 8px;border-radius:4px;font-family:var(--font-mono);font-size:12px;width:70px">';
+  html += '<span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">%</span>';
+  html += '<button class="btn" onclick="saveTaxRate()" style="font-size:10px;padding:4px 10px">💾 SET</button>';
+  html += '</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+  html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
+  html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">Realized Gain/Loss</div>';
+  html += '<div style="font-family:var(--font-mono);font-size:18px;font-weight:700;margin-top:4px;' + (totalRealizedGain >= 0 ? 'color:var(--green-bull)' : 'color:var(--red-bear)') + '">' + (totalRealizedGain >= 0 ? '+' : '') + '$' + totalRealizedGain.toFixed(2) + '</div>';
+  html += '</div>';
+  html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
+  html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">TAX (' + taxRate + '%)</div>';
+  html += '<div style="font-family:var(--font-mono);font-size:18px;font-weight:700;margin-top:4px;color:var(--red-bear)">$' + (totalRealizedGain > 0 ? taxAmount.toFixed(2) : '0.00') + '</div>';
+  html += '</div>';
+  html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
+  html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">Net After Tax</div>';
+  html += '<div style="font-family:var(--font-mono);font-size:18px;font-weight:700;margin-top:4px;' + (netAfterTax >= 0 ? 'color:var(--green-bull)' : 'color:var(--red-bear)') + '">' + (netAfterTax >= 0 ? '+' : '') + '$' + netAfterTax.toFixed(2) + '</div>';
+  html += '</div>';
+  html += '</div>';
+  html += '<div style="margin-top:10px;font-size:10px;color:var(--text-dim);padding:8px;background:rgba(255,193,7,0.08);border-radius:4px">';
+  html += '⚠️ <strong>Disclaimer:</strong> This is an <strong>estimate only</strong>. Tax rates vary by jurisdiction, holding period, and individual circumstances. Consult a qualified tax professional for actual tax filing.';
+  html += '</div></div></div>';
+  
+  container.innerHTML = html;
+}
+
+function updateTaxReportMonth() {
+  _taxReportMonth = document.getElementById('taxMonthSelect').value;
+  generateTaxReport();
+}
+
+function downloadTaxCSV() {
+  const taxMonth = _taxReportMonth || document.getElementById('taxMonthSelect')?.value || '';
+  const soldItems = state.portfolio.filter(p => {
+    if (p.status !== 'sold' || !p.sellPrice) return false;
+    if (!taxMonth || taxMonth === 'all') return true;
+    return (p.sellDate && p.sellDate.slice(0,7) === taxMonth) || (p.buyDate && p.buyDate.slice(0,7) === taxMonth);
+  });
+  const holdingItems = state.portfolio.filter(p => {
+    if (p.status !== 'holding') return false;
+    if (!taxMonth || taxMonth === 'all') return true;
+    return p.buyDate && p.buyDate.slice(0,7) === taxMonth;
+  });
+  const totalRealizedGain = soldItems.reduce((sum, p) => sum + ((p.sellPrice - p.buyPrice) * p.quantity), 0);
+  const taxRate = parseFloat(localStorage.getItem('jerry_tax_rate') || '30');
+  const taxAmount = totalRealizedGain > 0 ? totalRealizedGain * (taxRate / 100) : 0;
+  const netAfterTax = totalRealizedGain - taxAmount;
+  
+  let csv = 'TAX REPORT\n\n';
+  csv += 'REALIZED GAINS/LOSSES\n';
+  csv += 'Ticker,Qty,Buy Price,Sell Price,Gain/Loss,Buy Date,Sell Date\n';
+  soldItems.forEach(p => {
+    const profit = (p.sellPrice - p.buyPrice) * p.quantity;
+    csv += p.ticker + ',' + p.quantity + ',' + p.buyPrice.toFixed(2) + ',' + p.sellPrice.toFixed(2) + ',' + (profit >= 0 ? '+' : '') + profit.toFixed(2) + ',' + (p.buyDate || '') + ',' + (p.sellDate || '') + '\n';
+  });
+  csv += '\nUNREALIZED GAINS/LOSSES\n';
+  csv += 'Ticker,Qty,Buy Price,Current Price,Unrealized P&L,Buy Date\n';
+  holdingItems.forEach(p => {
+    const cp = getPortfolioPrice(p.ticker);
+    const price = cp || p.buyPrice;
+    const profit = (price - p.buyPrice) * p.quantity;
+    csv += p.ticker + ',' + p.quantity + ',' + p.buyPrice.toFixed(2) + ',' + (cp ? price.toFixed(2) : 'N/A') + ',' + (profit >= 0 ? '+' : '') + profit.toFixed(2) + ',' + (p.buyDate || '') + '\n';
+  });
+  csv += '\nSUMMARY\n';
+  csv += 'Realized Gain/Loss,' + (totalRealizedGain >= 0 ? '+' : '') + '$' + totalRealizedGain.toFixed(2) + '\n';
+  csv += 'Tax Rate,' + taxRate + '%\n';
+  csv += 'Tax Due,' + '$' + taxAmount.toFixed(2) + '\n';
+  csv += 'Net After Tax,' + (netAfterTax >= 0 ? '+' : '') + '$' + netAfterTax.toFixed(2) + '\n';
+  downloadFile(csv, 'tax-report.csv', 'text/csv');
+}
+
+function downloadTaxMD() {
+  const taxMonth = _taxReportMonth || '';
+  const soldItems = state.portfolio.filter(p => {
+    if (p.status !== 'sold' || !p.sellPrice) return false;
+    if (!taxMonth || taxMonth === 'all') return true;
+    return (p.sellDate && p.sellDate.slice(0,7) === taxMonth) || (p.buyDate && p.buyDate.slice(0,7) === taxMonth);
+  });
+  const holdingItems = state.portfolio.filter(p => {
+    if (p.status !== 'holding') return false;
+    if (!taxMonth || taxMonth === 'all') return true;
+    return p.buyDate && p.buyDate.slice(0,7) === taxMonth;
+  });
+  const totalRealizedGain = soldItems.reduce((sum, p) => sum + ((p.sellPrice - p.buyPrice) * p.quantity), 0);
+  const taxRate = parseFloat(localStorage.getItem('jerry_tax_rate') || '30');
+  const taxAmount = totalRealizedGain > 0 ? totalRealizedGain * (taxRate / 100) : 0;
+  const netAfterTax = totalRealizedGain - taxAmount;
+  
+  let md = '# Tax Report\n\n';
+  md += '## Realized Gains/Losses\n\n';
+  md += '| Ticker | Qty | Buy $ | Sell $ | Gain/Loss | Buy Date | Sell Date |\n';
+  md += '|-------|-----|--------|--------|-----------|----------|----------|\n';
+  soldItems.forEach(p => {
+    const profit = (p.sellPrice - p.buyPrice) * p.quantity;
+    md += '| ' + p.ticker + ' | ' + p.quantity + ' | $' + p.buyPrice.toFixed(2) + ' | $' + p.sellPrice.toFixed(2) + ' | ' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + ' | ' + (p.buyDate || '—') + ' | ' + (p.sellDate || '—') + ' |\n';
+  });
+  md += '\n## Unrealized Gains/Losses\n\n';
+  md += '| Ticker | Qty | Buy $ | Current $ | Unrealized P&L | Buy Date |\n';
+  md += '|-------|-----|--------|-----------|----------------|----------|\n';
+  holdingItems.forEach(p => {
+    const cp = getPortfolioPrice(p.ticker);
+    const price = cp || p.buyPrice;
+    const profit = (price - p.buyPrice) * p.quantity;
+    md += '| ' + p.ticker + ' | ' + p.quantity + ' | $' + p.buyPrice.toFixed(2) + ' | ' + (cp ? '$' + price.toFixed(2) : 'N/A') + ' | ' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + ' | ' + (p.buyDate || '—') + ' |\n';
+  });
+  md += '\n## Summary\n\n';
+  md += '- **Realized Gain/Loss:** ' + (totalRealizedGain >= 0 ? '+' : '') + '$' + totalRealizedGain.toFixed(2) + '\n';
+  md += '- **Tax Rate:** ' + taxRate + '%\n';
+  md += '- **Tax Due:** $' + taxAmount.toFixed(2) + '\n';
+  md += '- **Net After Tax:** ' + (netAfterTax >= 0 ? '+' : '') + '$' + netAfterTax.toFixed(2) + '\n';
+  md += '\n---\n⚠️ *Generated by MOMENTUM. Not financial advice. Consult a tax professional.*\n';
+  downloadFile(md, 'tax-report.md', 'text/markdown');
+}
+
+function downloadTaxPDF() {
+  const taxMonth = _taxReportMonth || '';
+  const soldItems = state.portfolio.filter(p => {
+    if (p.status !== 'sold' || !p.sellPrice) return false;
+    if (!taxMonth || taxMonth === 'all') return true;
+    return (p.sellDate && p.sellDate.slice(0,7) === taxMonth) || (p.buyDate && p.buyDate.slice(0,7) === taxMonth);
+  });
+  const holdingItems = state.portfolio.filter(p => {
+    if (p.status !== 'holding') return false;
+    if (!taxMonth || taxMonth === 'all') return true;
+    return p.buyDate && p.buyDate.slice(0,7) === taxMonth;
+  });
+  const totalCost = state.portfolio.reduce((s, p) => s + p.buyPrice * p.quantity, 0);
+  const totalRealizedGain = soldItems.reduce((sum, p) => sum + ((p.sellPrice - p.buyPrice) * p.quantity), 0);
+  let totalValueHolding = 0;
+  holdingItems.forEach(p => {
+    const cp = getPortfolioPrice(p.ticker);
+    totalValueHolding += (cp || p.buyPrice) * p.quantity;
+  });
+  const taxRate = parseFloat(localStorage.getItem('jerry_tax_rate') || '30');
+  const taxAmount = totalRealizedGain > 0 ? totalRealizedGain * (taxRate / 100) : 0;
+  const netAfterTax = totalRealizedGain - taxAmount;
+  
+  const date = new Date().toISOString().slice(0,10);
+  let htmlContent = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Tax Report - ' + date + '</title>';
+  htmlContent += '<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:800px;margin:30px auto;padding:20px;color:#1a1410}'; 
+  htmlContent += 'h1{font-family:monospace;color:#c85a17;font-size:22px;border-bottom:2px solid #e8a846;padding-bottom:8px}'; 
+  htmlContent += 'h2{font-family:monospace;color:#3d2e1c;font-size:16px;margin-top:24px}'; 
+  htmlContent += 'table{width:100%;border-collapse:collapse;margin:10px 0 20px;font-family:monospace;font-size:12px}'; 
+  htmlContent += 'th{background:#3d2e1c;color:#fff;padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase}'; 
+  htmlContent += 'td{padding:6px 8px;border-bottom:1px solid #ddd;font-size:11px}'; 
+  htmlContent += 'tr:hover{background:#f5f0eb}'; 
+  htmlContent += '.pos{color:#4caf50;font-weight:700}.neg{color:#e53935;font-weight:700}'; 
+  htmlContent += '.summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}'; 
+  htmlContent += '.summary-card{border:1px solid #ddd;border-radius:6px;padding:12px}'; 
+  htmlContent += '.summary-card .label{font-size:9px;color:#9a8870;text-transform:uppercase;letter-spacing:0.5px}'; 
+  htmlContent += '.summary-card .value{font-family:monospace;font-size:20px;font-weight:700;margin-top:4px}'; 
+  htmlContent += '.footer{margin-top:30px;padding-top:12px;border-top:1px solid #ddd;font-size:10px;color:#9a8870}'; 
+  htmlContent += '@media print{body{margin:0;padding:15px}}</style></head><body>';
+  htmlContent += '<h1>💰 TAX REPORT</h1>';
+  htmlContent += '<p style="color:#9a8870;font-size:12px">Generated: ' + date + ' | Portfolios: ' + state.portfolio.length + ' positions (' + holdingItems.length + ' holding, ' + soldItems.length + ' sold)</p>';
+  
+  // Realized
+  htmlContent += '<h2>✅ Realized Gains/Losses (Sold)</h2>';
+  if (soldItems.length === 0) {
+    htmlContent += '<p style="color:#9a8870;font-size:11px">No closed positions.</p>';
+  } else {
+    htmlContent += '<table><thead><tr><th>Ticker</th><th>Qty</th><th>Buy $</th><th>Sell $</th><th>Gain/Loss</th><th>Buy Date</th><th>Sell Date</th></tr></thead><tbody>';
+    soldItems.forEach(p => {
+      const profit = (p.sellPrice - p.buyPrice) * p.quantity;
+      const cls = profit >= 0 ? 'pos' : 'neg';
+      htmlContent += '<tr><td style="font-weight:700">' + p.ticker + '</td><td>' + p.quantity + '</td><td>$' + p.buyPrice.toFixed(2) + '</td><td>$' + p.sellPrice.toFixed(2) + '</td><td class="' + cls + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td><td>' + (p.buyDate || '—') + '</td><td>' + (p.sellDate || '—') + '</td></tr>';
+    });
+    htmlContent += '<tr style="font-weight:700"><td colspan="4">Total Realized</td><td class="' + (totalRealizedGain >= 0 ? 'pos' : 'neg') + '">' + (totalRealizedGain >= 0 ? '+' : '') + '$' + totalRealizedGain.toFixed(2) + '</td><td></td><td></td></tr>';
+    htmlContent += '</tbody></table>';
+  }
+  
+  // Unrealized
+  htmlContent += '<h2>🔵 Unrealized Gains/Losses (Holding)</h2>';
+  if (holdingItems.length === 0) {
+    htmlContent += '<p style="color:#9a8870;font-size:11px">All positions closed.</p>';
+  } else {
+    htmlContent += '<table><thead><tr><th>Ticker</th><th>Qty</th><th>Buy $</th><th>Current $</th><th>Unrealized P&L</th><th>Buy Date</th></tr></thead><tbody>';
+    let totalUnrealized = 0;
+    holdingItems.forEach(p => {
+      const cp = getPortfolioPrice(p.ticker);
+      const price = cp || p.buyPrice;
+      const profit = (price - p.buyPrice) * p.quantity;
+      totalUnrealized += profit;
+      const cls = profit >= 0 ? 'pos' : 'neg';
+      htmlContent += '<tr><td style="font-weight:700">' + p.ticker + '</td><td>' + p.quantity + '</td><td>$' + p.buyPrice.toFixed(2) + '</td><td>' + (cp ? '$' + price.toFixed(2) : 'N/A') + '</td><td class="' + cls + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td><td>' + (p.buyDate || '—') + '</td></tr>';
+    });
+    htmlContent += '<tr style="font-weight:700"><td colspan="4">Total Unrealized</td><td class="' + (totalUnrealized >= 0 ? 'pos' : 'neg') + '">' + (totalUnrealized >= 0 ? '+' : '') + '$' + totalUnrealized.toFixed(2) + '</td><td></td></tr>';
+    htmlContent += '</tbody></table>';
+  }
+  
+  // Summary
+  const netClass = netAfterTax >= 0 ? 'pos' : 'neg';
+  htmlContent += '<h2>📊 Summary</h2>';
+  htmlContent += '<div class="summary">';
+  htmlContent += '<div class="summary-card"><div class="label">Value Bought (Cost Basis)</div><div class="value">$' + totalCost.toFixed(2) + '</div></div>';
+  htmlContent += '<div class="summary-card"><div class="label">Realized Gain/Loss</div><div class="value ' + (totalRealizedGain >= 0 ? 'pos' : 'neg') + '">' + (totalRealizedGain >= 0 ? '+' : '') + '$' + totalRealizedGain.toFixed(2) + '</div></div>';
+  htmlContent += '<div class="summary-card"><div class="label">Tax Rate</div><div class="value">' + taxRate + '%</div></div>';
+  htmlContent += '<div class="summary-card"><div class="label">Tax Due</div><div class="value neg">-$' + taxAmount.toFixed(2) + '</div></div>';
+  htmlContent += '<div class="summary-card" style="grid-column:1/3"><div class="label">Net After Tax</div><div class="value ' + netClass + '">' + (netAfterTax >= 0 ? '+' : '') + '$' + netAfterTax.toFixed(2) + '</div></div>';
+  htmlContent += '</div>';
+  htmlContent += '<div class="footer">⚠️ Generated by MOMENTUM. Not financial advice. Consult a tax professional.</div>';
+  htmlContent += '</body></html>';
+  
+  downloadFile(htmlContent, 'tax-report.pdf', 'text/html');
+}
+
+function saveTaxRate() {
+  const rate = parseFloat(document.getElementById('taxRateInput').value);
+  if (!rate || isNaN(rate) || rate < 0 || rate > 100) { alert('Enter a valid tax rate (0-100%)'); return; }
+  localStorage.setItem('jerry_tax_rate', String(rate));
+  generateTaxReport();
+}
+
 // ─── UNIVERSE VIEW ─────────────────────────────────────────────────────
 let universeData = {};
 
@@ -1199,11 +1953,12 @@ async function loadUniverseData(market) {
 
 function showUniverseView() {
   state.showTracked = false;
+  state.showPortfolio = false;
   state.showUniverse = !state.showUniverse;
   document.getElementById('trackedTabBtn').style.borderColor = '';
   document.getElementById('trackedTabBtn').style.color = '';
-  document.getElementById('trackedTabBtn').style.borderColor = '';
-  document.getElementById('trackedTabBtn').style.color = '';
+  document.getElementById('portfolioTabBtn').style.borderColor = '';
+  document.getElementById('portfolioTabBtn').style.color = '';
   document.getElementById('universeTabBtn').style.borderColor = state.showUniverse ? 'var(--accent-amber)' : '';
   document.getElementById('universeTabBtn').style.color = state.showUniverse ? 'var(--accent-amber)' : '';
   if (state.showUniverse) renderUniverseView();
@@ -1683,7 +2438,7 @@ function generateSimData(count) {
 
 function showSimulateView() {
   state.showTracked = false; state.showUniverse = false;
-  if (!authUser || authUser.tier !== 'pro') {
+  if (!authUser || (authUser.tier !== 'pro' && authUser.tier !== 'admin')) {
     document.getElementById('dashboard').innerHTML = '<div class="card" style="max-width:400px;margin:60px auto;text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:12px">🎲</div><h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">Pro Feature</h2><p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">Sign in with a Pro account.<br><button class="btn primary" onclick="showAuthModal()" style="font-size:12px;margin-top:8px">🔑 SIGN IN</button></p></div>';
     return;
   }
@@ -1829,7 +2584,7 @@ function changeSimPeriod(period) {
 function showEducationView() {
   try {
     state.showTracked = false; state.showUniverse = false;
-    if (!authUser || authUser.tier !== 'pro') { 
+    if (!authUser || (authUser.tier !== 'pro' && authUser.tier !== 'admin')) { 
       const d = document.getElementById('dashboard');
       d.innerHTML = '<div class="card" style="max-width:400px;margin:60px auto;text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:12px">📘</div><h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">Pro Feature</h2><p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:20px">Sign in with a Pro account to access Education.<br><br><button class="btn primary" onclick="showAuthModal()" style="font-size:12px">🔑 SIGN IN</button></p></div>';
       return;
@@ -1939,33 +2694,55 @@ function switchEduTopic(id) {
 
 // ─── THEME ───// ─── THEME ───// ─── EXPORT ──────────────────────────────────────────────────────────────
 function getPrice(ticker) {
-  for (const m of ['us','europe','emerging']) {
-    const f = (state.analyzed[m]||[]).find(s => s.ticker === ticker);
-    if (f) return f.price;
-  }
-  return null;
+  return getPortfolioPrice(ticker);
 }
 function exportCSV(type) {
   const data = type === 'portfolio' ? state.portfolio : state.trackedPicks.filter(p => p.status === 'active');
-  let csv = 'Ticker,Entry Price,Current Price,P&L %,Entry Date,Days Held,TP,SL,Status\n';
-  data.forEach(p => {
-    const cur = getPrice(p.ticker) || p.entryPrice || 0;
-    const pnl = cur ? (((cur - (p.entryPrice||p.entry||0)) / (p.entryPrice||p.entry||1)) * 100).toFixed(2) : '0';
-    const days = Math.floor((new Date() - new Date(p.entryDate||p.date)) / (1000*60*60*24));
-    csv += p.ticker + ',' + (p.entryPrice||p.entry||0) + ',' + cur.toFixed(2) + ',' + pnl + '%,' + (p.entryDate||p.date||'') + ',' + days + ',' + (p.tp||'') + ',' + (p.sl||'') + ',' + (p.status||'active') + '\n';
-  });
-  downloadFile(csv, type + '-export.csv', 'text/csv');
+  if (type === 'portfolio') {
+    let csv = 'Ticker,Quantity,Buy Price,Sell Price,Cost Basis,Current/Realized Value,P&L $,Buy Date,Sell Date,Status\n';
+    data.forEach(p => {
+      const currPrice = getPortfolioPrice(p.ticker);
+      const currentVal = p.status === 'sold' && p.sellPrice ? p.sellPrice : (currPrice || p.buyPrice);
+      const costBasis = p.buyPrice * p.quantity;
+      const valueNow = currentVal * p.quantity;
+      const pnlDollar = valueNow - costBasis;
+      csv += p.ticker + ',' + p.quantity + ',' + p.buyPrice.toFixed(2) + ',' + (p.sellPrice ? p.sellPrice.toFixed(2) : '') + ',' + costBasis.toFixed(2) + ',' + valueNow.toFixed(2) + ',' + (pnlDollar >= 0 ? '+' : '') + pnlDollar.toFixed(2) + ',' + (p.buyDate || '') + ',' + (p.sellDate || '') + ',' + (p.status || 'holding') + '\n';
+    });
+    downloadFile(csv, 'portfolio-export.csv', 'text/csv');
+  } else {
+    let csv = 'Ticker,Entry Price,Current Price,P&L %,Entry Date,Days Held,TP,SL,Status\n';
+    data.forEach(p => {
+      const cur = getPortfolioPrice(p.ticker) || p.entryPrice || 0;
+      const pnl = cur ? (((cur - (p.entryPrice||p.entry||0)) / (p.entryPrice||p.entry||1)) * 100).toFixed(2) : '0';
+      const days = Math.floor((new Date() - new Date(p.entryDate||p.date)) / (1000*60*60*24));
+      csv += p.ticker + ',' + (p.entryPrice||p.entry||0) + ',' + cur.toFixed(2) + ',' + pnl + '%,' + (p.entryDate||p.date||'') + ',' + days + ',' + (p.tp||'') + ',' + (p.sl||'') + ',' + (p.status||'active') + '\n';
+    });
+    downloadFile(csv, type + '-export.csv', 'text/csv');
+  }
 }
 function exportMD(type) {
   const data = type === 'portfolio' ? state.portfolio : state.trackedPicks.filter(p => p.status === 'active');
-  let md = '# ' + type + ' Export\n| Ticker | Entry | Current | P&L | Days | Status |\n|-------|-------|---------|-----|------|--------|\n';
-  data.forEach(p => {
-    const cur = getPrice(p.ticker) || p.entryPrice || 0;
-    const pnl = cur ? (((cur - (p.entryPrice||p.entry||0)) / (p.entryPrice||p.entry||1)) * 100).toFixed(2) : '0';
-    const days = Math.floor((new Date() - new Date(p.entryDate||p.date)) / (1000*60*60*24));
-    md += '| ' + p.ticker + ' | $' + (p.entryPrice||p.entry||0) + ' | $' + cur.toFixed(2) + ' | ' + pnl + '% | ' + days + 'd | ' + (p.status||'active') + ' |\n';
-  });
-  downloadFile(md, type + '-export.md', 'text/markdown');
+  if (type === 'portfolio') {
+    let md = '# Portfolio Export\n| Ticker | Qty | Buy $ | Sell $ | Cost Basis | Value | P&L $ | Buy Date | Sell Date | Status |\n|-------|-----|--------|--------|-----------|-------|-------|----------|----------|--------|\n';
+    data.forEach(p => {
+      const currPrice = getPortfolioPrice(p.ticker);
+      const currentVal = p.status === 'sold' && p.sellPrice ? p.sellPrice : (currPrice || p.buyPrice);
+      const costBasis = p.buyPrice * p.quantity;
+      const valueNow = currentVal * p.quantity;
+      const pnlDollar = valueNow - costBasis;
+      md += '| ' + p.ticker + ' | ' + p.quantity + ' | $' + p.buyPrice.toFixed(2) + ' | ' + (p.sellPrice ? '$' + p.sellPrice.toFixed(2) : '—') + ' | $' + costBasis.toFixed(2) + ' | $' + valueNow.toFixed(2) + ' | ' + (pnlDollar >= 0 ? '+' : '') + '$' + pnlDollar.toFixed(2) + ' | ' + (p.buyDate || '—') + ' | ' + (p.sellDate || '—') + ' | ' + (p.status || 'holding') + ' |\n';
+    });
+    downloadFile(md, 'portfolio-export.md', 'text/markdown');
+  } else {
+    let md = '# ' + type + ' Export\n| Ticker | Entry | Current | P&L | Days | Status |\n|-------|-------|---------|-----|------|--------|\n';
+    data.forEach(p => {
+      const cur = getPortfolioPrice(p.ticker) || p.entryPrice || 0;
+      const pnl = cur ? (((cur - (p.entryPrice||p.entry||0)) / (p.entryPrice||p.entry||1)) * 100).toFixed(2) : '0';
+      const days = Math.floor((new Date() - new Date(p.entryDate||p.date)) / (1000*60*60*24));
+      md += '| ' + p.ticker + ' | $' + (p.entryPrice||p.entry||0) + ' | $' + cur.toFixed(2) + ' | ' + pnl + '% | ' + days + 'd | ' + (p.status||'active') + ' |\n';
+    });
+    downloadFile(md, type + '-export.md', 'text/markdown');
+  }
 }
 function downloadFile(content, name, mime) {
   const blob = new Blob([content], {type: mime});
@@ -2000,12 +2777,12 @@ async function init() {
   document.getElementById('themeLabel').textContent = THEME_LABELS[savedTheme || 'dark'];
   // Load saved portfolio, tracked picks & signals
   try { const p = localStorage.getItem('jerry_portfolio'); if (p) state.portfolio = JSON.parse(p); } catch {}
-  try { const s = localStorage.getItem('jerry_signals'); if (s) state.signalHistory = JSON.parse(s); } catch {}
+  // Signal history removed
     const savedLang = localStorage.getItem('jerry_lang');
   if (savedLang) { _lang = savedLang; document.getElementById('langSelect').value = savedLang; }
   const fs = parseFloat(localStorage.getItem('jerry_fontsize') || '1');
   document.documentElement.style.setProperty('--font-size', fs);
-  loadTrackedPicks(); loadPortfolio(); renderSignalHistory(); loadCalendar(); applyLang();
+  loadTrackedPicks(); loadPortfolio(); loadCalendar(); applyLang();
   
   // Background: auth check, universe data, then scan
   // Phase 1: Auth immediately (non-blocking)
@@ -2030,34 +2807,86 @@ async function init() {
     try { await scanAll(); calcCorrelation(); } catch(e) { console.log('Scan error:', e); }
   }, 300);
   // Close modal on overlay click
-  // Track pick delegation on the dashboard container
-  document.getElementById('dashboard').addEventListener('click', function(e) {
-    try {
-      const btn = e.target.closest('.track-btn');
-      if (!btn) return;
-      e.preventDefault();
-      const ticker = btn.getAttribute('data-ticker');
-      const market = btn.getAttribute('data-market');
-      const price = Number(btn.getAttribute('data-price'));
-      const tp = Number(btn.getAttribute('data-tp'));
-      const sl = Number(btn.getAttribute('data-sl'));
-      if (!ticker || isNaN(price)) return;
-      trackPick(ticker, market, price, tp, sl);
-    } catch(e) { console.error('Track error:', e); }
-  });
-  // Also add global onclick fallback for each track-btn
-  document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.track-btn');
-    if (!btn) return;
-    if (e.target.closest('#dashboard')) return; // already handled above
-    e.preventDefault();
+  // Track pick delegation — flash button on click
+  function handleTrackPick(btn) {
     const ticker = btn.getAttribute('data-ticker');
     const market = btn.getAttribute('data-market');
     const price = Number(btn.getAttribute('data-price'));
     const tp = Number(btn.getAttribute('data-tp'));
     const sl = Number(btn.getAttribute('data-sl'));
     if (!ticker || isNaN(price)) return;
+    if (!authUser) { showAuthModal(); return; }
+    // Check if already tracked
+    if (state.trackedPicks.find(p => p.ticker === ticker && p.status === 'active')) {
+      alert(ticker + ' is already tracked.');
+      return;
+    }
     trackPick(ticker, market, price, tp, sl);
+    // Flash feedback on the button
+    const origText = btn.textContent;
+    btn.textContent = '✅ TRACKED!';
+    btn.style.background = 'rgba(76,175,80,0.25)';
+    btn.style.borderColor = 'var(--green-bull)';
+    setTimeout(() => {
+      btn.textContent = origText;
+      btn.style.background = '';
+      btn.style.borderColor = '';
+    }, 1800);
+  }
+  document.getElementById('dashboard').addEventListener('click', function(e) {
+    const btn = e.target.closest('.track-btn');
+    if (!btn) return;
+    e.preventDefault();
+    handleTrackPick(btn);
+  });
+  // Global fallback for track-btn outside dashboard
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.track-btn');
+    if (!btn || e.target.closest('#dashboard')) return;
+    e.preventDefault();
+    handleTrackPick(btn);
+  });
+  // Portfolio quick-add from scanned cards
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.portfolio-add-btn');
+    if (!btn) return;
+    e.preventDefault();
+    const ticker = btn.getAttribute('data-ticker');
+    const price = Number(btn.getAttribute('data-price'));
+    if (!ticker || isNaN(price)) return;
+    if (!authUser) { showAuthModal(); return; }
+    // Free tier gate
+    if (authUser.tier !== 'pro' && authUser.tier !== 'admin') {
+      upgradeToPro();
+      return;
+    }
+    // Check if already in portfolio
+    if (state.portfolio.find(p => p.ticker === ticker && p.status === 'holding')) {
+      alert(ticker + ' is already in your portfolio.');
+      return;
+    }
+    state.portfolio.push({
+      ticker,
+      quantity: 1,
+      buyPrice: price,
+      sellPrice: null,
+      buyDate: new Date().toISOString().slice(0,10),
+      sellDate: null,
+      status: 'holding'
+    });
+    savePortfolio();
+    updatePortfolioSidebar();
+    // Toast notification + button flash
+    showToast('✅ ' + ticker + ' added to MY STOCKS!', true);
+    const origText = btn.textContent;
+    btn.textContent = '✅ ADDED!';
+    btn.style.background = 'rgba(76,175,80,0.25)';
+    btn.style.borderColor = 'var(--green-bull)';
+    setTimeout(() => {
+      btn.textContent = origText;
+      btn.style.background = '';
+      btn.style.borderColor = '';
+    }, 2000);
   });
   document.getElementById('authModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeAuthModal(); });
   document.getElementById('portfolioModal').addEventListener('click', e => { if (e.target === e.currentTarget) closePortfolioModal(); });

@@ -42,7 +42,15 @@ function loadUsers() {
 function saveUsers(users) {
   try { if (!fs.existsSync(path.join(DIR, 'data'))) fs.mkdirSync(path.join(DIR, 'data')); fs.writeFileSync(DB_PATH, JSON.stringify(users, null, 2)); } catch {}
 }
+const ADMIN_EMAIL = 'thiagotupa@hotmail.com'.toLowerCase();
 const users = loadUsers();
+// Migrate: ensure admin user has tier: 'admin'
+let needsSave = false;
+users.forEach(u => {
+  if (u.email === ADMIN_EMAIL && u.tier !== 'admin') { u.tier = 'admin'; needsSave = true; }
+  if (u.email !== ADMIN_EMAIL && u.tier === 'admin') { u.tier = 'free'; needsSave = true; }
+});
+if (needsSave) saveUsers(users);
 
 function hashPassword(pw) {
   const salt = crypto.randomBytes(16).toString('hex');
@@ -60,6 +68,7 @@ function nextId() { return users.length > 0 ? Math.max(...users.map(u => u.id)) 
 const TIERS = {
   free: { scansPerDay: 999999, maxTrackedPicks: 5, maxStocksPerMarket: 5, scanIntervalMs: 80, name: 'Free' },
   pro: { scansPerDay: 999999, maxTrackedPicks: 9999, maxStocksPerMarket: 9999, scanIntervalMs: 80, name: 'Pro' },
+  admin: { scansPerDay: 999999, maxTrackedPicks: 9999, maxStocksPerMarket: 9999, scanIntervalMs: 80, name: 'Admin' },
 };
 
 // ─── STRIPE ─────────────────────────────────────────────────────────────
@@ -352,12 +361,10 @@ async function handleRequest(req, res) {
     }
 
     // ─── ADMIN ───────────────────────────────────────────────────
-    if (pathname === '/api/admin/users') {
+    if (pathname === '/api/admin/users' && req.method === 'GET') {
       const authUser = getAuthUser(req);
       if (!authUser) return sendError(res, 401, 'Not authenticated');
-      // Admin by email (set ADMIN_EMAIL in .env) or first user
-      const adminEmail = (ENV.ADMIN_EMAIL || users.sort((a,b) => a.id - b.id)[0]?.email || '').toLowerCase();
-      if (authUser.email.toLowerCase() !== adminEmail) return sendError(res, 403, 'Admin only');
+      if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
       const safe = users.map(u => ({
         id: u.id, email: u.email, tier: u.tier, createdAt: u.createdAt,
         subscriptionEnd: u.subscriptionEnd,
@@ -367,9 +374,23 @@ async function handleRequest(req, res) {
         total: users.length,
         free: users.filter(u => u.tier === 'free').length,
         pro: users.filter(u => u.tier === 'pro').length,
+        admin: users.filter(u => u.tier === 'admin').length,
         activeSubscriptions: users.filter(u => u.tier === 'pro' && u.subscriptionEnd && new Date(u.subscriptionEnd) > new Date()).length,
       };
       return sendJSON(res, 200, { users: safe, stats });
+    }
+    
+    if (pathname === '/api/admin/set-admin' && req.method === 'POST') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
+      const body = await readBody(req);
+      const targetEmail = (body.email || '').toLowerCase();
+      const targetUser = findUser(targetEmail);
+      if (!targetUser) return sendError(res, 404, 'User not found');
+      targetUser.tier = body.admin === true || body.admin === 'true' ? 'admin' : 'free';
+      saveUsers(users);
+      return sendJSON(res, 200, { ok: true, email: targetEmail, tier: targetUser.tier });
     }
 
     // ─── STRIPE ──────────────────────────────────────────────────
