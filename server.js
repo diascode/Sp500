@@ -2,12 +2,11 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const urlMod = require('url');
 
 // ─── LOAD ENV ───────────────────────────────────────────────────────────
 function loadEnv() {
   const envPath = path.join(__dirname, '.env');
-  const env = { PORT: '8080', HOST: '0.0.0.0', JWT_SECRET: 'dev-secret-change-me', APP_URL: 'http://localhost:8080' };
+  const env = { PORT: '8080', HOST: '0.0.0.0', JWT_SECRET: '', APP_URL: 'http://localhost:8080', NODE_ENV: 'development' };
   try {
     const lines = fs.readFileSync(envPath, 'utf8').split('\n');
     for (const line of lines) {
@@ -15,7 +14,6 @@ function loadEnv() {
       if (m && !m[1].startsWith('#')) env[m[1]] = m[2].replace(/^["']|["']$/g, '');
     }
   } catch {}
-  // Override from process.env
   for (const k of Object.keys(env)) { if (process.env[k]) env[k] = process.env[k]; }
   return env;
 }
@@ -27,8 +25,13 @@ const DIR = __dirname;
 
 // ─── JWT ────────────────────────────────────────────────────────────────
 let jwt;
-try { jwt = require('jsonwebtoken'); } catch { console.log('⚠️ jsonwebtoken not installed. Run: npm install'); process.exit(1); }
+try { jwt = require('jsonwebtoken'); } catch { console.error('❌ jsonwebtoken not installed. Run: npm install'); process.exit(1); }
+
 const JWT_SECRET = ENV.JWT_SECRET || 'dev-secret-change-me';
+if (ENV.NODE_ENV === 'production' && (!ENV.JWT_SECRET || JWT_SECRET === 'dev-secret-change-me')) {
+  console.error('❌ FATAL: JWT_SECRET is not set or is using the default dev value in production. Set the JWT_SECRET environment variable.');
+  process.exit(1);
+}
 
 function signToken(user) { return jwt.sign({ id: user.id, email: user.email, tier: user.tier }, JWT_SECRET, { expiresIn: '30d' }); }
 function verifyToken(token) { try { return jwt.verify(token, JWT_SECRET); } catch { return null; } }
@@ -39,12 +42,19 @@ const DB_PATH = path.join(DIR, 'data', 'users.json');
 function loadUsers() {
   try { return JSON.parse(fs.readFileSync(DB_PATH, 'utf8')); } catch { return []; }
 }
+
 function saveUsers(users) {
-  try { fs.mkdirSync(path.join(DIR, 'data'), { recursive: true }); fs.writeFileSync(DB_PATH, JSON.stringify(users, null, 2)); } catch {}
+  try {
+    fs.mkdirSync(path.join(DIR, 'data'), { recursive: true });
+    // Atomic write: write to temp file then rename to prevent corruption
+    const tmp = DB_PATH + '.tmp.' + process.pid;
+    fs.writeFileSync(tmp, JSON.stringify(users, null, 2));
+    fs.renameSync(tmp, DB_PATH);
+  } catch (e) { console.error('saveUsers error:', e); }
 }
+
 const ADMIN_EMAIL = 'thiagotupa@hotmail.com'.toLowerCase();
 const users = loadUsers();
-// Migrate: ensure admin user has tier: 'admin'
 let needsSave = false;
 users.forEach(u => {
   if (u.email === ADMIN_EMAIL && u.tier !== 'admin') { u.tier = 'admin'; needsSave = true; }
@@ -66,9 +76,9 @@ function nextId() { return users.length > 0 ? Math.max(...users.map(u => u.id)) 
 
 // ─── SUBSCRIPTION TIERS ─────────────────────────────────────────────────
 const TIERS = {
-  free: { scansPerDay: 999999, maxTrackedPicks: 5, maxStocksPerMarket: 5, scanIntervalMs: 80, name: 'Free' },
-  pro: { scansPerDay: 999999, maxTrackedPicks: 9999, maxStocksPerMarket: 9999, scanIntervalMs: 80, name: 'Pro' },
-  admin: { scansPerDay: 999999, maxTrackedPicks: 9999, maxStocksPerMarket: 9999, scanIntervalMs: 80, name: 'Admin' },
+  free:  { scansPerDay: 999999, maxTrackedPicks: 5,    maxStocksPerMarket: 5,    scanIntervalMs: 80, name: 'Free' },
+  pro:   { scansPerDay: 999999, maxTrackedPicks: 9999,  maxStocksPerMarket: 9999, scanIntervalMs: 80, name: 'Pro' },
+  admin: { scansPerDay: 999999, maxTrackedPicks: 9999,  maxStocksPerMarket: 9999, scanIntervalMs: 80, name: 'Admin' },
 };
 
 // ─── STRIPE ─────────────────────────────────────────────────────────────
@@ -81,16 +91,41 @@ try {
 
 // ─── MIME ───────────────────────────────────────────────────────────────
 const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.css': 'text/css',
-  '.js': 'application/javascript',
-  '.json': 'application/json',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.svg': 'image/svg+xml',
+  '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'application/javascript',
+  '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml',
 };
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+
+// ─── IN-MEMORY CACHE (Yahoo Finance) ────────────────────────────────────
+const _cache = new Map();
+const CACHE_TTL_MS = 60_000; // 60 seconds
+
+function cacheGet(key) {
+  const entry = _cache.get(key);
+  if (!entry || Date.now() > entry.expiresAt) { _cache.delete(key); return null; }
+  return entry.data;
+}
+function cacheSet(key, data, ttlMs = CACHE_TTL_MS) {
+  _cache.set(key, { data, expiresAt: Date.now() + ttlMs });
+}
+
+// ─── AUTH RATE LIMITER ──────────────────────────────────────────────────
+const _authAttempts = new Map();
+const AUTH_MAX = 10;
+const AUTH_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
+function checkAuthRateLimit(ip) {
+  const now = Date.now();
+  const entry = _authAttempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    _authAttempts.set(ip, { count: 1, resetAt: now + AUTH_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= AUTH_MAX) return false;
+  entry.count++;
+  return true;
+}
 
 // ─── STOCK UNIVERSES ────────────────────────────────────────────────────
 const UNIVERSES = {
@@ -233,13 +268,12 @@ const UNIVERSES = {
   ],
 };
 
-// ─── RATE LIMITING ──────────────────────────────────────────────────────
-const scanCounts = {}; // email -> { date, count }
+// ─── SCAN RATE LIMITING ─────────────────────────────────────────────────
+const scanCounts = {};
 
 function getTier(email) {
   const user = findUser(email);
   if (!user || user.tier === 'free') return TIERS.free;
-  // Check if subscription is active
   if (user.tier === 'pro' && user.subscriptionEnd) {
     if (new Date(user.subscriptionEnd) < new Date()) {
       user.tier = 'free'; saveUsers(users);
@@ -252,21 +286,15 @@ function getTier(email) {
 function getScanState(email) {
   const tier = getTier(email);
   const today = new Date().toISOString().slice(0, 10);
-  if (!scanCounts[email] || scanCounts[email].date !== today) {
-    scanCounts[email] = { date: today, count: 0 };
-  }
+  if (!scanCounts[email] || scanCounts[email].date !== today) scanCounts[email] = { date: today, count: 0 };
   const count = scanCounts[email].count;
-  const remaining = tier.scansPerDay - count;
-  const allowed = count < tier.scansPerDay;
-  return { allowed, remaining, tier: tier.name, scanInterval: tier.scanIntervalMs };
+  return { allowed: count < tier.scansPerDay, remaining: tier.scansPerDay - count, tier: tier.name, scanInterval: tier.scanIntervalMs };
 }
 
 function checkScanLimit(email) {
   const state = getScanState(email);
   if (state.allowed) {
     scanCounts[email].count++;
-    state.remaining--;
-    // remaining after consuming one: recalculate
     const tier = getTier(email);
     state.remaining = tier.scansPerDay - scanCounts[email].count;
     state.allowed = scanCounts[email].count <= tier.scansPerDay;
@@ -274,25 +302,36 @@ function checkScanLimit(email) {
   return state;
 }
 
-// ─── YAHOO FETCH ────────────────────────────────────────────────────────
+// ─── YAHOO FETCH (with cache) ────────────────────────────────────────────
 async function yahooFetch(ticker) {
+  const cacheKey = 'chart:' + ticker;
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=5y&interval=1d`;
   const r = await fetch(url, { headers: { 'User-Agent': UA } });
   if (!r.ok) throw new Error(`Yahoo returned ${r.status} for ${ticker}`);
   const text = await r.text();
-  try { return JSON.parse(text); } catch { throw new Error(`Yahoo returned non-JSON for ${ticker}`); }
+  let data;
+  try { data = JSON.parse(text); } catch { throw new Error(`Yahoo returned non-JSON for ${ticker}`); }
+  cacheSet(cacheKey, data);
+  return data;
 }
 
 async function yahooNews(ticker) {
+  const cacheKey = 'news:' + ticker;
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
   const url = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(ticker)}&newsCount=5`;
   const r = await fetch(url, { headers: { 'User-Agent': UA } });
   if (!r.ok) throw new Error(`Yahoo news returned ${r.status} for ${ticker}`);
   const text = await r.text();
   let data;
   try { data = JSON.parse(text); } catch { throw new Error(`Yahoo news returned non-JSON for ${ticker}`); }
-  return (data.news || []).map(n => ({
+  const news = (data.news || []).map(n => ({
     title: n.title, link: n.link, publisher: n.publisher, summary: (n.summary || '').slice(0, 200),
   }));
+  cacheSet(cacheKey, news);
+  return news;
 }
 
 // ─── ECONOMIC CALENDAR ──────────────────────────────────────────────────
@@ -316,19 +355,25 @@ function lastDay(year, month) { const d = new Date(year, month, 0); return d.toI
 
 // ─── HTTP HELPERS ──────────────────────────────────────────────────────
 function sendJSON(res, code, data) {
-  res.writeHead(code, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+  const origin = ENV.APP_URL || 'http://localhost:8080';
+  res.writeHead(code, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': origin });
   res.end(JSON.stringify(data));
 }
 function sendError(res, code, msg) { sendJSON(res, code, { error: msg }); }
-function readBody(req) {
-  return new Promise((resolve) => {
+
+function readBody(req, maxBytes = 1_048_576) {
+  return new Promise((resolve, reject) => {
     let body = '';
-    req.on('data', c => body += c);
-    req.on('end', () => {
-      try { resolve(JSON.parse(body)); } catch { resolve({}); }
+    let size = 0;
+    req.on('data', c => {
+      size += c.length;
+      if (size > maxBytes) { reject(new Error('Request body too large')); return; }
+      body += c;
     });
+    req.on('end', () => { try { resolve(JSON.parse(body)); } catch { resolve({}); } });
   });
 }
+
 function getAuthUser(req) {
   const auth = req.headers['authorization'] || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
@@ -337,17 +382,29 @@ function getAuthUser(req) {
 
 // ─── REQUEST HANDLER ────────────────────────────────────────────────────
 async function handleRequest(req, res) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  const allowedOrigin = ENV.APP_URL || 'http://localhost:8080';
+
+  // Security + CORS headers
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
 
+  // Auth rate limiting (IP-based)
+  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  if ((pathname === '/api/auth/login' || pathname === '/api/auth/signup') && req.method === 'POST') {
+    if (!checkAuthRateLimit(clientIp)) return sendError(res, 429, 'Too many attempts. Please wait 15 minutes before trying again.');
+  }
+
   try {
-    // ─── AUTH ROUTES ────────────────────────────────────────────
+    // ─── AUTH ────────────────────────────────────────────────────
     if (pathname === '/api/auth/signup' && req.method === 'POST') {
       const body = await readBody(req);
       const { email, password } = body;
@@ -355,8 +412,7 @@ async function handleRequest(req, res) {
       if (findUser(email)) return sendError(res, 409, 'Email already registered');
       const user = { id: nextId(), email: email.toLowerCase(), password: hashPassword(password), tier: 'free', createdAt: new Date().toISOString(), subscriptionId: null, subscriptionEnd: null };
       users.push(user); saveUsers(users);
-      const token = signToken(user);
-      return sendJSON(res, 201, { token, user: { id: user.id, email: user.email, tier: user.tier } });
+      return sendJSON(res, 201, { token: signToken(user), user: { id: user.id, email: user.email, tier: user.tier } });
     }
 
     if (pathname === '/api/auth/login' && req.method === 'POST') {
@@ -365,8 +421,7 @@ async function handleRequest(req, res) {
       if (!email || !password) return sendError(res, 400, 'Email and password required');
       const user = findUser(email);
       if (!user || !verifyPassword(password, user.password)) return sendError(res, 401, 'Invalid email or password');
-      const token = signToken(user);
-      return sendJSON(res, 200, { token, user: { id: user.id, email: user.email, tier: user.tier } });
+      return sendJSON(res, 200, { token: signToken(user), user: { id: user.id, email: user.email, tier: user.tier } });
     }
 
     if (pathname === '/api/auth/me') {
@@ -375,6 +430,45 @@ async function handleRequest(req, res) {
       const user = findUser(authUser.email);
       if (!user) return sendError(res, 401, 'User not found');
       return sendJSON(res, 200, { id: user.id, email: user.email, tier: user.tier, subscriptionEnd: user.subscriptionEnd });
+    }
+
+    if (pathname === '/api/auth/change-password' && req.method === 'POST') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      const body = await readBody(req);
+      const user = findUser(authUser.email);
+      if (!user) return sendError(res, 404, 'User not found');
+      if (!body.oldPassword) return sendError(res, 400, 'Current password is required');
+      if (!verifyPassword(body.oldPassword, user.password)) return sendError(res, 400, 'Current password is incorrect');
+      if (!body.newPassword || body.newPassword.length < 6) return sendError(res, 400, 'New password must be at least 6 characters');
+      user.password = hashPassword(body.newPassword);
+      saveUsers(users);
+      return sendJSON(res, 200, { ok: true });
+    }
+
+    // ─── GDPR / ACCOUNT ─────────────────────────────────────────
+    if (pathname === '/api/auth/data-export' && req.method === 'GET') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      const user = findUser(authUser.email);
+      if (!user) return sendError(res, 404, 'User not found');
+      return sendJSON(res, 200, {
+        id: user.id, email: user.email, tier: user.tier,
+        createdAt: user.createdAt, subscriptionEnd: user.subscriptionEnd,
+        exportedAt: new Date().toISOString(),
+        note: 'Portfolio and tracking data is stored locally in your browser (localStorage). This export covers only your account record on our server.',
+      });
+    }
+
+    if (pathname === '/api/auth/account' && req.method === 'DELETE') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (authUser.email.toLowerCase() === ADMIN_EMAIL) return sendError(res, 400, 'Cannot delete admin account');
+      const idx = users.findIndex(u => u.email.toLowerCase() === authUser.email.toLowerCase());
+      if (idx === -1) return sendError(res, 404, 'User not found');
+      users.splice(idx, 1);
+      saveUsers(users);
+      return sendJSON(res, 200, { ok: true, message: 'Account deleted. All server-side personal data has been removed.' });
     }
 
     // ─── ADMIN ───────────────────────────────────────────────────
@@ -396,7 +490,7 @@ async function handleRequest(req, res) {
       };
       return sendJSON(res, 200, { users: safe, stats });
     }
-    
+
     if (pathname === '/api/admin/set-admin' && req.method === 'POST') {
       const authUser = getAuthUser(req);
       if (!authUser) return sendError(res, 401, 'Not authenticated');
@@ -423,7 +517,6 @@ async function handleRequest(req, res) {
       if (!targetUser) return sendError(res, 404, 'User not found');
       targetUser.tier = newTier;
       if (newTier === 'pro') {
-        // Grant 1 year from today if no active subscription end date exists
         const existingEnd = targetUser.subscriptionEnd ? new Date(targetUser.subscriptionEnd) : null;
         if (!existingEnd || existingEnd <= new Date()) {
           const end = new Date();
@@ -465,27 +558,9 @@ async function handleRequest(req, res) {
       const user = findUser(authUser.email);
       if (!user || !user.subscriptionId) return sendError(res, 400, 'No active subscription');
       try {
-        const session = await stripe.billingPortal.sessions.create({
-          customer: user.subscriptionId,
-          return_url: ENV.APP_URL + '/',
-        });
+        const session = await stripe.billingPortal.sessions.create({ customer: user.subscriptionId, return_url: ENV.APP_URL + '/' });
         return sendJSON(res, 200, { url: session.url });
       } catch (e) { return sendError(res, 500, 'Stripe error: ' + e.message); }
-    }
-
-    // ─── CHANGE PASSWORD ───────────────────────────────────────
-    if (pathname === '/api/auth/change-password' && req.method === 'POST') {
-      const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
-      const body = await readBody(req);
-      const user = findUser(authUser.email);
-      if (!user) return sendError(res, 404, 'User not found');
-      if (!body.oldPassword) return sendError(res, 400, 'Current password is required');
-      if (!verifyPassword(body.oldPassword, user.password)) return sendError(res, 400, 'Current password is incorrect');
-      if (!body.newPassword || body.newPassword.length < 6) return sendError(res, 400, 'New password must be at least 6 characters');
-      user.password = hashPassword(body.newPassword);
-      saveUsers(users);
-      return sendJSON(res, 200, { ok: true });
     }
 
     if (pathname === '/api/stripe/webhook' && req.method === 'POST') {
@@ -498,8 +573,13 @@ async function handleRequest(req, res) {
         const event = stripe.webhooks.constructEvent(body, sig, ENV.STRIPE_WEBHOOK_SECRET);
         if (event.type === 'checkout.session.completed') {
           const session = event.data.object;
-          const email = session.customer_email;
-          const user = findUser(email);
+          // customer_email may be null on some session types; fall back to customer lookup
+          let email = session.customer_email;
+          if (!email && session.customer) {
+            const customer = await stripe.customers.retrieve(session.customer);
+            email = customer.email;
+          }
+          const user = email && findUser(email);
           if (user) {
             user.tier = 'pro';
             user.subscriptionId = session.customer;
@@ -510,8 +590,12 @@ async function handleRequest(req, res) {
         }
         if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
           const sub = event.data.object;
-          const email = sub.customer_email || (sub.customer && (await stripe.customers.retrieve(sub.customer)).email);
-          const user = findUser(email);
+          let email = sub.customer_email;
+          if (!email && sub.customer) {
+            const customer = await stripe.customers.retrieve(sub.customer);
+            email = customer.email;
+          }
+          const user = email && findUser(email);
           if (user) {
             if (sub.status === 'active' || sub.status === 'trialing') {
               user.tier = 'pro';
@@ -527,7 +611,7 @@ async function handleRequest(req, res) {
       } catch (e) { return sendError(res, 400, 'Webhook error: ' + e.message); }
     }
 
-    // ─── SCAN LIMIT CHECK ───────────────────────────────────────
+    // ─── SCAN LIMIT ──────────────────────────────────────────────
     if (pathname === '/api/limit') {
       const authUser = getAuthUser(req);
       if (!authUser) return sendJSON(res, 200, { allowed: false, tier: 'guest', scansRemaining: 0 });
@@ -540,7 +624,8 @@ async function handleRequest(req, res) {
       const authUser = getAuthUser(req);
       const tier = authUser ? getTier(authUser.email) : TIERS.free;
       const summary = Object.entries(UNIVERSES).map(([key, stocks]) => ({
-        id: key, name: key === 'us' ? 'United States' : key === 'europe' ? 'Europe' : 'Emerging Markets',
+        id: key,
+        name: key === 'us' ? 'United States' : key === 'europe' ? 'Europe' : 'Emerging Markets',
         label: key === 'us' ? '🇺🇸 S&P 500' : key === 'europe' ? '🇪🇺 STOXX 600' : '🌍 Emerging Markets',
         count: stocks.length,
         visibleCount: Math.min(stocks.length, tier.maxStocksPerMarket),
@@ -583,7 +668,6 @@ async function handleRequest(req, res) {
       if (!authUser) return sendError(res, 401, 'Sign in required to scan');
       const limit = checkScanLimit(authUser.email);
       if (!limit.allowed) return sendJSON(res, 429, { error: 'Daily scan limit reached', limit, tier: limit.tier });
-      // Scan all markets
       const results = {};
       for (const [market, stocks] of Object.entries(UNIVERSES)) {
         const batch = [];
@@ -608,7 +692,6 @@ async function handleRequest(req, res) {
       res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
       res.end(content);
     } catch {
-      // Fallback to dashboard for SPA routing
       const fallback = path.join(DIR, 'stock-dashboard.html');
       try {
         const content = fs.readFileSync(fallback);
@@ -626,10 +709,12 @@ async function handleRequest(req, res) {
 const server = http.createServer(handleRequest);
 server.listen(PORT, HOST, () => {
   const url = `http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`;
-  console.log(`\n🚀  MOMENTUM v5.0 — Paper Trading Simulator :: ${url}`);
+  console.log(`\n🚀  MOMENTUM v5.1 — Trading Journal & Scanner :: ${url}`);
   console.log('⚠️  EDUCATIONAL PURPOSES ONLY — Not financial advice.');
-  console.log(`📊  ${Object.values(UNIVERSES).reduce((a,b) => a+b.length, 0)} stocks across ${Object.keys(UNIVERSES).length} markets`);
+  console.log(`📊  ${Object.values(UNIVERSES).reduce((a, b) => a + b.length, 0)} stocks across ${Object.keys(UNIVERSES).length} markets`);
   console.log(`💳  ${stripe ? 'Stripe connected' : 'Stripe not configured (set STRIPE_SECRET_KEY)'}`);
   console.log(`👤  ${users.length} users registered`);
-  console.log(`📁  Data: ${DB_PATH}\n`);
+  console.log(`📁  Data: ${DB_PATH}`);
+  console.log(`🔒  Auth rate limit: ${AUTH_MAX} attempts per ${AUTH_WINDOW_MS / 60000} min per IP`);
+  console.log(`💾  Yahoo cache TTL: ${CACHE_TTL_MS / 1000}s\n`);
 });

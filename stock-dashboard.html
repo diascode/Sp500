@@ -148,6 +148,12 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 </head>
 <body>
 
+<!-- Cookie / LGPD consent banner -->
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--bg-card);border-top:1px solid var(--border);padding:12px 20px;align-items:center;gap:14px;flex-wrap:wrap">
+  <span style="font-size:11px;color:var(--text-secondary);flex:1;min-width:200px">🍪 We use cookies and local storage to keep you signed in and save your preferences. By continuing you accept our use of these technologies. <a href="#" onclick="showPrivacyNote();return false" style="color:var(--accent-amber);text-decoration:underline">Learn more</a></span>
+  <button class="btn" onclick="acceptCookies()" style="font-size:11px;padding:6px 16px;background:var(--accent-amber);color:#000;border-color:var(--accent-amber);white-space:nowrap">Accept &amp; Continue</button>
+</div>
+
 <header class="header">
   <div>
     <div class="brand-logo">MOMENTUM <span class="cursor">▌</span></div>
@@ -178,6 +184,8 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
           <div class="dropdown-item" onclick="showChangePassword()" style="padding:8px 14px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">🔑 Change Password</div>
           <div class="dropdown-item" id="upgradeBtn2" onclick="upgradeToPro()" style="padding:8px 14px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">⭐ Go Pro</div>
           <div class="dropdown-item" id="adminBtn2" onclick="showAdminView()" style="display:none;padding:8px 14px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border);align-items:center;gap:8px">👑 Admin Panel</div>
+          <div class="dropdown-item" onclick="exportMyData()" style="padding:8px 14px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">📤 Export My Data</div>
+          <div class="dropdown-item" onclick="deleteMyAccount()" style="padding:8px 14px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;color:var(--red-bear)">🗑️ Delete Account</div>
           <div class="dropdown-item" onclick="logout()" style="padding:8px 14px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:8px;color:var(--red-bear)">🚪 Sign Out</div>
         </div>
       </div>
@@ -532,6 +540,47 @@ function logout() {
   authUser = null;
   updateAuthUI();
   location.reload();
+}
+
+async function exportMyData() {
+  document.getElementById('userDropdown').style.display = 'none';
+  const token = getToken();
+  if (!token) return;
+  try {
+    const res = await fetch('/api/auth/data-export', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) { alert('Export failed: ' + res.status); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'momentum-data-export.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) { alert('Export error: ' + e.message); }
+}
+
+async function deleteMyAccount() {
+  document.getElementById('userDropdown').style.display = 'none';
+  const email = authUser?.email || 'your account';
+  if (!confirm('Permanently delete ' + email + '? This cannot be undone. All your data will be erased.')) return;
+  if (!confirm('Are you absolutely sure? Type OK to confirm.')) return;
+  const token = getToken();
+  try {
+    const res = await fetch('/api/auth/account', { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    if (res.ok) { alert('Account deleted. Goodbye!'); logout(); }
+    else alert(data.error || 'Failed to delete account.');
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+function acceptCookies() {
+  localStorage.setItem('momentum_consent', '1');
+  const banner = document.getElementById('cookieBanner');
+  if (banner) banner.style.display = 'none';
+}
+
+function showPrivacyNote() {
+  alert('MOMENTUM stores your session token and preferences in your browser\'s localStorage. No third-party tracking cookies are used. Your portfolio data is stored on our server only when you are signed in. You can export or delete your data at any time from the account menu.');
 }
 
 async function upgradeToPro() {
@@ -1497,9 +1546,9 @@ function renderPortfolioView() {
     html += '</div>';
   }
   
-  // Tax report note
+  // Disclaimer
   html += '<div style="padding:10px 14px;background:rgba(200,90,23,0.08);border:1px solid rgba(200,90,23,0.2);border-radius:6px;font-size:10px;color:var(--text-dim);line-height:1.6">';
-  html += '⚠️ Tax reports are estimated based on your entries. Sold positions with a sell price are treated as <strong>realized gains/losses</strong>. Holding positions show <strong>unrealized gains/losses</strong> based on current market prices. Consult a tax professional for actual tax filing.';
+  html += '⚠️ <strong>NOT a tax filing document.</strong> P&L figures are personal estimates based on your entries. Sold positions with a sell price show <strong>realized gains/losses</strong>; holding positions show <strong>unrealized gains/losses</strong> based on current prices. Tax rules vary by country and individual circumstances. Always consult a qualified tax professional.';
   html += '</div>';
   
   container.innerHTML = html;
@@ -1927,95 +1976,7 @@ function downloadTaxMD() {
 }
 
 function downloadTaxPDF() {
-  const taxMonth = _taxReportMonth || '';
-  const soldItems = state.portfolio.filter(p => {
-    if (p.status !== 'sold' || !p.sellPrice) return false;
-    if (!taxMonth || taxMonth === 'all') return true;
-    return (p.sellDate && p.sellDate.slice(0,7) === taxMonth) || (p.buyDate && p.buyDate.slice(0,7) === taxMonth);
-  });
-  const holdingItems = state.portfolio.filter(p => {
-    if (p.status !== 'holding') return false;
-    if (!taxMonth || taxMonth === 'all') return true;
-    return p.buyDate && p.buyDate.slice(0,7) === taxMonth;
-  });
-  const totalCost = state.portfolio.reduce((s, p) => s + p.buyPrice * p.quantity, 0);
-  const totalRealizedGain = soldItems.reduce((sum, p) => sum + ((p.sellPrice - p.buyPrice) * p.quantity), 0);
-  let totalValueHolding = 0;
-  holdingItems.forEach(p => {
-    const cp = getPortfolioPrice(p.ticker);
-    totalValueHolding += (cp || p.buyPrice) * p.quantity;
-  });
-  const taxRate = parseFloat(localStorage.getItem('jerry_tax_rate') || '30');
-  const taxAmount = totalRealizedGain > 0 ? totalRealizedGain * (taxRate / 100) : 0;
-  const netAfterTax = totalRealizedGain - taxAmount;
-  
-  const date = new Date().toISOString().slice(0,10);
-  let htmlContent = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Tax Report - ' + date + '</title>';
-  htmlContent += '<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:800px;margin:30px auto;padding:20px;color:#1a1410}'; 
-  htmlContent += 'h1{font-family:monospace;color:#c85a17;font-size:22px;border-bottom:2px solid #e8a846;padding-bottom:8px}'; 
-  htmlContent += 'h2{font-family:monospace;color:#3d2e1c;font-size:16px;margin-top:24px}'; 
-  htmlContent += 'table{width:100%;border-collapse:collapse;margin:10px 0 20px;font-family:monospace;font-size:12px}'; 
-  htmlContent += 'th{background:#3d2e1c;color:#fff;padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase}'; 
-  htmlContent += 'td{padding:6px 8px;border-bottom:1px solid #ddd;font-size:11px}'; 
-  htmlContent += 'tr:hover{background:#f5f0eb}'; 
-  htmlContent += '.pos{color:#4caf50;font-weight:700}.neg{color:#e53935;font-weight:700}'; 
-  htmlContent += '.summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}'; 
-  htmlContent += '.summary-card{border:1px solid #ddd;border-radius:6px;padding:12px}'; 
-  htmlContent += '.summary-card .label{font-size:9px;color:#9a8870;text-transform:uppercase;letter-spacing:0.5px}'; 
-  htmlContent += '.summary-card .value{font-family:monospace;font-size:20px;font-weight:700;margin-top:4px}'; 
-  htmlContent += '.footer{margin-top:30px;padding-top:12px;border-top:1px solid #ddd;font-size:10px;color:#9a8870}'; 
-  htmlContent += '@media print{body{margin:0;padding:15px}}</style></head><body>';
-  htmlContent += '<h1>💰 TAX REPORT</h1>';
-  htmlContent += '<p style="color:#9a8870;font-size:12px">Generated: ' + date + ' | Portfolios: ' + state.portfolio.length + ' positions (' + holdingItems.length + ' holding, ' + soldItems.length + ' sold)</p>';
-  
-  // Realized
-  htmlContent += '<h2>✅ Realized Gains/Losses (Sold)</h2>';
-  if (soldItems.length === 0) {
-    htmlContent += '<p style="color:#9a8870;font-size:11px">No closed positions.</p>';
-  } else {
-    htmlContent += '<table><thead><tr><th>Ticker</th><th>Qty</th><th>Buy $</th><th>Sell $</th><th>Gain/Loss</th><th>Buy Date</th><th>Sell Date</th></tr></thead><tbody>';
-    soldItems.forEach(p => {
-      const profit = (p.sellPrice - p.buyPrice) * p.quantity;
-      const cls = profit >= 0 ? 'pos' : 'neg';
-      htmlContent += '<tr><td style="font-weight:700">' + p.ticker + '</td><td>' + p.quantity + '</td><td>$' + p.buyPrice.toFixed(2) + '</td><td>$' + p.sellPrice.toFixed(2) + '</td><td class="' + cls + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td><td>' + (p.buyDate || '—') + '</td><td>' + (p.sellDate || '—') + '</td></tr>';
-    });
-    htmlContent += '<tr style="font-weight:700"><td colspan="4">Total Realized</td><td class="' + (totalRealizedGain >= 0 ? 'pos' : 'neg') + '">' + (totalRealizedGain >= 0 ? '+' : '') + '$' + totalRealizedGain.toFixed(2) + '</td><td></td><td></td></tr>';
-    htmlContent += '</tbody></table>';
-  }
-  
-  // Unrealized
-  htmlContent += '<h2>🔵 Unrealized Gains/Losses (Holding)</h2>';
-  if (holdingItems.length === 0) {
-    htmlContent += '<p style="color:#9a8870;font-size:11px">All positions closed.</p>';
-  } else {
-    htmlContent += '<table><thead><tr><th>Ticker</th><th>Qty</th><th>Buy $</th><th>Current $</th><th>Unrealized P&L</th><th>Buy Date</th></tr></thead><tbody>';
-    let totalUnrealized = 0;
-    holdingItems.forEach(p => {
-      const cp = getPortfolioPrice(p.ticker);
-      const price = cp || p.buyPrice;
-      const profit = (price - p.buyPrice) * p.quantity;
-      totalUnrealized += profit;
-      const cls = profit >= 0 ? 'pos' : 'neg';
-      htmlContent += '<tr><td style="font-weight:700">' + p.ticker + '</td><td>' + p.quantity + '</td><td>$' + p.buyPrice.toFixed(2) + '</td><td>' + (cp ? '$' + price.toFixed(2) : 'N/A') + '</td><td class="' + cls + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td><td>' + (p.buyDate || '—') + '</td></tr>';
-    });
-    htmlContent += '<tr style="font-weight:700"><td colspan="4">Total Unrealized</td><td class="' + (totalUnrealized >= 0 ? 'pos' : 'neg') + '">' + (totalUnrealized >= 0 ? '+' : '') + '$' + totalUnrealized.toFixed(2) + '</td><td></td></tr>';
-    htmlContent += '</tbody></table>';
-  }
-  
-  // Summary
-  const netClass = netAfterTax >= 0 ? 'pos' : 'neg';
-  htmlContent += '<h2>📊 Summary</h2>';
-  htmlContent += '<div class="summary">';
-  htmlContent += '<div class="summary-card"><div class="label">Value Bought (Cost Basis)</div><div class="value">$' + totalCost.toFixed(2) + '</div></div>';
-  htmlContent += '<div class="summary-card"><div class="label">Realized Gain/Loss</div><div class="value ' + (totalRealizedGain >= 0 ? 'pos' : 'neg') + '">' + (totalRealizedGain >= 0 ? '+' : '') + '$' + totalRealizedGain.toFixed(2) + '</div></div>';
-  htmlContent += '<div class="summary-card"><div class="label">Tax Rate</div><div class="value">' + taxRate + '%</div></div>';
-  htmlContent += '<div class="summary-card"><div class="label">Tax Due</div><div class="value neg">-$' + taxAmount.toFixed(2) + '</div></div>';
-  htmlContent += '<div class="summary-card" style="grid-column:1/3"><div class="label">Net After Tax</div><div class="value ' + netClass + '">' + (netAfterTax >= 0 ? '+' : '') + '$' + netAfterTax.toFixed(2) + '</div></div>';
-  htmlContent += '</div>';
-  htmlContent += '<div class="footer">⚠️ Generated by MOMENTUM. Not financial advice. Consult a tax professional.</div>';
-  htmlContent += '</body></html>';
-  
-  downloadFile(htmlContent, 'tax-report.pdf', 'text/html');
+  window.print();
 }
 
 function saveTaxRate() {
@@ -2394,8 +2355,8 @@ const LANGS = {
     errors_scanFirst: 'Scan this market first to get prices.',
     errors_invalidTaxRate: 'Enter a valid tax rate (0-100%)',
 
-    // Tax report
-    taxReport_title: '💰 TAX REPORT',
+    // Trading Journal / P&L Summary (formerly Tax Report)
+    taxReport_title: '📓 TRADING JOURNAL — P&L SUMMARY',
     taxReport_realized: '✅ REALIZED GAINS/LOSSES (SOLD)',
     taxReport_unrealized: '🔵 UNREALIZED GAINS/LOSSES (HOLDING)',
     taxReport_noRealized: 'No closed positions this period.',
@@ -2403,11 +2364,11 @@ const LANGS = {
     taxReport_taxEstimate: '📊 TAX ESTIMATE (Realized Gains Only)',
     taxReport_taxRate: 'Tax Rate:',
     taxReport_netAfterTax: 'Net After Tax',
-    taxReport_disclaimer: '⚠️ Disclaimer: This is an estimate only. Tax rates vary by jurisdiction, holding period, and individual circumstances. Consult a qualified tax professional for actual tax filing.',
+    taxReport_disclaimer: '⚠️ NOT a tax filing document. This is a personal P&L estimate only. Tax rates, rules, and obligations vary by country, holding period, and individual circumstances. Always consult a qualified tax professional for your actual tax filing.',
     taxReport_selectMonth: '📅 Select Month:',
     taxReport_allTime: 'All Time',
     taxReport_update: '🔄 UPDATE',
-    taxReport_pdf: '📄 PDF',
+    taxReport_pdf: '🖨️ PRINT / SAVE PDF',
 
     // Education
     edu_title: '📘 EDUCATION — Pro Reference',
@@ -2540,8 +2501,8 @@ const LANGS = {
     errors_scanFirst: 'Faça scan deste mercado primeiro para obter preços.',
     errors_invalidTaxRate: 'Insira uma alíquota válida (0-100%)',
 
-    // Tax report
-    taxReport_title: '💰 RELATÓRIO FISCAL',
+    // Trading Journal / P&L Summary (formerly Tax Report)
+    taxReport_title: '📓 DIÁRIO DE TRADING — RESUMO DE P&L',
     taxReport_realized: '✅ GANHOS/PERDAS REALIZADOS (VENDIDOS)',
     taxReport_unrealized: '🔵 GANHOS/PERDAS NÃO REALIZADOS (MANTENDO)',
     taxReport_noRealized: 'Sem posições fechadas neste período.',
@@ -2549,11 +2510,11 @@ const LANGS = {
     taxReport_taxEstimate: '📊 ESTIMATIVA DE IMPOSTO (Apenas Ganhos Realizados)',
     taxReport_taxRate: 'Alíquota:',
     taxReport_netAfterTax: 'Líquido Após Imposto',
-    taxReport_disclaimer: '⚠️ Aviso: Esta é apenas uma estimativa. As alíquotas variam por jurisdição, prazo e circunstâncias individuais. Consulte um profissional tributário qualificado para declaração real.',
+    taxReport_disclaimer: '⚠️ NÃO é um documento fiscal. Este é apenas um resumo pessoal de P&L. Alíquotas, regras e obrigações variam por país, prazo e circunstâncias individuais. Consulte sempre um profissional tributário qualificado para sua declaração real.',
     taxReport_selectMonth: '📅 Selecionar Mês:',
     taxReport_allTime: 'Todo o Período',
     taxReport_update: '🔄 ATUALIZAR',
-    taxReport_pdf: '📄 PDF',
+    taxReport_pdf: '🖨️ IMPRIMIR / SALVAR PDF',
 
     // Education
     edu_title: '📘 EDUCAÇÃO — Referência Pro',
@@ -3368,6 +3329,11 @@ async function init() {
   });
   document.getElementById('authModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeAuthModal(); });
   document.getElementById('portfolioModal').addEventListener('click', e => { if (e.target === e.currentTarget) closePortfolioModal(); });
+  // Show cookie/LGPD consent banner if not yet accepted
+  if (!localStorage.getItem('momentum_consent')) {
+    const banner = document.getElementById('cookieBanner');
+    if (banner) banner.style.display = 'flex';
+  }
 }
 init();
 </script>
