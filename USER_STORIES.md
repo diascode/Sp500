@@ -1,0 +1,709 @@
+# MOMENTUM — User Stories
+
+*Version 1.0 — May 2026*
+
+---
+
+## Table of Contents
+
+1. [Roles & Personas](#roles--personas)
+2. [Epic 1 — Authentication & Account](#epic-1--authentication--account)
+3. [Epic 2 — Market Scanning](#epic-2--market-scanning)
+4. [Epic 3 — Stock Cards & Analysis](#epic-3--stock-cards--analysis)
+5. [Epic 4 — Tracked Picks](#epic-4--tracked-picks)
+6. [Epic 5 — All Stocks Browser](#epic-5--all-stocks-browser)
+7. [Epic 6 — Portfolio & Trading Journal](#epic-6--portfolio--trading-journal)
+8. [Epic 7 — Education Module](#epic-7--education-module)
+9. [Epic 8 — Economic Calendar](#epic-8--economic-calendar)
+10. [Epic 9 — Correlation Matrix](#epic-9--correlation-matrix)
+11. [Epic 10 — Admin Panel](#epic-10--admin-panel)
+12. [Epic 11 — Accessibility & Personalisation](#epic-11--accessibility--personalisation)
+13. [Epic 12 — GDPR / LGPD Compliance](#epic-12--gdpr--lgpd-compliance)
+14. [Epic 13 — Subscriptions & Billing](#epic-13--subscriptions--billing)
+
+---
+
+## Roles & Personas
+
+| Role | Description |
+|---|---|
+| **Visitor** | Unauthenticated user; can browse landing page and limited scan results |
+| **Free User** | Registered and signed in; limited to 5 stocks per market and 5 tracked picks |
+| **Pro User** | Paying subscriber (€9/month); unlimited access to all features except admin |
+| **Admin** | Single superuser (founder); full access plus user management panel |
+
+---
+
+## Epic 1 — Authentication & Account
+
+### US-01 — Sign Up
+**As a** visitor,
+**I want to** create an account with my email and password,
+**so that** I can save my tracked picks and access personalised features.
+
+**Acceptance criteria:**
+- Email must be unique; duplicate registration returns a clear error.
+- Password must be at least 6 characters; shorter passwords are rejected with a message.
+- On success the user is immediately signed in and sees their account badge in the header.
+- Passwords are stored as a scrypt hash — never in plain text.
+
+---
+
+### US-02 — Sign In
+**As a** registered user,
+**I want to** sign in with my email and password,
+**so that** I can access my saved picks, portfolio, and subscription features.
+
+**Acceptance criteria:**
+- Invalid credentials return "Invalid email or password" (same message for both cases — no enumeration).
+- After 10 failed attempts from the same IP within 15 minutes the endpoint returns a 429 with a clear wait message.
+- A valid login issues a 30-day JWT stored in localStorage.
+- The header immediately reflects the user's email, tier badge, and avatar icon.
+
+---
+
+### US-03 — Sign Out
+**As a** signed-in user,
+**I want to** sign out,
+**so that** my session is cleared from this device.
+
+**Acceptance criteria:**
+- Clicking "Sign Out" clears the JWT from localStorage.
+- The UI reverts to the logged-out state immediately without a page reload error.
+- The portfolio and tracked picks remain in localStorage (not wiped) so they are available if the user signs back in.
+
+---
+
+### US-04 — Change Password
+**As a** signed-in user,
+**I want to** change my password,
+**so that** I can update my credentials if I suspect a compromise.
+
+**Acceptance criteria:**
+- Current password is required and validated before the new password is accepted.
+- New password must be at least 6 characters.
+- On success, the modal closes and a toast confirms the change.
+- The existing JWT remains valid after a password change (no forced re-login).
+
+---
+
+### US-05 — Auth Form Autofill
+**As a** signed-in user returning to the app,
+**I want** the browser to autofill my email and password,
+**so that** I don't have to type credentials every time.
+
+**Acceptance criteria:**
+- The auth form is wrapped in a `<form id="authForm">` element.
+- The email input has `autocomplete="email"`.
+- The password input has `autocomplete="current-password"` in sign-in mode and `autocomplete="new-password"` in sign-up mode.
+- No browser "password field not in a form" console warning appears.
+
+---
+
+### US-06 — Session Persistence
+**As a** returning user,
+**I want** my session to be remembered across browser refreshes,
+**so that** I don't have to sign in on every visit.
+
+**Acceptance criteria:**
+- A valid JWT in localStorage auto-authenticates the user on page load via `/api/auth/me`.
+- An expired or tampered token silently clears the session and shows the signed-out state.
+- Session lasts 30 days from last sign-in.
+
+---
+
+## Epic 2 — Market Scanning
+
+### US-07 — Scan a Market
+**As a** signed-in user,
+**I want to** click SCAN to fetch live technical data for the selected market,
+**so that** I can see current BUY/HOLD/SELL signals for each stock.
+
+**Acceptance criteria:**
+- Pressing SCAN triggers real-time data fetch from Yahoo Finance via the server-side proxy.
+- A loading indicator is shown during the scan.
+- Each card appears as its data resolves; the user does not wait for all 50 before seeing results.
+- The header updates with "LAST SCAN — HH:MM:SS UTC" on completion.
+
+---
+
+### US-08 — Switch Market
+**As a** user,
+**I want to** switch between US, Europe, and Emerging Markets tabs,
+**so that** I can compare opportunities across geographies.
+
+**Acceptance criteria:**
+- Switching market clears the current scan results and shows a "HIT SCAN TO BEGIN" prompt.
+- The active market tab is highlighted.
+- The signal filter resets to BUY on market switch.
+- The stock universe count in the tab label reflects the user's tier.
+
+---
+
+### US-09 — Free Tier Universe Limit
+**As a** free user,
+**I want to** scan a sample of each market,
+**so that** I can evaluate the product before subscribing.
+
+**Acceptance criteria:**
+- Free users see exactly 5 stocks per market (first 5 in the curated list).
+- A Pro upsell banner is visible below the sample results.
+- The upsell clearly shows what additional stocks and features are available on Pro.
+
+---
+
+### US-10 — Pro Signal Filter
+**As a** Pro or Admin user,
+**I want to** filter scan results by BUY, HOLD, SELL, or ALL,
+**so that** I can focus on the signal type relevant to my current strategy.
+
+**Acceptance criteria:**
+- A filter bar appears at the top of results for Pro/Admin users only.
+- Selecting a filter re-renders only matching cards without re-fetching data.
+- The filter defaults to BUY on page load and resets to BUY on market switch.
+- Free users do not see the filter bar; they always see only BUY signals.
+
+---
+
+### US-11 — Scan Results Summary
+**As a** user,
+**I want to** see a summary of BUY / HOLD / SELL counts after a scan,
+**so that** I can quickly gauge overall market sentiment.
+
+**Acceptance criteria:**
+- The stats bar under the description card shows: UNIVERSE: N stocks, BUY SIGNALS: N, HOLD: N, SELL: N.
+- Counts update immediately after the scan completes.
+
+---
+
+## Epic 3 — Stock Cards & Analysis
+
+### US-12 — View Stock Card
+**As a** user,
+**I want to** see a detailed card for each scanned stock,
+**so that** I can understand its technical condition at a glance.
+
+**Acceptance criteria:**
+- Each card shows: ticker, company name, sector, current price, 1-day price change (%), BUY/HOLD/SELL badge.
+- Technical pills are shown: RSI, MACD, ADX, SMA status (bull/bear/neutral).
+- Entry zone, take-profit (TP), and stop-loss (SL) bands are displayed.
+- A verdict bar at the bottom summarises the composite signal.
+
+---
+
+### US-13 — Interactive Price Chart
+**As a** user,
+**I want to** view an interactive price chart with SMA overlays and Bollinger Bands,
+**so that** I can visually confirm the technical setup.
+
+**Acceptance criteria:**
+- Chart renders using Canvas (no external charting library dependency).
+- Period buttons (1D, 1M, 3M, 6M, 1Y, 5Y) allow zoom.
+- SMA 20, 50, 200 and Bollinger Bands are toggled via buttons on the card.
+- Chart updates instantly on period/overlay change without re-fetching.
+
+---
+
+### US-14 — News Sentiment
+**As a** user,
+**I want to** see recent news headlines for each stock,
+**so that** I can factor in qualitative events when assessing the signal.
+
+**Acceptance criteria:**
+- Up to 5 headlines are shown per card, sourced from Yahoo Finance news.
+- Each headline links to the original article (opens in a new tab).
+- Publisher and time-ago labels are displayed.
+- News section is collapsible to save vertical space.
+
+---
+
+### US-15 — Support & Resistance Levels
+**As a** user,
+**I want to** see computed support and resistance levels on the card,
+**so that** I can identify key price zones for entry and exit.
+
+**Acceptance criteria:**
+- Support 1, Resistance 1, and Resistance 2 levels are displayed on each card.
+- Values are computed server-side from OHLCV history.
+- Entry zone is derived from Support 1 and ATR.
+
+---
+
+## Epic 4 — Tracked Picks
+
+### US-16 — Track a Pick
+**As a** signed-in user,
+**I want to** add a stock to my Tracked Picks from a scan card,
+**so that** I can monitor it over time with its TP/SL levels.
+
+**Acceptance criteria:**
+- Clicking "TRACK PICK" on a card adds the stock to the tracked list with the current TP and SL from the scan.
+- Duplicate tracking is prevented; clicking again shows an "already tracked" message.
+- Free users are limited to 5 tracked picks; attempting to add more shows an upgrade prompt.
+
+---
+
+### US-17 — View Tracked Picks
+**As a** user,
+**I want to** see all my tracked picks in a dedicated tab,
+**so that** I can monitor their status at a glance.
+
+**Acceptance criteria:**
+- The TRACKED tab shows a table with: ticker, entry price, current price, TP, SL, % P&L, status badge (ACTIVE / HIT TP / HIT SL).
+- An empty state with a helpful prompt is shown when no picks are tracked.
+- The count of tracked picks is shown in the tab label.
+
+---
+
+### US-18 — Refresh Tracked Prices
+**As a** user,
+**I want to** refresh the current prices of all tracked picks,
+**so that** I can see up-to-date P&L without running a full market scan.
+
+**Acceptance criteria:**
+- Clicking "REFRESH PRICES" re-fetches prices only for the tracked tickers.
+- TP/SL hit status updates based on the refreshed price.
+- A loading state is shown during the refresh.
+
+---
+
+### US-19 — Clear All Tracked Picks
+**As a** user,
+**I want to** clear all my tracked picks at once,
+**so that** I can start fresh after a strategy change.
+
+**Acceptance criteria:**
+- A confirmation prompt appears before clearing.
+- After confirmation, the tracked list is empty and the count resets to 0.
+- Clearing does not affect portfolio positions.
+
+---
+
+### US-20 — Navigate Back from Tracked View
+**As a** user,
+**I want to** return to the scan from the Tracked Picks view,
+**so that** I can quickly switch between monitoring and scanning.
+
+**Acceptance criteria:**
+- A "BACK TO SCAN" button is visible in the Tracked tab.
+- Clicking it returns to the last active scan result without re-fetching.
+
+---
+
+## Epic 5 — All Stocks Browser
+
+### US-21 — Browse Full Universe
+**As a** user,
+**I want to** see a table of all available stocks in the selected market,
+**so that** I can find a specific company without running a scan.
+
+**Acceptance criteria:**
+- The ALL STOCKS tab shows a table with: ticker, company name, sector, and action buttons.
+- Each row has a TRACK button and a "+ MY STOCKS" button.
+- Stocks already tracked show a "✓ TRACKED" indicator.
+- Stocks already in the portfolio show a "✅" badge instead of the add button.
+
+---
+
+### US-22 — Quick-Add to Portfolio from Browser
+**As a** Pro user,
+**I want to** add a stock directly to my portfolio from the All Stocks browser,
+**so that** I can log a position without running a scan first.
+
+**Acceptance criteria:**
+- Clicking "+ MY STOCKS" on a row adds the stock to the portfolio at the last known scanned price.
+- If no scan price is available, the user is prompted to scan the market first.
+- Free users see the "+ MY STOCKS" button but are redirected to the upgrade flow on click.
+
+---
+
+## Epic 6 — Portfolio & Trading Journal
+
+### US-23 — Add Portfolio Position
+**As a** Pro user,
+**I want to** manually log a stock position with quantity, buy price, and date,
+**so that** I can track the performance of positions I've entered in my real broker.
+
+**Acceptance criteria:**
+- The "Add Position" modal has fields: ticker, quantity, buy price, buy date.
+- Ticker is validated against the known universe; unknown tickers are accepted with a warning.
+- Free users are limited to 3 positions; attempting to add more shows an upgrade prompt.
+- Duplicate holding positions (same ticker, status = holding) are prevented.
+
+---
+
+### US-24 — View Portfolio Summary
+**As a** Pro user,
+**I want to** see a summary of my portfolio with total cost, current value, and overall P&L,
+**so that** I can track my performance at a glance.
+
+**Acceptance criteria:**
+- Summary cards show: total cost basis, current value, total unrealized P&L (€ and %), total realized P&L.
+- Positions are listed in a table with: ticker, qty, buy price, current price, P&L (€ and %).
+- HOLDING positions are highlighted in blue; SOLD positions are greyed out.
+- Current prices are sourced from the last scan; a "last updated" timestamp is shown.
+
+---
+
+### US-25 — Full Sell a Position
+**As a** Pro user,
+**I want to** record a full sale of a holding position,
+**so that** the position moves to SOLD status with a realised P&L.
+
+**Acceptance criteria:**
+- Clicking SELL on a holding row opens a sell modal pre-filled with the full quantity.
+- The modal has fields: shares to sell (max = current quantity), sell price, sell date.
+- Preview shows: "Selling: N of N shares", realised P&L (€ and %), no "remaining holding" line.
+- On confirm, the position status changes to SOLD and the row shows the sell price and sell date.
+
+---
+
+### US-26 — Partial Sell a Position
+**As a** Pro user,
+**I want to** sell only part of my holding,
+**so that** I can realise some profit while keeping a remaining position.
+
+**Acceptance criteria:**
+- Entering a quantity less than the full holding in the sell modal shows a preview with: "Selling: N of M shares", "Remaining holding: (M−N) shares @ buy price", and the P&L on the sold portion.
+- On confirm, the original row is updated to the remaining quantity (HOLDING), and a new SOLD row is appended for the sold portion.
+- Both rows are independently visible in the portfolio table.
+
+---
+
+### US-27 — Sell Validation
+**As a** Pro user,
+**I want to** be prevented from entering an invalid sell,
+**so that** data integrity is maintained.
+
+**Acceptance criteria:**
+- Quantity > current holding → error: "Cannot sell more than you hold."
+- Quantity = 0 or negative → error: "Quantity must be at least 1."
+- Sell price = 0 or negative → error: "Enter a valid sell price."
+- None of these validation errors crash the app.
+
+---
+
+### US-28 — Edit a Portfolio Position
+**As a** Pro user,
+**I want to** edit the details of an existing position,
+**so that** I can correct entry mistakes.
+
+**Acceptance criteria:**
+- Clicking EDIT opens the add-position modal pre-filled with the current values.
+- Saving updates the position in place.
+- Editing does not create a duplicate row.
+
+---
+
+### US-29 — Remove a Portfolio Position
+**As a** Pro user,
+**I want to** delete a position from my portfolio,
+**so that** I can remove erroneous entries.
+
+**Acceptance criteria:**
+- Clicking REMOVE shows a confirmation prompt.
+- After confirmation, the row is removed from the table and P&L summaries recalculate.
+
+---
+
+### US-30 — Monthly P&L Breakdown
+**As a** Pro user,
+**I want to** see my realised and unrealised P&L grouped by month,
+**so that** I can understand my performance over time.
+
+**Acceptance criteria:**
+- The portfolio view shows a monthly P&L table below the position list.
+- Realised gains/losses are bucketed by sell date.
+- Unrealised positions are bucketed by buy date.
+- A grand total row is shown for each section.
+
+---
+
+### US-31 — Tax Estimate
+**As a** Pro user,
+**I want to** see an estimated tax liability based on my realised gains and a configurable tax rate,
+**so that** I can plan cash reserves for tax season.
+
+**Acceptance criteria:**
+- A tax rate input (defaulting to 30%) is shown in the Trading Journal section.
+- Changing the rate recalculates the estimate immediately.
+- Displayed values: realised gain/loss, tax rate, estimated tax due, net after tax.
+- A prominent disclaimer states this is NOT a tax filing document.
+
+---
+
+### US-32 — Export Portfolio as CSV
+**As a** Pro user,
+**I want to** download my portfolio data as a CSV file,
+**so that** I can import it into a spreadsheet for further analysis.
+
+**Acceptance criteria:**
+- Clicking CSV downloads a file with columns: Ticker, Qty, Buy Price, Sell Price, Buy Date, Sell Date, Status, P&L.
+- The file is named with the current date (e.g. `portfolio-2026-05-11.csv`).
+
+---
+
+### US-33 — Export Portfolio as Markdown
+**As a** Pro user,
+**I want to** download my portfolio as a Markdown file,
+**so that** I can embed it in notes, obsidian, or a personal blog.
+
+**Acceptance criteria:**
+- Clicking MD downloads a properly formatted Markdown table.
+- The file includes a header with export date and total P&L summary.
+
+---
+
+### US-34 — Print / Save Portfolio as PDF
+**As a** Pro user,
+**I want to** print or save my Trading Journal as a PDF,
+**so that** I can keep a physical or archived record.
+
+**Acceptance criteria:**
+- Clicking "PRINT / SAVE PDF" triggers the browser's native print dialog.
+- The printed view is clean — no header controls, nav tabs, or scan UI visible.
+- The disclaimer "NOT a tax filing document" is clearly visible on the printed page.
+
+---
+
+## Epic 7 — Education Module
+
+### US-35 — Access Education Content
+**As a** any signed-in user,
+**I want to** read explanations of the technical indicators MOMENTUM uses,
+**so that** I can understand why a BUY or SELL signal is generated.
+
+**Acceptance criteria:**
+- The EDUCATION tab is accessible from the navigation bar (visible for Pro/Admin by default).
+- Each topic (RSI, MACD, ADX, SMA, Bollinger) has a title and a detailed body with examples.
+- Content is available in both EN and PT.
+
+---
+
+### US-36 — Understand Scoring Logic
+**As a** user reading education content,
+**I want to** see exactly how MOMENTUM scores each indicator,
+**so that** I can trust and interpret the composite verdict.
+
+**Acceptance criteria:**
+- Each indicator section explicitly describes its scoring contribution (e.g., "RSI 45–65 → +1 point").
+- The "How MOMENTUM scores it" sub-section is present for every indicator.
+
+---
+
+## Epic 8 — Economic Calendar
+
+### US-37 — View Upcoming Macro Events
+**As a** user,
+**I want to** see a calendar of upcoming economic events,
+**so that** I can avoid holding volatile positions into major releases.
+
+**Acceptance criteria:**
+- The Economic Calendar widget on the main page shows the next 8 events.
+- Each event has: date, title, and impact level (HIGH / MEDIUM badge).
+- Events are sorted by date ascending.
+- The calendar is generated server-side and requires no API key.
+
+---
+
+## Epic 9 — Correlation Matrix
+
+### US-38 — View Correlation Between Tracked Stocks
+**As a** Pro user,
+**I want to** see a correlation matrix for my tracked picks,
+**so that** I can understand diversification and avoid over-concentrating in correlated names.
+
+**Acceptance criteria:**
+- The Correlation section is visible only to Pro and Admin users.
+- It appears after scanning at least 2 tickers from the same market.
+- Positive correlations are colour-coded green; negative correlations are red.
+- A legend explains "Move Together" and "Move Opposite."
+
+---
+
+### US-39 — Correlation Requires Scan
+**As a** free user attempting to view the correlation matrix,
+**I want to** see a clear locked/upgrade state,
+**so that** I understand this is a Pro feature.
+
+**Acceptance criteria:**
+- Free users see a locked placeholder with a "Pro Feature" label and upgrade CTA.
+- The section does not crash or show partial data for free users.
+
+---
+
+## Epic 10 — Admin Panel
+
+### US-40 — View All Registered Users
+**As an** admin,
+**I want to** see a table of all registered users with their tier and subscription status,
+**so that** I can monitor growth and manage accounts.
+
+**Acceptance criteria:**
+- The Admin Panel tab is visible only when logged in as admin.
+- The table shows: ID, email, tier badge, subscription expiry, account creation date.
+- Summary stats are shown: total users, free, pro, active subscriptions.
+
+---
+
+### US-41 — Upgrade a User to Pro
+**As an** admin,
+**I want to** manually upgrade a free user to Pro tier,
+**so that** I can reward beta testers, influencers, and partners.
+
+**Acceptance criteria:**
+- Each free user row has a "⭐ Make Pro" button.
+- Clicking it shows a confirmation dialog: "Upgrade [email] to PRO? (grants 1 year subscription)."
+- On confirm, the user's tier is set to `pro` with a 1-year `subscriptionEnd`.
+- The table refreshes showing the updated tier immediately.
+
+---
+
+### US-42 — Revoke Pro from a User
+**As an** admin,
+**I want to** downgrade a Pro user back to Free,
+**so that** I can revoke access when a partner agreement ends.
+
+**Acceptance criteria:**
+- Each Pro user row has a "↓ Revoke Pro" button.
+- Clicking it shows a confirmation: "Revoke PRO from [email] and downgrade to FREE?"
+- On confirm, the user's tier is set to `free` and `subscriptionEnd` is cleared.
+- The admin's own account cannot be downgraded.
+
+---
+
+### US-43 — Language Selector (Admin Only)
+**As an** admin,
+**I want to** switch the app language between EN and PT,
+**so that** I can test localisation and demo the app in both languages.
+
+**Acceptance criteria:**
+- The language selector (EN/PT dropdown) is visible only when logged in as admin.
+- Logged-out users and Free/Pro users do not see the selector.
+- Switching language applies immediately to all visible UI strings without a page reload.
+
+---
+
+## Epic 11 — Accessibility & Personalisation
+
+### US-44 — Increase Font Size
+**As a** user with visual accessibility needs,
+**I want to** increase the font size of the entire app,
+**so that** I can read content comfortably.
+
+**Acceptance criteria:**
+- Clicking A+ increases the page zoom by a fixed step.
+- Clicking A− decreases it.
+- The zoom level persists across sessions via localStorage.
+- The default zoom is 1.0 (100%).
+
+---
+
+### US-45 — Switch Theme
+**As a** user,
+**I want to** switch between visual themes (Dark, Light, Dracula, Monokai, Nord, Solarized, One Dark),
+**so that** I can personalise the appearance of the app.
+
+**Acceptance criteria:**
+- Clicking the theme toggle button cycles through all available themes.
+- The theme label in the button updates to reflect the active theme.
+- The selected theme is persisted in localStorage and restored on next visit.
+
+---
+
+## Epic 12 — GDPR / LGPD Compliance
+
+### US-46 — Cookie & Storage Consent Banner
+**As a** first-time visitor,
+**I want to** see a consent notice about how MOMENTUM uses cookies and local storage,
+**so that** I understand how my data is handled before using the app.
+
+**Acceptance criteria:**
+- A banner appears at the bottom of the page on first visit.
+- The banner explains that localStorage is used for session and preferences.
+- A "Learn more" link shows a detailed privacy note.
+- Clicking "Accept & Continue" dismisses the banner and records consent in localStorage.
+- On subsequent visits, the banner is not shown.
+
+---
+
+### US-47 — Export My Account Data
+**As a** signed-in user,
+**I want to** download a copy of all data MOMENTUM holds about my account,
+**so that** I can exercise my rights under GDPR and LGPD.
+
+**Acceptance criteria:**
+- "Export My Data" appears in the user dropdown menu.
+- Clicking it downloads a JSON file containing: user ID, email, tier, subscription dates, export timestamp.
+- The export includes a note clarifying that portfolio data is stored locally in the browser.
+- The endpoint requires a valid JWT; unauthenticated requests are rejected.
+
+---
+
+### US-48 — Delete My Account
+**As a** signed-in user,
+**I want to** permanently delete my account,
+**so that** all my server-side personal data is erased.
+
+**Acceptance criteria:**
+- "Delete Account" appears in the user dropdown, styled in red.
+- Two confirmation dialogs appear in sequence before deletion proceeds.
+- On confirmation, the server removes the user record from the database.
+- The user is immediately signed out and returned to the logged-out state.
+- The admin account cannot be deleted.
+
+---
+
+## Epic 13 — Subscriptions & Billing
+
+### US-49 — Upgrade to Pro via Stripe
+**As a** free user,
+**I want to** subscribe to the Pro tier using my card,
+**so that** I can unlock unlimited scanning and the full trading journal.
+
+**Acceptance criteria:**
+- Clicking "Go Pro" or "⬆ GO PRO — €9/MO" redirects to a Stripe Checkout session.
+- On successful payment, the user is redirected to `/?subscription=success`.
+- The user's tier is updated to `pro` via the Stripe webhook within seconds.
+- The Pro upsell banner is hidden immediately after upgrade.
+
+---
+
+### US-50 — Manage Subscription
+**As a** Pro user,
+**I want to** manage or cancel my subscription,
+**so that** I have full control over my billing.
+
+**Acceptance criteria:**
+- The "Go Pro" button changes to "⚙ Manage Subscription" for Pro users.
+- Clicking it opens the Stripe Customer Portal.
+- Cancellation via the portal triggers the `customer.subscription.deleted` webhook, which downgrades the user to Free at period end.
+
+---
+
+### US-51 — Subscription Expiry Enforcement
+**As a** Pro user whose subscription has lapsed,
+**I want** the app to gracefully downgrade my access,
+**so that** I understand my tier has changed and can renew if I choose.
+
+**Acceptance criteria:**
+- On every authenticated request, the server checks whether `subscriptionEnd` is in the past.
+- If expired, the user's tier is set back to `free` automatically.
+- Pro-only features (portfolio, signal filter, correlation) show the upgrade prompt rather than blank or broken states.
+
+---
+
+### US-52 — Stripe Not Configured State
+**As a** user on a self-hosted instance without Stripe keys,
+**I want** the app to behave gracefully without payment functionality,
+**so that** non-commercial deployments are still fully usable.
+
+**Acceptance criteria:**
+- If `STRIPE_SECRET_KEY` is not set, the checkout and portal endpoints return a 503 with "Stripe not configured."
+- The rest of the app (scanning, tracking, education) functions normally.
+- No uncaught errors related to Stripe appear in the server logs.
+
+---
+
+*End of User Stories — v1.0*
+*124 stocks · 3 markets · 2 languages · 52 stories across 13 epics*
