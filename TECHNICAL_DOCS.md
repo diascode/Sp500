@@ -727,7 +727,7 @@ function t(key) {
 }
 ```
 
-`LANGS` is an object with `en` and `pt` sub-objects. Every UI string that needs translation has a key. Keys are dot-namespaced by feature area, e.g.:
+`LANGS` is an object with `en` and `pt` sub-objects. Every UI string that needs translation has a key. Keys are namespaced by feature area using a category prefix (see Section 12 — Adding a Translation Key for the full category list). Example:
 
 ```js
 LANGS.en = {
@@ -738,11 +738,51 @@ LANGS.en = {
 }
 ```
 
+> **Sprint 2 expansion:** `LANGS` was expanded from ~7 keys to ~180 keys per language, covering all render functions across every view (stock cards, portfolio, tracked picks, tax report, education, footer, auth). All render functions are wired to call `t()` for every user-facing string — no raw string literals remain in rendering code.
+
 **`applyLang()`** is called on language switch and page load. It updates static DOM elements (tab labels, status bar, auth modal text). Dynamic content uses `t()` inline inside rendering functions.
 
 **`switchLang(lang)`** — sets `_lang`, saves to localStorage, calls `applyLang()`, and re-renders all currently visible dynamic views.
 
-**Language selector visibility:** Controlled by `updateAuthUI()`. The `<select id="langSelect">` is hidden by default (`display:none`) and is only made visible when `authUser.tier === 'admin'`.
+**Language selector visibility:** From Sprint 2 onwards the `<select id="langSelect">` is publicly visible to all users regardless of tier or auth state. The previous admin-only gate has been removed from `updateAuthUI()`.
+
+**Auto-detection:** `init()` reads `navigator.language` on first load. If no `jerry_lang` preference is stored and the detected language starts with `'pt'`, `_lang` is set to `'pt'` before any UI renders.
+
+#### 6.2.1 Currency Symbol Helper
+
+`getCurrencySymbol(ticker)` derives the correct currency symbol from the Yahoo Finance ticker suffix. No conversion math is performed — this is display-only labeling.
+
+```js
+function getCurrencySymbol(ticker) {
+  const t = (ticker || '').toUpperCase();
+  if (t.endsWith('.SA'))                                      return 'R$';
+  if (t.endsWith('.L'))                                       return '£';
+  if (['.DE','.PA','.AS','.MC','.MI','.BR'].some(s => t.endsWith(s))) return '€';
+  if (t.endsWith('.NS') || t.endsWith('.BO'))                 return '₹';
+  if (t.endsWith('.MX'))                                      return 'MX$';
+  if (t.endsWith('.JO'))                                      return 'R';
+  return '$';  // US and unknown
+}
+```
+
+**Suffix → symbol mapping:**
+
+| Suffix | Market | Symbol |
+|---|---|---|
+| `.SA` | Brazil B3 | `R$` |
+| `.L` | UK LSE | `£` |
+| `.DE` | Germany XETRA | `€` |
+| `.PA` | France Euronext | `€` |
+| `.AS` | Netherlands AEX | `€` |
+| `.MC` | Spain BME | `€` |
+| `.MI` | Italy Borsa Italiana | `€` |
+| `.BR` | Belgium Euronext | `€` |
+| `.NS` / `.BO` | India NSE / BSE | `₹` |
+| `.MX` | Mexico BMV | `MX$` |
+| `.JO` | South Africa JSE | `R` |
+| (none) | US and fallback | `$` |
+
+All ~25 hardcoded `$` price strings across the app (stock cards, chart tooltips, portfolio table, tracked picks table, CSV/MD exports) call `getCurrencySymbol(ticker)` instead of embedding a literal `$`. The `card_tp` and `card_sl` LANGS keys no longer embed a currency symbol — the symbol is prepended at render time.
 
 ### 6.3 Rendering Architecture
 
@@ -879,6 +919,72 @@ unrealizedPnl = (currentPrice - buyPrice) * quantity
 ```
 
 **`getPortfolioPrice(ticker)`** looks up the last known price from `jerry_prices` (populated during scans).
+
+#### DARF Tax Engine (Sprint 2 Phase 1)
+
+Brazilian traders are subject to monthly capital-gains tax (DARF) on B3 equity sales. The engine covers swing trades (DARF code 6015, 17.5%) and day-trades (code 6010, 20%).
+
+**`BR_TAX` constants:**
+
+```js
+const BR_TAX = {
+  SWING_RATE:             0.175,   // 17.5% — swing trade
+  DAYTRADE_RATE:          0.20,    // 20%   — day-trade
+  SWING_CODE:             '6015',
+  DAYTRADE_CODE:          '6010',
+  SWING_EXEMPT_THRESHOLD: 20000,   // R$20k monthly sales → swing DARF exempt
+  DEDODURO_RATE:          0.00005, // 0.005% IR retido na fonte
+};
+```
+
+**`tradeType` field on positions:**
+
+The position schema gains a `tradeType` field:
+
+```js
+{
+  ticker:    'PETR4.SA',
+  quantity:  100,
+  buyPrice:  35.00,
+  sellPrice: 38.50,
+  buyDate:   '2026-04-10',
+  sellDate:  '2026-04-15',
+  status:    'sold',
+  tradeType: 'swing',     // 'swing' | 'daytrade'  (defaults to 'swing')
+  dedoDuro:  0.10         // IR retido na fonte (R$), entered at sell time
+}
+```
+
+Existing positions without `tradeType` are treated as `'swing'` at read time without requiring migration.
+
+**`computeDARF(month, year)` spec:**
+
+```
+1. Filter portfolio for .SA tickers, status='sold', sellDate in (month, year).
+2. Split into swing[] and daytrade[] arrays by tradeType.
+3. For each bucket:
+   a. totalSales  = sum(sellPrice × quantity)
+   b. netGain     = sum((sellPrice − buyPrice) × quantity)
+   c. carryIn     = localStorage.getItem('darf_carry_swing' | 'darf_carry_daytrade') || 0
+   d. taxableGain = max(0, netGain − carryIn)
+   e. carryOut    = max(0, carryIn − netGain)   // reduced by gain, never below 0
+   f. if netGain < 0: carryOut += abs(netGain)  // loss adds to carry
+   g. dedoDuroTotal = sum(position.dedoDuro)
+   h. exemptSwing  = (bucket === swing) && totalSales < BR_TAX.SWING_EXEMPT_THRESHOLD
+   i. darf = exemptSwing ? 0 : max(0, taxableGain × rate − dedoDuroTotal)
+4. Update localStorage carry keys with carryOut values.
+5. Return { swing: { darf, taxableGain, carryOut, dedoDuro, totalSales, exempt },
+            daytrade: { darf, taxableGain, carryOut, dedoDuro, totalSales } }
+```
+
+**Loss carryforward localStorage keys:**
+
+| Key | Type | Description |
+|---|---|---|
+| `darf_carry_swing` | number (R$) | Accumulated swing loss not yet offset against a future gain |
+| `darf_carry_daytrade` | number (R$) | Accumulated day-trade loss not yet offset |
+
+Both keys persist in localStorage alongside the portfolio. They are displayed (read-only) in the DARF summary panel and recalculated every time `computeDARF()` is called.
 
 ---
 
@@ -1124,6 +1230,11 @@ Yahoo Finance does not offer a public API and explicitly prohibits scraping in t
 
 SQLite requires no separate process, fits in the current Docker-first model, and handles 100k+ users easily. The user schema maps 1:1 to a relational table.
 
+### i18n Coverage
+
+**Status (Sprint 1):** Partial — ~7 keys covered static DOM only.
+**Status (Sprint 2):** Resolved. Full translation expansion complete — ~180 keys per language, all render functions wired to `t()`, `navigator.language` auto-detection in `init()`, public language toggle.
+
 ### localStorage Portfolio
 
 **Status:** Active. **Risk: Data loss on browser clear.**
@@ -1174,10 +1285,27 @@ This runs the 12-test Playwright-based suite defined in `.claude/commands/regres
 
 ### Adding a Translation Key
 
-1. Add to `LANGS.en` in `stock-dashboard.html`.
-2. Add the Portuguese equivalent to `LANGS.pt`.
-3. Use `t('your_key')` wherever the string is rendered.
-4. If it's a static DOM element, also call `el.textContent = t('your_key')` inside `applyLang()`.
+The `LANGS` object contains ~180 keys per language (as of Sprint 2). Keys are grouped by category prefix:
+
+| Category prefix | Covers |
+|---|---|
+| `status_` | Signal badges: BUY, HOLD, SELL, loading, error states |
+| `signals_` | Indicator pill labels (RSI, MACD, ADX, SMA, Bollinger) |
+| `card_` | Stock card fields: price, TP, SL, entry zone, verdict |
+| `auth_` | Sign-in / sign-up modal, change password, error messages |
+| `portfolio_` | Portfolio table columns, sell modal, position actions |
+| `tracked_` | Tracked picks table, refresh button, empty state |
+| `taxReport_` | Trading journal headings, DARF panel, monthly breakdown |
+| `edu_` | Education module section headings and body text |
+| `footer_` | Footer disclaimer and links |
+
+**Steps to add a new key:**
+
+1. Choose the appropriate category prefix and add the key to `LANGS.en` in `stock-dashboard.html`.
+2. Add the Portuguese equivalent to `LANGS.pt` immediately below (keep the two objects in sync).
+3. Use `t('category_keyName')` wherever the string is rendered in a dynamic view.
+4. If the string appears in a static DOM element that is not re-rendered on language switch, also call `el.textContent = t('category_keyName')` inside `applyLang()` so it updates on `switchLang()`.
+5. Run the `/regression` suite to confirm no untranslated keys appear as raw key strings in either language.
 
 ### Adding a New API Endpoint
 

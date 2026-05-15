@@ -20,6 +20,13 @@
 12. [Epic 11 — Accessibility & Personalisation](#epic-11--accessibility--personalisation)
 13. [Epic 12 — GDPR / LGPD Compliance](#epic-12--gdpr--lgpd-compliance)
 14. [Epic 13 — Subscriptions & Billing](#epic-13--subscriptions--billing)
+15. [Epic 14 — Internationalisation (Sprint 2)](#epic-14--internationalisation-sprint-2)
+16. [Epic 15 — Currency Display (Sprint 2)](#epic-15--currency-display-sprint-2)
+17. [Epic 16 — Email & Auth Recovery (Sprint 2)](#epic-16--email--auth-recovery-sprint-2)
+18. [Epic 17 — Brazilian Onboarding (Sprint 2)](#epic-17--brazilian-onboarding-sprint-2)
+19. [Epic 18 — DARF Tax Calculator (Sprint 2 Phase 1)](#epic-18--darf-tax-calculator-sprint-2-phase-1)
+20. [Epic 19 — Mobile Responsiveness (Sprint 2)](#epic-19--mobile-responsiveness-sprint-2)
+21. [Epic 20 — Closed Beta (Sprint 2)](#epic-20--closed-beta-sprint-2)
 
 ---
 
@@ -705,5 +712,308 @@
 
 ---
 
-*End of User Stories — v1.0*
-*124 stocks · 3 markets · 2 languages · 52 stories across 13 epics*
+---
+
+## Epic 14 — Internationalisation (Sprint 2)
+
+### US-53 — Browser Language Auto-Detection
+**As a** Brazilian user,
+**I want** the app to detect my browser language and load in PT automatically,
+**so that** I don't have to manually switch.
+
+**Acceptance criteria:**
+- On first load, `init()` reads `navigator.language` (e.g. `pt-BR`, `pt`).
+- If the detected language starts with `pt`, `_lang` is set to `'pt'` before any UI renders.
+- If no `jerry_lang` preference is stored, auto-detection applies; a stored preference always takes precedence.
+- Auto-detected language is saved to localStorage so subsequent visits honour the choice.
+
+---
+
+### US-54 — Full UI Translation Coverage
+**As a** any user,
+**I want** all UI text — stock cards, portfolio table, tax report, education — to appear in my chosen language,
+**so that** the experience feels native.
+
+**Acceptance criteria:**
+- `LANGS` object contains ~180 keys per language, covering all render functions.
+- No visible English string appears in PT mode, and no visible PT string appears in EN mode.
+- All dynamically rendered views (cards, portfolio, tracked picks, tax report, education) call `t()` for every user-facing string.
+- Switching language re-renders all currently visible views without a page reload.
+
+---
+
+### US-55 — Auth Form Browser Autofill (PT)
+**As a** PT user,
+**I want** the auth form to support browser autofill for email and password,
+**so that** I can sign in faster.
+
+**Acceptance criteria:**
+- The auth modal HTML wraps inputs inside a `<form id="authForm">` element.
+- Email input has `autocomplete="email"`.
+- Password input has `autocomplete="current-password"` in sign-in mode and `autocomplete="new-password"` in sign-up mode.
+- No "password field not in a form" warning appears in the browser console.
+
+---
+
+## Epic 15 — Currency Display (Sprint 2)
+
+### US-56 — R$ Symbol for B3 Stocks
+**As a** Brazilian user scanning B3 stocks,
+**I want** prices displayed as R$ (not $),
+**so that** I can read values at a glance without confusion.
+
+**Acceptance criteria:**
+- `getCurrencySymbol(ticker)` returns `'R$'` for any ticker ending in `.SA`.
+- All price strings on B3 stock cards (current price, TP, SL, entry zone) display `R$` as the prefix.
+- Portfolio positions for `.SA` tickers display `R$` in the table, summary cards, and exports (CSV, MD).
+- Hardcoded `$` symbols are removed from `card_tp` and `card_sl` LANGS keys.
+
+---
+
+### US-57 — € and £ for European Stocks
+**As a** European user scanning EU stocks,
+**I want** prices in € for Eurozone stocks and £ for UK stocks,
+**so that** I see values in the correct currency.
+
+**Acceptance criteria:**
+- `getCurrencySymbol(ticker)` returns `'€'` for tickers ending in `.DE`, `.PA`, `.AS`, `.MC`, `.MI`, or `.BR`.
+- `getCurrencySymbol(ticker)` returns `'£'` for tickers ending in `.L`.
+- All ~25 price strings across the app use the result of `getCurrencySymbol()` rather than a hardcoded symbol.
+- Tracked picks table shows the correct symbol per ticker in the current price and P&L columns.
+
+---
+
+### US-58 — Per-Position Currency Symbol in Mixed Portfolio
+**As a** user with a mixed portfolio (US + BR stocks),
+**I want** each position to show the correct currency symbol for that stock,
+**so that** values are unambiguous across a multi-market portfolio.
+
+**Acceptance criteria:**
+- `getCurrencySymbol(ticker)` returns `'$'` for tickers with no recognised suffix.
+- Portfolio table renders the correct symbol in buy price, current price, and P&L columns for every row regardless of market.
+- Tax report rows show the per-ticker symbol for realised gain/loss figures.
+- CSV and Markdown exports include the correct symbol in all price columns.
+
+---
+
+## Epic 16 — Email & Auth Recovery (Sprint 2)
+
+### US-59 — Email Verification on Signup
+**As a** new user,
+**I want** to verify my email address after signup,
+**so that** the platform knows I own the account.
+
+**Acceptance criteria:**
+- On signup, the server sends a verification email via Resend containing a unique time-limited link.
+- The link calls `GET /api/auth/verify-email?token=<token>` and marks the account as verified.
+- Unverified users see a banner prompting verification; core features (scan, track) remain accessible.
+- Resending verification is available from the banner; re-send is rate-limited to once per 60 seconds.
+
+---
+
+### US-60 — Forgot Password Flow
+**As a** user who forgot my password,
+**I want** to receive a reset link by email,
+**so that** I can recover access without contacting support.
+
+**Acceptance criteria:**
+- A "Forgot password?" link is visible on the sign-in form.
+- Clicking it shows an email input; submitting calls `POST /api/auth/forgot-password`.
+- The endpoint always responds with a neutral "If that email exists, a reset link has been sent" message — no user enumeration.
+- A reset email is dispatched via Resend containing a one-time link.
+
+---
+
+### US-61 — Password Reset Link Expiry
+**As a** user receiving a reset link,
+**I want** the link to expire after 1 hour,
+**so that** stale links can't be exploited.
+
+**Acceptance criteria:**
+- Reset tokens are stored server-side with a 1-hour expiry timestamp.
+- `POST /api/auth/reset-password` rejects tokens older than 1 hour with a clear error message.
+- A used token is immediately invalidated so it cannot be replayed.
+- After a successful reset the user is redirected to sign-in with a confirmation toast.
+
+---
+
+## Epic 17 — Brazilian Onboarding (Sprint 2)
+
+### US-62 — B3 Ticker Auto-Suggest
+**As a** Brazilian user,
+**I want** to see B3 tickers suggested (PETR4, VALE3, etc.) when I search for stocks,
+**so that** I don't have to remember exact `.SA` suffixes.
+
+**Acceptance criteria:**
+- Typing a stock name or partial ticker in the scan/add field shows a dropdown of matching B3 tickers.
+- Suggestions are filtered from the existing `.SA` universe and display the full company name alongside the ticker.
+- Selecting a suggestion auto-fills the input with the correct Yahoo Finance ticker (e.g. `PETR4.SA`).
+- The feature works without any additional API call — it filters the client-side universe list.
+
+---
+
+### US-63 — CPF Field in User Profile
+**As a** Brazilian Pro user,
+**I want** to enter my CPF in my profile,
+**so that** the app can pre-fill tax documents.
+
+**Acceptance criteria:**
+- A CPF field is available in the account/profile section for Pro users.
+- CPF is validated against the Brazilian 11-digit format (with check-digit verification).
+- CPF is stored server-side on the user record (not in localStorage).
+- CPF is included in the GDPR/LGPD data export.
+
+---
+
+### US-64 — BRL Display Throughout App
+**As a** Brazilian user,
+**I want** B3 stock prices displayed in R$ throughout the app (cards, portfolio, tracked picks),
+**so that** I see prices in my native currency.
+
+**Acceptance criteria:**
+- All views that display a price for a `.SA` ticker show `R$` as the prefix.
+- No `$` symbol appears next to a B3 price anywhere in the UI.
+- The currency symbol updates immediately when a new scan result is rendered.
+- Exported files (CSV, MD) use `R$` for B3 positions.
+
+---
+
+## Epic 18 — DARF Tax Calculator (Sprint 2 Phase 1)
+
+### US-65 — Trade Type Classification
+**As a** Brazilian swing trader,
+**I want** the app to classify my trades as swing or day-trade so tax rates (17.5% vs 20%) are applied correctly,
+**so that** my DARF calculation is accurate.
+
+**Acceptance criteria:**
+- Each portfolio position has a `tradeType` field accepting `'swing'` or `'daytrade'`.
+- The add/edit position modal includes a Trade Type selector (defaulting to `'swing'`).
+- Tax rate applied in `computeDARF()` is 17.5% for swing and 20% for day-trade.
+- Existing positions without a `tradeType` default to `'swing'` without data migration errors.
+
+---
+
+### US-66 — Monthly DARF Liability Panel
+**As a** Brazilian trader,
+**I want** to see my monthly DARF liability (swing code 6015, day-trade code 6010) calculated automatically from my closed positions,
+**so that** I know what I owe each month.
+
+**Acceptance criteria:**
+- A DARF Summary panel is visible in the Tax Report section for users with at least one `.SA` sold position.
+- `computeDARF(month, year)` calculates net gain per trade type, applies the correct tax rate, and returns the amount due per DARF code.
+- Loss carryforward is deducted from the current month's gain before applying the tax rate.
+- If DARF due is zero or negative, the panel states "No DARF due for this period."
+
+---
+
+### US-67 — Loss Carryforward by Trade Type
+**As a** Brazilian trader,
+**I want** loss carryforward tracked separately for swing and day-trade buckets,
+**so that** future profits are offset correctly.
+
+**Acceptance criteria:**
+- `darf_carry_swing` and `darf_carry_daytrade` keys are persisted in localStorage.
+- A net loss in swing for month M increases `darf_carry_swing`; a net gain reduces it (not below zero).
+- The same logic applies independently to `darf_carry_daytrade`.
+- Carryforward balances are displayed in the DARF summary panel.
+
+---
+
+### US-68 — Dedo-Duro (Withholding) Display
+**As a** Brazilian trader,
+**I want** the DARF summary to show my dedo-duro (withholding) so I can deduct it from the DARF amount due,
+**so that** I don't overpay.
+
+**Acceptance criteria:**
+- The DARF panel shows a "Dedo-duro retido" field per trade type for each month.
+- Dedo-duro is entered manually by the user (0.005% of gross sale proceeds) in the position sell modal.
+- The DARF amount due displayed is `(tax_rate × net_gain) − dedo_duro`, not below zero.
+- The panel shows both gross DARF and net DARF after dedo-duro deduction.
+
+---
+
+### US-69 — R$20k Swing Exemption Flag
+**As a** Brazilian trader whose monthly swing sales are under R$20k,
+**I want** the app to flag that I'm exempt from swing DARF for that month,
+**so that** I don't file unnecessarily.
+
+**Acceptance criteria:**
+- `computeDARF()` sums total `.SA` swing sale proceeds for the selected month.
+- If total swing sales < R$ 20,000, the DARF panel shows a green "Isento — vendas abaixo de R$20.000" badge.
+- The exemption applies only to swing trades; day-trade proceeds have no equivalent threshold.
+- The R$20k threshold is defined as a named constant `BR_TAX.SWING_EXEMPT_THRESHOLD` for easy maintenance.
+
+---
+
+### US-70 — SicalcWeb Link
+**As a** Brazilian trader,
+**I want** a direct link to SicalcWeb pre-filled with my DARF data,
+**so that** I can generate the official payment slip without leaving the workflow entirely.
+
+**Acceptance criteria:**
+- The DARF panel includes a "Gerar DARF no SicalcWeb" button per DARF code when an amount is due.
+- The button opens SicalcWeb (`https://sicalc.receita.fazenda.gov.br/`) in a new tab.
+- The CPF (if stored in profile) and the calculated DARF values are displayed adjacent to the link so the user can copy-paste them into the Sicalc form.
+- If CPF is not set, the button is still visible but a tooltip instructs the user to add CPF to their profile.
+
+---
+
+## Epic 19 — Mobile Responsiveness (Sprint 2)
+
+### US-71 — Usable Scan & Portfolio on 375px Viewport
+**As a** mobile user (iPhone SE / 375px),
+**I want** the scan and portfolio views to be usable on a small screen without horizontal scrolling,
+**so that** I can use the app on my phone.
+
+**Acceptance criteria:**
+- No horizontal overflow occurs on a 375px viewport in the scan, portfolio, tracked picks, or education views.
+- Stock cards stack vertically and fill the viewport width with comfortable padding.
+- The portfolio table scrolls horizontally within a constrained container rather than causing full-page overflow.
+- All changes are CSS-only — no JavaScript responsive logic or layout rewrites.
+
+---
+
+### US-72 — Touch-Friendly Tap Targets
+**As a** mobile user,
+**I want** touch-friendly tap targets (min 44px) on all primary actions (SCAN, TRACK, ADD TO PORTFOLIO),
+**so that** I can interact accurately on a touchscreen.
+
+**Acceptance criteria:**
+- SCAN, TRACK PICK, and ADD TO PORTFOLIO buttons have a minimum height of 44px on mobile viewports.
+- Tab navigation buttons meet the 44px minimum touch target size at 375px.
+- No two primary tap targets are closer than 8px apart to prevent mis-taps.
+- Tap target sizing is implemented via CSS media queries targeting `max-width: 480px`.
+
+---
+
+## Epic 20 — Closed Beta (Sprint 2)
+
+### US-73 — Public EN/PT Language Toggle
+**As a** visitor,
+**I want** to switch between EN and PT without needing an admin account,
+**so that** the language toggle is publicly accessible.
+
+**Acceptance criteria:**
+- The language selector (`<select id="langSelect">`) is visible to all users regardless of tier or auth state.
+- The admin gate on `langSelect` visibility is removed from `updateAuthUI()`.
+- The toggle is visible in the header on both mobile and desktop viewports.
+- Switching language applies immediately to all visible UI strings without a page reload.
+
+---
+
+### US-74 — Language Preference Persisted Across Sessions
+**As a** beta user,
+**I want** the app to remember my language preference across sessions,
+**so that** I don't have to re-select my language on every visit.
+
+**Acceptance criteria:**
+- Selecting a language writes `jerry_lang` to localStorage immediately.
+- On page load, `init()` reads `jerry_lang` and applies the stored preference before any UI renders.
+- If no preference is stored, `navigator.language` auto-detection applies (per US-53).
+- Clearing localStorage resets to auto-detection behaviour, not a hardcoded default.
+
+---
+
+*End of User Stories — v1.1*
+*124 stocks · 3 markets · 2 languages · 74 stories across 20 epics*
+*Sprint 1 complete. Sprint 2 stories: US-53 through US-74 (Epics 14–20).*

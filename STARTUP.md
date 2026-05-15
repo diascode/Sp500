@@ -72,7 +72,7 @@ The user flow is deliberately narrow: scan → filter → track → journal. Eve
 1. **Brazilian B3 coverage as a first-class citizen** — 24 B3 tickers in the default universe, not a paywalled add-on.
 2. **Paper-trading-first onboarding** — new users practice before risking capital, dramatically lowering activation friction vs. broker-tied platforms.
 3. **Composite verdict** — instead of forcing the user to read five indicators, MOMENTUM ships an opinion. Users disagreeing with the opinion still benefit from the explainability.
-4. **Bilingual EN/PT product surface** — currently admin-gated, scheduled for public toggle in Sprint 2.
+4. **Bilingual EN/PT product surface** — public toggle shipped in Sprint 2 (no longer admin-gated); `navigator.language` auto-detection included.
 5. **€9 flat-rate Pro tier** — cheaper than TradingView Essential, cheaper than Stock Rover Premium, cheaper than Finviz Elite. EU-VAT-compliant pricing in EUR removes USD FX friction for European customers.
 
 ---
@@ -233,20 +233,22 @@ The architecture is deliberately boring and cheap to operate up to ~10k paying u
 
 ## 8. Product Roadmap (12-Month View)
 
-### Q2 2026 — Sprint 1: Foundations (COMPLETE)
+### Q2 2026 — Sprint 1: Foundations (COMPLETE ✓)
 
 - Security hardening (rate limiting, scrypt, JWT)
 - GDPR + LGPD (export, delete, consent banner)
 - Trading Journal rename, PDF export fix
 - Non-root Docker, env var cleanup
 
-### Q3 2026 — Sprint 2: Recovery + Mobile
+### Q3 2026 — Sprint 2: i18n, Currency, Auth Recovery, BR Onboarding, DARF, Mobile, Beta
 
-- Email verification + password reset (Resend)
-- Mobile responsive pass (CSS-only, no rewrite)
-- Brazilian onboarding: BRL display, B3 auto-suggest on signup
-- Closed beta recruitment (target: 100 B3 traders)
-- Public EN/PT language toggle
+- **Full i18n completion** — LANGS expanded from ~7 to ~180 keys (EN + PT), all render functions wired to `t()`, `navigator.language` auto-detection, auth form `<form>` wrapper + `autocomplete` attributes, `scanAllMarkets()` dead code removed
+- **Currency smart labeling** — `getCurrencySymbol(ticker)` helper (suffix → symbol: `.SA`→R$, `.L`→£, `.DE/.PA/.AS/.MC/.MI/.BR`→€, `.NS/.BO`→₹, `.MX`→MX$, `.JO`→R, no suffix→$); all ~25 hardcoded `$` price strings replaced across cards, charts, portfolio, tracked picks, and exports
+- **Auth & email recovery** — email verification on signup (Resend), forgot-password flow (email link → reset form), 1-hour token expiry
+- **Brazilian onboarding** — B3 ticker auto-suggest during scan/add, CPF field in user profile (prerequisite for DARF), BRL display via currency smart labeling
+- **DARF Phase 1** — `computeDARF()` tax engine, `tradeType` field ('swing'|'daytrade'), loss carryforward (separate buckets), DARF summary panel in tax report, dedo-duro fields, R$20k swing exemption flag, SicalcWeb link
+- **Mobile responsiveness** — CSS-only responsive pass targeting 375px viewport (iPhone SE), 44px minimum touch targets on primary actions
+- **Closed beta** — public EN/PT language toggle (admin gate removed), target 100 B3 beta users
 
 ### Q4 2026 — Sprint 3: Soft Launch
 

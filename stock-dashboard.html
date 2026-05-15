@@ -764,8 +764,8 @@ function drawChart(canvas, candles, extra) {
   // BB fill
   if(extra.bbU&&extra.bbL){ctx.fillStyle='rgba(200,90,23,0.05)';ctx.beginPath();let s=false;for(let i=0;i<candles.length;i++){if(extra.bbU[i]===null)continue;if(!s){ctx.moveTo(x(i),y(extra.bbU[i]));s=true}else ctx.lineTo(x(i),y(extra.bbU[i]))}for(let i=candles.length-1;i>=0;i--){if(extra.bbL[i]===null)continue;ctx.lineTo(x(i),y(extra.bbL[i]))}ctx.closePath();ctx.fill()}
   // TP / SL target bands
-  if (extra.tp) { ctx.strokeStyle='rgba(76,175,80,0.5)'; ctx.lineWidth=1; ctx.setLineDash([6,4]); ctx.beginPath(); const ty=y(extra.tp); ctx.moveTo(pad.l,ty); ctx.lineTo(W-pad.r,ty); ctx.stroke(); ctx.fillStyle='rgba(76,175,80,0.6)'; ctx.font='8px var(--font-mono)'; ctx.textAlign='right'; ctx.fillText('TP +15% $'+extra.tp.toFixed(2),W-pad.r-2,ty-2); ctx.setLineDash([]); }
-  if (extra.sl) { ctx.strokeStyle='rgba(229,57,53,0.5)'; ctx.lineWidth=1; ctx.setLineDash([6,4]); ctx.beginPath(); const sy=y(extra.sl); ctx.moveTo(pad.l,sy); ctx.lineTo(W-pad.r,sy); ctx.stroke(); ctx.fillStyle='rgba(229,57,53,0.6)'; ctx.font='8px var(--font-mono)'; ctx.textAlign='right'; ctx.fillText('SL -7% $'+extra.sl.toFixed(2),W-pad.r-2,sy+10); ctx.setLineDash([]); }
+  if (extra.tp) { ctx.strokeStyle='rgba(76,175,80,0.5)'; ctx.lineWidth=1; ctx.setLineDash([6,4]); ctx.beginPath(); const ty=y(extra.tp); ctx.moveTo(pad.l,ty); ctx.lineTo(W-pad.r,ty); ctx.stroke(); ctx.fillStyle='rgba(76,175,80,0.6)'; ctx.font='8px var(--font-mono)'; ctx.textAlign='right'; ctx.fillText('TP +15% '+(extra.ticker?getCurrencySymbol(extra.ticker):'$')+extra.tp.toFixed(2),W-pad.r-2,ty-2); ctx.setLineDash([]); }
+  if (extra.sl) { ctx.strokeStyle='rgba(229,57,53,0.5)'; ctx.lineWidth=1; ctx.setLineDash([6,4]); ctx.beginPath(); const sy=y(extra.sl); ctx.moveTo(pad.l,sy); ctx.lineTo(W-pad.r,sy); ctx.stroke(); ctx.fillStyle='rgba(229,57,53,0.6)'; ctx.font='8px var(--font-mono)'; ctx.textAlign='right'; ctx.fillText('SL -7% '+(extra.ticker?getCurrencySymbol(extra.ticker):'$')+extra.sl.toFixed(2),W-pad.r-2,sy+10); ctx.setLineDash([]); }
   // Pattern lines
   if (extra.patternLines) {
     extra.patternLines.forEach(function(pl) {
@@ -781,7 +781,7 @@ function drawChart(canvas, candles, extra) {
   let maxV=0;candles.forEach(c=>{if(c.v>maxV)maxV=c.v});const vp=H-vH+2;
   candles.forEach((c,i)=>{const cx=x(i);ctx.fillStyle=c.c>=c.o?'rgba(76,175,80,0.3)':'rgba(229,57,53,0.3)';const vh=(c.v/(maxV||1))*(vH-4);ctx.fillRect(cx-bw/2,vp+(vH-4-vh),bw,vh)});
   ctx.fillStyle='#5a4a38';ctx.font='8px var(--font-mono)';ctx.textAlign='right';
-  for(let gy=0;gy<5;gy++)ctx.fillText('$'+(lo+(1-gy/4)*range).toFixed(2),pad.l-2,pad.t+(gy/4)*ch+3);
+  for(let gy=0;gy<5;gy++)ctx.fillText((extra.ticker?getCurrencySymbol(extra.ticker):'$')+(lo+(1-gy/4)*range).toFixed(2),pad.l-2,pad.t+(gy/4)*ch+3);
 }
 
 // ─── SCAN LOGIC ─────────────────────────────────────────────────────────
@@ -920,15 +920,15 @@ function renderDashboard() {
           <span class="card-signal ${d.signal}">${signalLabel}</span>
         </div>
         <div class="card-price-section">
-          <div class="card-price ${changeClass}">$${d.price.toFixed(2)}</div>
+          <div class="card-price ${changeClass}">${getCurrencySymbol(d.ticker)}${d.price.toFixed(2)}</div>
           <span style="font-size:10px;color:var(--text-dim)">${change>=0?'+':''}${change.toFixed(2)}% 1Y</span>
         </div>
       </div>
       <div class="tech-summary">${pills.map(p => `<span class="tech-pill ${p.c}">${p.l} ${p.v}</span>`).join('')}</div>
       <div class="target-bands">
-        <div class="target-band tp">${t('card_tp')}${d.tp.toFixed(2)} (+15%)</div>
-        <div class="target-band current">📍 $${d.price.toFixed(2)}</div>
-        <div class="target-band sl">${t('card_sl')}${d.sl.toFixed(2)} (-7%)</div>
+        <div class="target-band tp">${t('card_tp')}${getCurrencySymbol(d.ticker)}${d.tp.toFixed(2)} (+15%)</div>
+        <div class="target-band current">📍 ${getCurrencySymbol(d.ticker)}${d.price.toFixed(2)}</div>
+        <div class="target-band sl">${t('card_sl')}${getCurrencySymbol(d.ticker)}${d.sl.toFixed(2)} (-7%)</div>
       </div>
       <div class="chart-container">
         <div style="display:flex;gap:4px;padding:4px 6px">
@@ -948,12 +948,12 @@ function renderDashboard() {
         ${cll(d,'SMA 200',d.sma200.toFixed(2),d.pA200?'bull':'bear')}
         ${cll(d,'ATR',d.atr.toFixed(2),'neutral')}
         ${cll(d,'VOL RATIO',d.volRatio.toFixed(2),d.volRatio>1.5?'bull':'neutral')}
-        ${cll(d,'SUP 1','$'+d.sup1.toFixed(2),'bull')}
-        ${cll(d,'RES 1','$'+d.res1.toFixed(2),'bear')}
+        ${cll(d,'SUP 1',getCurrencySymbol(d.ticker)+d.sup1.toFixed(2),'bull')}
+        ${cll(d,'RES 1',getCurrencySymbol(d.ticker)+d.res1.toFixed(2),'bear')}
       </div>
       <div class="analysis-row">
-        <div class="analysis-box"><div class="label">${t('card_entryZone')}</div><div class="value">$${d.sup1.toFixed(2)} – $${d.price.toFixed(2)}</div></div>
-        <div class="analysis-box"><div class="label">${t('card_exitZone')}</div><div class="value bull">$${d.tp.toFixed(2)} – $${d.res2.toFixed(2)}</div></div>
+        <div class="analysis-box"><div class="label">${t('card_entryZone')}</div><div class="value">${getCurrencySymbol(d.ticker)}${d.sup1.toFixed(2)} – ${getCurrencySymbol(d.ticker)}${d.price.toFixed(2)}</div></div>
+        <div class="analysis-box"><div class="label">${t('card_exitZone')}</div><div class="value bull">${getCurrencySymbol(d.ticker)}${d.tp.toFixed(2)} – ${getCurrencySymbol(d.ticker)}${d.res2.toFixed(2)}</div></div>
       </div>
       ${d.news && d.news.length > 0 ? `
       <div class="news-list">
@@ -1022,8 +1022,8 @@ function renderPortfolioTable() {
     const statusIcon = p.status === 'sold' ? '✅' : '🔵';
     return `<div class="portfolio-row">
       <span class="pos-ticker">${p.ticker}</span>
-      <span>${p.quantity} × $${p.buyPrice.toFixed(2)}</span>
-      <span class="pos-pnl ${pnl>=0?'pos':'neg'}">${pnl>=0?'+':''}${pnl.toFixed(2)}% (${pnlDollar>=0?'+':''}$${pnlDollar.toFixed(2)})</span>
+      <span>${p.quantity} × ${getCurrencySymbol(p.ticker)}${p.buyPrice.toFixed(2)}</span>
+      <span class="pos-pnl ${pnl>=0?'pos':'neg'}">${pnl>=0?'+':''}${pnl.toFixed(2)}% (${pnlDollar>=0?'+':''}${getCurrencySymbol(p.ticker)}${pnlDollar.toFixed(2)})</span>
       <span style="font-size:9px;color:var(--text-dim)">${statusIcon}</span>
       <span style="cursor:pointer;color:var(--red-bear)" onclick="removePortfolioItem(${i})">✕</span>
     </div>`;
@@ -1073,7 +1073,7 @@ function updatePortfolioSidebar() {
   }).join('');
   const totalPnlEl = document.getElementById('totalPnl');
   if (totalPnlEl) {
-    totalPnlEl.textContent = (total>=0?'+':'') + '$' + total.toFixed(2);
+    totalPnlEl.textContent = (total>=0?'+':'') + '$' + total.toFixed(2); // aggregate across mixed currencies — symbol intentionally left as $
     totalPnlEl.style.color = total>=0 ? 'var(--green-bull)' : 'var(--red-bear)';
   }
 }
@@ -1280,7 +1280,7 @@ function renderTrackedPicks() {
   html += '<th>#</th><th>TICKER</th><th>ENTRY</th><th>DATE</th><th>TP $</th><th>SL $</th><th>CURRENT $</th><th>P&amp;L %</th><th>DAYS</th><th>STATUS</th><th></th></tr></thead><tbody>';
   state.trackedPicks.forEach((pick, i) => {
     const check = checkTrackedStatus(pick);
-    const priceStr = check.price !== null ? '$' + check.price.toFixed(2) : '—';
+    const priceStr = check.price !== null ? getCurrencySymbol(pick.ticker) + check.price.toFixed(2) : '—';
     const pnlStr = check.pnl !== null ? (check.pnl >= 0 ? '+' : '') + check.pnl.toFixed(2) + '%' : '—';
     const pnlClass = check.pnl !== null ? (check.pnl >= 0 ? 'pnl-up' : 'pnl-dn') : '';
     const days = Math.floor((new Date() - new Date(pick.entryDate)) / (1000*60*60*24));
@@ -1300,10 +1300,10 @@ function renderTrackedPicks() {
     html += `<tr>
       <td style="color:var(--text-dim)">${i+1}</td>
       <td class="tkr" style="${tkrStyle}">${pick.ticker}</td>
-      <td>$${pick.entryPrice.toFixed(2)}</td>
+      <td>${getCurrencySymbol(pick.ticker)}${pick.entryPrice.toFixed(2)}</td>
       <td style="color:var(--text-dim)">${pick.entryDate}</td>
-      <td style="color:var(--green-bull)">$${pick.tp.toFixed(2)}</td>
-      <td style="color:var(--red-bear)">$${pick.sl.toFixed(2)}</td>
+      <td style="color:var(--green-bull)">${getCurrencySymbol(pick.ticker)}${pick.tp.toFixed(2)}</td>
+      <td style="color:var(--red-bear)">${getCurrencySymbol(pick.ticker)}${pick.sl.toFixed(2)}</td>
       <td>${priceStr}</td>
       <td class="${pnlClass}">${pnlStr}</td>
       <td style="color:var(--text-dim)">${days}d</td>
@@ -1416,7 +1416,7 @@ function renderPortfolioView() {
     // Per-row profit: realized for sold, unrealized for holding
     const rowProfit = p.status === 'sold' && p.sellPrice ? ((p.sellPrice - p.buyPrice) * p.quantity) : ((hasPrice ? currPrice : p.buyPrice) - p.buyPrice) * p.quantity;
     const profitLabel = p.status === 'sold' ? '✅' : '🔵';
-    const monthProfitStr = profitLabel + ' ' + (rowProfit >= 0 ? '+' : '') + '$' + rowProfit.toFixed(2);
+    const monthProfitStr = profitLabel + ' ' + (rowProfit >= 0 ? '+' : '') + getCurrencySymbol(p.ticker) + rowProfit.toFixed(2);
     
     const statusLabel = p.status === 'sold' ? t('portfolio_sold') : t('portfolio_holding');
     const statusClass = p.status === 'sold' ? 'tp' : 'active';
@@ -1426,12 +1426,12 @@ function renderPortfolioView() {
     html += '<td style="color:var(--text-dim)">' + (i+1) + '</td>';
     html += '<td class="tkr">' + p.ticker + '</td>';
     html += '<td>' + p.quantity + '</td>';
-    html += '<td>$' + p.buyPrice.toFixed(2) + '</td>';
-    html += '<td>$' + (p.status === 'sold' && p.sellPrice ? p.sellPrice.toFixed(2) : (hasPrice ? currPrice.toFixed(2) : '—')) + '</td>';
-    html += '<td style="color:var(--text-dim)">$' + costBasis.toFixed(2) + '</td>';
-    html += '<td>$' + valueNow.toFixed(2) + '</td>';
+    html += '<td>' + getCurrencySymbol(p.ticker) + p.buyPrice.toFixed(2) + '</td>';
+    html += '<td>' + getCurrencySymbol(p.ticker) + (p.status === 'sold' && p.sellPrice ? p.sellPrice.toFixed(2) : (hasPrice ? currPrice.toFixed(2) : '—')) + '</td>';
+    html += '<td style="color:var(--text-dim)">' + getCurrencySymbol(p.ticker) + costBasis.toFixed(2) + '</td>';
+    html += '<td>' + getCurrencySymbol(p.ticker) + valueNow.toFixed(2) + '</td>';
     html += '<td class="' + pnlClass + '">' + (pnlPercent >= 0 ? '+' : '') + pnlPercent.toFixed(2) + '%</td>';
-    html += '<td class="' + pnlClass + '">' + (pnlDollar >= 0 ? '+' : '') + '$' + pnlDollar.toFixed(2) + '</td>';
+    html += '<td class="' + pnlClass + '">' + (pnlDollar >= 0 ? '+' : '') + getCurrencySymbol(p.ticker) + pnlDollar.toFixed(2) + '</td>';
     html += '<td><span class="status-badge ' + statusClass + '">' + statusLabel + '</span></td>';
     html += '<td style="font-weight:600;font-size:10px;' + (rowProfit > 0 ? 'color:var(--green-bull)' : rowProfit < 0 ? 'color:var(--red-bear)' : 'color:var(--text-dim)') + '">' + monthProfitStr + '</td>';
     html += '<td>' + (p.status === 'holding' ? '<span style="cursor:pointer;color:var(--red-bear);font-size:11px;font-weight:700" onclick="sellPortfolioItem(' + i + ')" title="Sell">' + t('portfolio_sell') + '</span>' : '') + '</td>';
@@ -1452,6 +1452,7 @@ function renderPortfolioView() {
   const rgClass = realizedGain >= 0 ? 'pnl-up' : 'pnl-dn';
   const ugClass = unrealizedGain >= 0 ? 'pnl-up' : 'pnl-dn';
   html += '<div style="display:flex;flex-wrap:wrap;gap:16px;font-family:var(--font-mono);font-size:11px;margin-bottom:14px;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px">';
+  // aggregate across mixed currencies — symbol intentionally left as $
   html += '<div><span style="color:var(--text-dim)">' + t('portfolio_costBasis') + ':</span> <strong>$' + totalCost.toFixed(2) + '</strong></div>';
   html += '<div><span style="color:var(--text-dim)">' + t('portfolio_valueNow') + ':</span> <strong>$' + totalValue.toFixed(2) + '</strong></div>';
   html += '<div><span style="color:var(--text-dim)">Total P&amp;L:</span> <strong class="' + totalPnlClass + '">' + (totalPnL >= 0 ? '+' : '') + '$' + totalPnL.toFixed(2) + '</strong></div>';
@@ -1511,7 +1512,7 @@ function renderPortfolioView() {
     html += '<button class="btn" onclick="generateTaxReport()" style="font-size:10px;color:var(--accent-amber);border-color:var(--accent-amber)">' + t('taxReport_title') + '</button>';
     html += '</div></div>';
     
-    // Realized monthly
+    // Realized monthly — aggregate across mixed currencies — symbol intentionally left as $
     if (filteredRealizedMonths.length > 0) {
       html += '<div style="font-size:10px;color:var(--green-bull);margin-bottom:6px;font-family:var(--font-mono)">' + t('taxReport_realized') + '</div>';
       html += '<table class="tracked-table"><thead><tr><th>MONTH</th><th>PROFIT / DEFICIT</th></tr></thead><tbody>';
@@ -1526,8 +1527,8 @@ function renderPortfolioView() {
       html += '<tr><td style="font-weight:700;color:var(--text-primary)">' + t('portfolio_totalRealized') + '</td><td class="' + grClass + '" style="font-weight:700">' + (grandRealized >= 0 ? '+' : '') + '$' + grandRealized.toFixed(2) + '</td></tr>';
       html += '</tbody></table>';
     }
-    
-    // Unrealized monthly
+
+    // Unrealized monthly — aggregate across mixed currencies — symbol intentionally left as $
     if (filteredUnrealizedMonths.length > 0) {
       html += '<div style="font-size:10px;color:var(--yellow-neutral);margin:8px 0 6px;font-family:var(--font-mono)">' + t('taxReport_unrealized') + '</div>';
       html += '<table class="tracked-table"><thead><tr><th>MONTH</th><th>EST. PROFIT / DEFICIT</th></tr></thead><tbody>';
@@ -1584,11 +1585,11 @@ function sellPortfolioItem(index) {
   html += '<h3 style="font-family:var(--font-mono);font-size:13px;color:var(--accent-amber);margin-bottom:14px">' + t('portfolio_sellModalTitle') + ' ' + p.ticker + '</h3>';
   html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px;margin-bottom:12px;font-family:var(--font-mono);font-size:11px;line-height:1.8">';
   html += '<div>' + t('portfolio_holdingLabel') + ': <strong>' + p.quantity + ' shares</strong></div>';
-  html += '<div>Bought at: <strong>$' + p.buyPrice.toFixed(2) + '</strong></div>';
-  html += '<div>Cost Basis: <strong>$' + (p.buyPrice * p.quantity).toFixed(2) + '</strong></div>';
+  html += '<div>Bought at: <strong>' + getCurrencySymbol(p.ticker) + p.buyPrice.toFixed(2) + '</strong></div>';
+  html += '<div>Cost Basis: <strong>' + getCurrencySymbol(p.ticker) + (p.buyPrice * p.quantity).toFixed(2) + '</strong></div>';
   const curPrice = getPortfolioPrice(p.ticker);
   if (curPrice) {
-    html += '<div>Market Price: <strong>$' + curPrice.toFixed(2) + '</strong></div>';
+    html += '<div>Market Price: <strong>' + getCurrencySymbol(p.ticker) + curPrice.toFixed(2) + '</strong></div>';
   }
   html += '</div>';
   html += '<div style="margin-bottom:12px">';
@@ -1628,9 +1629,9 @@ function updateSellPreview(index) {
   const remaining = p.quantity - qty;
   previewEl.innerHTML = '';
   previewEl.innerHTML += '<div>Selling: <strong>' + qty + ' of ' + p.quantity + ' shares</strong></div>';
-  previewEl.innerHTML += '<div>Realized P&amp;L: <strong class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + ' (' + (profitPct >= 0 ? '+' : '') + profitPct.toFixed(2) + '%)</strong></div>';
+  previewEl.innerHTML += '<div>Realized P&amp;L: <strong class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + getCurrencySymbol(p.ticker) + profit.toFixed(2) + ' (' + (profitPct >= 0 ? '+' : '') + profitPct.toFixed(2) + '%)</strong></div>';
   if (remaining > 0) {
-    previewEl.innerHTML += '<div style="margin-top:4px;color:var(--accent-amber)">Remaining holding: <strong>' + remaining + ' shares @ $' + p.buyPrice.toFixed(2) + '</strong></div>';
+    previewEl.innerHTML += '<div style="margin-top:4px;color:var(--accent-amber)">Remaining holding: <strong>' + remaining + ' shares @ ' + getCurrencySymbol(p.ticker) + p.buyPrice.toFixed(2) + '</strong></div>';
   }
   previewEl.innerHTML += '<div style="margin-top:4px;font-size:10px;color:var(--text-dim)">' + (remaining > 0 ? 'Sold portion will be recorded as closed; remaining stays as holding.' : 'Full position will be closed.') + '</div>';
 }
@@ -1825,10 +1826,10 @@ function generateTaxReport() {
       const profit = (p.sellPrice - p.buyPrice) * p.quantity;
       totalRealized += profit;
       const profitClass = profit >= 0 ? 'pnl-up' : 'pnl-dn';
-      html += '<tr><td class="tkr">' + p.ticker + '</td><td>' + p.quantity + '</td><td>$' + p.buyPrice.toFixed(2) + '</td><td>$' + p.sellPrice.toFixed(2) + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td><td style="color:var(--text-dim)">' + (p.buyDate || '—') + '</td><td style="color:var(--text-dim)">' + (p.sellDate || '—') + '</td></tr>';
+      html += '<tr><td class="tkr">' + p.ticker + '</td><td>' + p.quantity + '</td><td>' + getCurrencySymbol(p.ticker) + p.buyPrice.toFixed(2) + '</td><td>' + getCurrencySymbol(p.ticker) + p.sellPrice.toFixed(2) + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + getCurrencySymbol(p.ticker) + profit.toFixed(2) + '</td><td style="color:var(--text-dim)">' + (p.buyDate || '—') + '</td><td style="color:var(--text-dim)">' + (p.sellDate || '—') + '</td></tr>';
     });
     const trClass = totalRealized >= 0 ? 'pnl-up' : 'pnl-dn';
-    html += '<tr><td style="font-weight:700">' + t('portfolio_totalRealized') + '</td><td></td><td></td><td></td><td class="' + trClass + '" style="font-weight:700">' + (totalRealized >= 0 ? '+' : '') + '$' + totalRealized.toFixed(2) + '</td><td></td><td></td></tr>';
+    html += '<tr><td style="font-weight:700">' + t('portfolio_totalRealized') + '</td><td></td><td></td><td></td><td class="' + trClass + '" style="font-weight:700">' + (totalRealized >= 0 ? '+' : '') + '$' + totalRealized.toFixed(2) + '</td><td></td><td></td></tr>'; // aggregate across mixed currencies — symbol intentionally left as $
     html += '</tbody></table></div>';
   }
   
@@ -1846,10 +1847,10 @@ function generateTaxReport() {
       const profit = (price - p.buyPrice) * p.quantity;
       totalUnrealized += profit;
       const profitClass = profit >= 0 ? 'pnl-up' : 'pnl-dn';
-      html += '<tr><td class="tkr">' + p.ticker + '</td><td>' + p.quantity + '</td><td>$' + p.buyPrice.toFixed(2) + '</td><td>' + (currPrice ? '$' + currPrice.toFixed(2) : '<span style="color:var(--text-dim)">—</span>') + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td><td style="color:var(--text-dim)">' + (p.buyDate || '—') + '</td></tr>';
+      html += '<tr><td class="tkr">' + p.ticker + '</td><td>' + p.quantity + '</td><td>' + getCurrencySymbol(p.ticker) + p.buyPrice.toFixed(2) + '</td><td>' + (currPrice ? getCurrencySymbol(p.ticker) + currPrice.toFixed(2) : '<span style="color:var(--text-dim)">—</span>') + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + getCurrencySymbol(p.ticker) + profit.toFixed(2) + '</td><td style="color:var(--text-dim)">' + (p.buyDate || '—') + '</td></tr>';
     });
     const turClass = totalUnrealized >= 0 ? 'pnl-up' : 'pnl-dn';
-    html += '<tr><td style="font-weight:700">' + t('portfolio_totalUnrealized') + '</td><td></td><td></td><td></td><td class="' + turClass + '" style="font-weight:700">' + (totalUnrealized >= 0 ? '+' : '') + '$' + totalUnrealized.toFixed(2) + '</td><td></td></tr>';
+    html += '<tr><td style="font-weight:700">' + t('portfolio_totalUnrealized') + '</td><td></td><td></td><td></td><td class="' + turClass + '" style="font-weight:700">' + (totalUnrealized >= 0 ? '+' : '') + '$' + totalUnrealized.toFixed(2) + '</td><td></td></tr>'; // aggregate across mixed currencies — symbol intentionally left as $
     html += '</tbody></table></div>';
   }
   
@@ -1866,6 +1867,7 @@ function generateTaxReport() {
   html += '<span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">%</span>';
   html += '<button class="btn" onclick="saveTaxRate()" style="font-size:10px;padding:4px 10px">💾 SET</button>';
   html += '</div>';
+  // aggregate across mixed currencies — symbol intentionally left as $
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
   html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
   html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">Realized Gain/Loss</div>';
@@ -1925,6 +1927,7 @@ function downloadTaxCSV() {
     csv += p.ticker + ',' + p.quantity + ',' + p.buyPrice.toFixed(2) + ',' + (cp ? price.toFixed(2) : 'N/A') + ',' + (profit >= 0 ? '+' : '') + profit.toFixed(2) + ',' + (p.buyDate || '') + '\n';
   });
   csv += '\nSUMMARY\n';
+  // CSV uses $ for spreadsheet compatibility
   csv += 'Realized Gain/Loss,' + (totalRealizedGain >= 0 ? '+' : '') + '$' + totalRealizedGain.toFixed(2) + '\n';
   csv += 'Tax Rate,' + taxRate + '%\n';
   csv += 'Tax Due,' + '$' + taxAmount.toFixed(2) + '\n';
@@ -1967,6 +1970,7 @@ function downloadTaxMD() {
     md += '| ' + p.ticker + ' | ' + p.quantity + ' | $' + p.buyPrice.toFixed(2) + ' | ' + (cp ? '$' + price.toFixed(2) : 'N/A') + ' | ' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + ' | ' + (p.buyDate || '—') + ' |\n';
   });
   md += '\n## Summary\n\n';
+  // MD export uses $ for document compatibility
   md += '- **Realized Gain/Loss:** ' + (totalRealizedGain >= 0 ? '+' : '') + '$' + totalRealizedGain.toFixed(2) + '\n';
   md += '- **Tax Rate:** ' + taxRate + '%\n';
   md += '- **Tax Due:** $' + taxAmount.toFixed(2) + '\n';
@@ -2064,7 +2068,7 @@ async function renderUniverseView() {
     const marketFlag = market === 'us' ? '🇺🇸' : market === 'europe' ? '🇪🇺' : '🌍';
     filtered.forEach((s, i) => {
       const found = analyzed.find(a => a.ticker === s.t);
-      const price = found ? '$' + found.price.toFixed(2) : '—';
+      const price = found ? getCurrencySymbol(s.t) + found.price.toFixed(2) : '—';
       const signal = found ? `<span class="card-signal ${found.signal}">${found.signal.toUpperCase()}</span>` : '<span style="color:var(--text-dim);font-size:10px">not scanned</span>';
       const tracked = state.trackedPicks.find(p => p.ticker === s.t && p.status === 'active');
       const trackBtn = tracked ? '<span style="color:var(--green-bull);font-size:10px">📌</span>' : `<button class="btn" onclick="trackFromUniv('${s.t}','${market}',${found?.price||0})" style="font-size:8px;padding:2px 6px">+ TRACK</button>`;
@@ -2172,7 +2176,7 @@ function changeChartPeriod(idx, period) {
   const sma20 = d.candles.length > 20 ? calcSMA(d.candles,20).slice(-count) : [];
   const sma50 = d.candles.length > 50 ? calcSMA(d.candles,50).slice(-count) : [];
   const sma200 = d.candles.length > 200 ? calcSMA(d.candles,200).slice(-count) : [];
-  drawChart(canvas, chartCandles, { sma9, sma20, sma50, sma200, bbU:bb.upper.slice(-count), bbL:bb.lower.slice(-count), tp: d.tp, sl: d.sl });
+  drawChart(canvas, chartCandles, { sma9, sma20, sma50, sma200, bbU:bb.upper.slice(-count), bbL:bb.lower.slice(-count), tp: d.tp, sl: d.sl, ticker: d.ticker });
 }
 
 // ─── PATTERNS ────────────────────────────────────────────────────────────
@@ -2265,7 +2269,7 @@ const LANGS = {
     card_trackPick: '📌 TRACK PICK', card_myStocks: '➕ MY STOCKS',
     card_news: '📰 NEWS SENTIMENT',
     card_entryZone: 'ENTRY ZONE', card_exitZone: 'EXIT ZONE',
-    card_tp: '🎯 TP $', card_sl: '🛑 SL $',
+    card_tp: '🎯 TP ', card_sl: '🛑 SL ',
 
     // Auth
     auth_signUp: 'SIGN UP', auth_cancel: 'CANCEL',
@@ -2411,7 +2415,7 @@ const LANGS = {
     card_trackPick: '📌 RASTREAR', card_myStocks: '➕ MEUS ATIVOS',
     card_news: '📰 SENTIMENTO DE NOTÍCIAS',
     card_entryZone: 'ZONA DE ENTRADA', card_exitZone: 'ZONA DE SAÍDA',
-    card_tp: '🎯 Alvo $', card_sl: '🛑 Stop $',
+    card_tp: '🎯 Alvo ', card_sl: '🛑 Stop ',
 
     // Auth
     auth_signUp: 'CADASTRAR', auth_cancel: 'CANCELAR',
@@ -2537,6 +2541,18 @@ const LANGS = {
   },
 };
 function t(key) { return LANGS[_lang]?.[key] || LANGS.en[key] || key; }
+function getCurrencySymbol(ticker) {
+  if (!ticker) return '$';
+  const t = ticker.toUpperCase();
+  if (t.endsWith('.SA')) return 'R$';
+  if (t.endsWith('.L')) return '£';
+  if (t.endsWith('.DE') || t.endsWith('.PA') || t.endsWith('.AS') || t.endsWith('.MC') ||
+      t.endsWith('.MI') || t.endsWith('.BR') || t.endsWith('.AT') || t.endsWith('.LS')) return '€';
+  if (t.endsWith('.NS') || t.endsWith('.BO')) return '₹';
+  if (t.endsWith('.MX')) return 'MX$';
+  if (t.endsWith('.JO')) return 'R';
+  return '$';
+}
 function switchLang(l) { _lang = l; localStorage.setItem('jerry_lang', l); applyLang(); renderDashboard(); }
 function applyLang() {
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
@@ -3155,6 +3171,7 @@ function exportCSV(type) {
 function exportMD(type) {
   const data = type === 'portfolio' ? state.portfolio : state.trackedPicks.filter(p => p.status === 'active');
   if (type === 'portfolio') {
+    // MD export uses $ for document compatibility
     let md = '# Portfolio Export\n| Ticker | Qty | Buy $ | Sell $ | Cost Basis | Value | P&L $ | Buy Date | Sell Date | Status |\n|-------|-----|--------|--------|-----------|-------|-------|----------|----------|--------|\n';
     data.forEach(p => {
       const currPrice = getPortfolioPrice(p.ticker);
@@ -3213,10 +3230,11 @@ async function init() {
     const savedLang = localStorage.getItem('jerry_lang');
   if (savedLang) { _lang = savedLang; document.getElementById('langSelect').value = savedLang; }
   else {
-    const detected = (navigator.language || 'en').toLowerCase().startsWith('pt') ? 'pt' : 'en';
-    _lang = detected;
-    const langSel = document.getElementById('langSelect');
-    if (langSel) langSel.value = detected;
+    const browserLang = (navigator.language || '').toLowerCase();
+    _lang = browserLang.startsWith('pt') ? 'pt' : 'en';
+    localStorage.setItem('jerry_lang', _lang);
+    const sel = document.getElementById('langSelect');
+    if (sel) sel.value = _lang;
   }
   const fs = parseFloat(localStorage.getItem('jerry_fontsize') || '1');
   document.documentElement.style.setProperty('--font-size', fs);
