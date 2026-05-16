@@ -1872,43 +1872,97 @@ function generateTaxReport() {
     html += '</tbody></table></div>';
   }
   
-  // Tax estimate — one block per currency
+  // Tax estimate — per-currency breakdown + grand total in BRL
   const taxRate = parseFloat(localStorage.getItem('jerry_tax_rate') || '30');
   const realizedGainByCur = {};
   soldItems.forEach(p => {
     const sym = getCurrencySymbol(p.ticker);
     realizedGainByCur[sym] = (realizedGainByCur[sym] || 0) + (p.sellPrice - p.buyPrice) * p.quantity;
   });
+
+  const fxCache = getFxRates();
+  const foreignSymbols = Object.keys(realizedGainByCur).filter(s => s !== 'R$');
+  const foreignCodes = foreignSymbols.map(getCurrencyCode);
+  const missingRates = foreignCodes.filter(c => c !== 'BRL' && !fxCache[c]);
+
   html += '<div style="padding:14px">';
   html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--accent-amber);margin-bottom:10px">' + t('taxReport_taxEstimate') + '</h3>';
-  html += '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">';
+
+  // Tax rate + refresh controls
+  html += '<div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap">';
   html += '<label style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">' + t('taxReport_taxRate') + '</label>';
   html += '<input id="taxRateInput" type="number" step="0.1" min="0" max="100" value="' + taxRate + '" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:6px 8px;border-radius:4px;font-family:var(--font-mono);font-size:12px;width:70px">';
   html += '<span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">%</span>';
   html += '<button class="btn" onclick="saveTaxRate()" style="font-size:10px;padding:4px 10px">💾 SET</button>';
+  if (foreignCodes.length > 0) {
+    html += '<button class="btn" onclick="refreshFxRates(' + JSON.stringify(foreignCodes) + ')" style="font-size:10px;padding:4px 10px;color:var(--accent-amber);border-color:var(--accent-amber)">🔄 ' + (missingRates.length > 0 ? 'Carregar Cotações' : 'Atualizar Cotações') + '</button>';
+  }
   html += '</div>';
+
   if (Object.keys(realizedGainByCur).length === 0) {
     html += '<div style="color:var(--text-dim);font-size:11px">' + t('taxReport_noRealized') + '</div>';
   } else {
+    // Per-currency rows with editable FX rate
+    html += '<table class="tracked-table" style="margin-bottom:14px"><thead><tr>';
+    html += '<th>MOEDA</th><th>GANHO REALIZADO</th><th>COTAÇÃO (R$/unidade)</th><th>EQUIV. R$</th>';
+    html += '</tr></thead><tbody>';
+
+    let totalBRL = 0;
     Object.entries(realizedGainByCur).forEach(([sym, gain]) => {
-      const tax = gain > 0 ? gain * (taxRate / 100) : 0;
-      const net = gain - tax;
-      html += '<div style="font-size:9px;color:var(--accent-amber);font-family:var(--font-mono);margin-bottom:6px">' + sym + '</div>';
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
-      html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
-      html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">Realized Gain/Loss</div>';
-      html += '<div style="font-family:var(--font-mono);font-size:18px;font-weight:700;margin-top:4px;' + (gain >= 0 ? 'color:var(--green-bull)' : 'color:var(--red-bear)') + '">' + (gain >= 0 ? '+' : '') + sym + gain.toFixed(2) + '</div>';
-      html += '</div>';
-      html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
-      html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">TAX (' + taxRate + '%)</div>';
-      html += '<div style="font-family:var(--font-mono);font-size:18px;font-weight:700;margin-top:4px;color:var(--red-bear)">' + sym + (gain > 0 ? tax.toFixed(2) : '0.00') + '</div>';
-      html += '</div>';
-      html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
-      html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">' + t('taxReport_netAfterTax') + '</div>';
-      html += '<div style="font-family:var(--font-mono);font-size:18px;font-weight:700;margin-top:4px;' + (net >= 0 ? 'color:var(--green-bull)' : 'color:var(--red-bear)') + '">' + (net >= 0 ? '+' : '') + sym + net.toFixed(2) + '</div>';
-      html += '</div>';
-      html += '</div>';
+      const code = getCurrencyCode(sym);
+      const isBRL = sym === 'R$';
+      const cached = fxCache[code];
+      const rate = isBRL ? 1.0 : (cached ? cached.rate : null);
+      const brlEquiv = rate !== null ? gain * rate : null;
+      if (brlEquiv !== null) totalBRL += brlEquiv;
+
+      const rateAge = cached && !cached.manual && cached.fetchedAt
+        ? new Date(cached.fetchedAt).toLocaleTimeString(_lang === 'pt' ? 'pt-BR' : 'en-US', { hour: '2-digit', minute: '2-digit' })
+        : null;
+      const rateLabel = isBRL ? '1,00 (BRL)' : (rate !== null
+        ? `<input type="number" step="0.01" min="0" value="${rate.toFixed(4)}" onchange="setFxRateManual('${code}',this.value);generateTaxReport()" style="width:80px;background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:3px 6px;border-radius:4px;font-family:var(--font-mono);font-size:11px"> <span style="font-size:9px;color:var(--text-dim)">${cached && cached.manual ? '✎ manual' : (rateAge ? '⏱ ' + rateAge : '')}</span>`
+        : '<span style="color:var(--yellow-neutral);font-size:10px">— clique em Carregar Cotações</span>');
+
+      const gainClass = gain >= 0 ? 'pnl-up' : 'pnl-dn';
+      const brlStr = brlEquiv !== null ? (brlEquiv >= 0 ? '+' : '') + 'R$' + brlEquiv.toFixed(2) : '—';
+      const brlClass = brlEquiv !== null ? (brlEquiv >= 0 ? 'pnl-up' : 'pnl-dn') : '';
+
+      html += '<tr>';
+      html += '<td style="font-weight:700;color:var(--accent-amber)">' + sym + ' (' + code + ')</td>';
+      html += '<td class="' + gainClass + '">' + (gain >= 0 ? '+' : '') + sym + gain.toFixed(2) + '</td>';
+      html += '<td>' + rateLabel + '</td>';
+      html += '<td class="' + brlClass + '">' + brlStr + '</td>';
+      html += '</tr>';
     });
+    html += '</tbody></table>';
+
+    // Grand total in BRL
+    const totalKnown = Object.keys(realizedGainByCur).every(sym => {
+      const code = getCurrencyCode(sym);
+      return sym === 'R$' || fxCache[code];
+    });
+    if (totalKnown) {
+      const taxBRL = totalBRL > 0 ? totalBRL * (taxRate / 100) : 0;
+      const netBRL = totalBRL - taxBRL;
+      html += '<div style="background:rgba(200,90,23,0.08);border:1px solid rgba(200,90,23,0.3);border-radius:8px;padding:14px;margin-bottom:10px">';
+      html += '<div style="font-family:var(--font-mono);font-size:11px;color:var(--accent-amber);font-weight:700;margin-bottom:10px">💰 TOTAL EM REAIS (R$)</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">';
+      html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
+      html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">Ganho Realizado</div>';
+      html += '<div style="font-family:var(--font-mono);font-size:16px;font-weight:700;margin-top:4px;' + (totalBRL >= 0 ? 'color:var(--green-bull)' : 'color:var(--red-bear)') + '">' + (totalBRL >= 0 ? '+' : '') + 'R$' + totalBRL.toFixed(2) + '</div>';
+      html += '</div>';
+      html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
+      html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">IMPOSTO (' + taxRate + '%)</div>';
+      html += '<div style="font-family:var(--font-mono);font-size:16px;font-weight:700;margin-top:4px;color:var(--red-bear)">R$' + (totalBRL > 0 ? taxBRL.toFixed(2) : '0.00') + '</div>';
+      html += '</div>';
+      html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
+      html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">Líquido Após Imposto</div>';
+      html += '<div style="font-family:var(--font-mono);font-size:16px;font-weight:700;margin-top:4px;' + (netBRL >= 0 ? 'color:var(--green-bull)' : 'color:var(--red-bear)') + '">' + (netBRL >= 0 ? '+' : '') + 'R$' + netBRL.toFixed(2) + '</div>';
+      html += '</div>';
+      html += '</div></div>';
+    } else {
+      html += '<div style="padding:10px;background:rgba(255,193,7,0.08);border-radius:6px;font-size:11px;color:var(--yellow-neutral)">⚠️ Carregue as cotações do dia para ver o total em R$.</div>';
+    }
   }
   html += '<div style="margin-top:10px;font-size:10px;color:var(--text-dim);padding:8px;background:rgba(255,193,7,0.08);border-radius:4px">';
   html += t('taxReport_disclaimer');
@@ -2583,6 +2637,64 @@ function getCurrencySymbol(ticker) {
   if (t.endsWith('.JO')) return 'R';
   return '$';
 }
+// FX rate infrastructure — used only in the tax estimate BRL total
+const FX_CACHE_KEY = 'momentum_fx_rates';
+const FX_CACHE_TTL = 60 * 60 * 1000; // 60 minutes
+
+function getCurrencyCode(sym) {
+  const map = { '$': 'USD', 'R$': 'BRL', '£': 'GBP', '€': 'EUR', '₹': 'INR', 'MX$': 'MXN', 'R': 'ZAR' };
+  return map[sym] || sym;
+}
+
+function getFxYahooTicker(code) {
+  if (code === 'BRL') return null;
+  return code + 'BRL=X';
+}
+
+function loadFxCache() {
+  try { return JSON.parse(localStorage.getItem(FX_CACHE_KEY) || '{}'); } catch { return {}; }
+}
+
+function saveFxCache(cache) {
+  localStorage.setItem(FX_CACHE_KEY, JSON.stringify(cache));
+}
+
+// Returns { USD: 5.42, EUR: 5.85, ... } from cache + manual overrides
+function getFxRates() {
+  return loadFxCache();
+}
+
+function setFxRateManual(code, rate) {
+  const cache = loadFxCache();
+  cache[code] = { rate: parseFloat(rate), manual: true, fetchedAt: Date.now() };
+  saveFxCache(cache);
+}
+
+async function fetchFxRate(code) {
+  if (code === 'BRL') return 1.0;
+  const ticker = getFxYahooTicker(code);
+  if (!ticker) return null;
+  try {
+    const data = await api('/api/history/' + encodeURIComponent(ticker));
+    if (Array.isArray(data) && data.length > 0) {
+      return data[data.length - 1].close || data[data.length - 1].c || null;
+    }
+  } catch {}
+  return null;
+}
+
+async function refreshFxRates(codes) {
+  const cache = loadFxCache();
+  const now = Date.now();
+  const stale = codes.filter(c => c !== 'BRL' && (!cache[c] || cache[c].manual || (now - (cache[c].fetchedAt || 0)) > FX_CACHE_TTL));
+  await Promise.all(stale.map(async code => {
+    const rate = await fetchFxRate(code);
+    if (rate && rate > 0) cache[code] = { rate, manual: false, fetchedAt: now };
+  }));
+  saveFxCache(cache);
+  generateTaxReport();
+}
+
 function switchLang(l) { _lang = l; localStorage.setItem('jerry_lang', l); applyLang(); renderDashboard(); }
 function applyLang() {
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
