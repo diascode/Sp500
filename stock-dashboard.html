@@ -126,7 +126,60 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 .search-results{position:absolute;background:var(--bg-card);border:1px solid var(--border);border-radius:5px;max-height:200px;overflow-y:auto;z-index:50;width:200px}
 .search-result-item{padding:6px 10px;cursor:pointer;font-family:var(--font-mono);font-size:11px;border-bottom:1px solid var(--border)}
 .search-result-item:hover{background:var(--bg-card-hover);color:var(--accent-amber)}
-@media(max-width:640px){body{padding:12px}.side-section{grid-template-columns:1fr}}
+/* ─── Mobile ─────────────────────────────────────────────────────── */
+@media(max-width:640px){
+  body{padding:8px}
+
+  /* Header: stack brand + controls vertically */
+  .header{flex-direction:column;align-items:stretch;gap:6px;margin-bottom:10px}
+  .header>div:last-child{align-items:flex-start!important}
+  .brand-logo{font-size:18px}
+  .brand-sub{font-size:9px;letter-spacing:1px}
+  .header-controls{gap:5px;justify-content:flex-start;flex-wrap:wrap}
+  #fxBar{flex-wrap:wrap!important;font-size:9px!important;justify-content:flex-start!important;gap:6px!important}
+
+  /* 44 px touch targets on all buttons */
+  .btn{min-height:44px;padding:8px 10px;font-size:10px;letter-spacing:0.3px}
+
+  /* Market tabs */
+  .market-tabs{gap:4px}
+
+  /* Intro card */
+  .goal-card{padding:10px 12px}
+  .goal-card p{font-size:11px}
+  .goal-card .stats{font-size:10px;gap:10px}
+
+  /* Stock cards */
+  .card{padding:12px 10px}
+  .card-ticker h3{font-size:14px}
+  .card-price{font-size:17px}
+  .chart-container canvas{height:200px}
+  .analysis-row{grid-template-columns:1fr}  /* entry/exit zones stack */
+  .metrics{grid-template-columns:repeat(3,1fr)}
+
+  /* Tables — horizontal scroll with iOS momentum */
+  .tracked-table{font-size:10px}
+  .tracked-table th,.tracked-table td{padding:4px 5px;white-space:nowrap}
+  /* any overflow-x:auto container gets smooth iOS scroll */
+  .card{-webkit-overflow-scrolling:touch}
+
+  /* Side cards (portfolio sidebar, calendar) */
+  .side-section{grid-template-columns:1fr}
+
+  /* Auth modal */
+  .modal{padding:16px;width:calc(100vw - 24px);max-width:none}
+
+  /* Status bar + footer */
+  .status-bar{font-size:9px}
+  .last-update{font-size:9px}
+  .footer{flex-direction:column;gap:4px;font-size:9px}
+
+  /* Search / form inputs */
+  .search-input{width:100%;max-width:none}
+
+  /* Pro upsell table gets its own scroll */
+  #proUpsell{overflow-x:auto}
+}
 .footer{max-width:1400px;margin:24px auto 0;padding:12px 0;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);flex-wrap:wrap;gap:8px}
 /* Tracked picks table */
 .tracked-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:11px}
