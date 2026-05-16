@@ -197,8 +197,8 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 </header>
 
 <div class="market-tabs" id="marketTabs">
-  <button class="btn" data-market="brasil" onclick="switchMarket('brasil')">🇧🇷 Brasil</button>
-  <button class="btn active-market" data-market="us" onclick="switchMarket('us')">🇺🇸 US (50)</button>
+  <button class="btn active-market" data-market="brasil" onclick="switchMarket('brasil')">🇧🇷 Brasil</button>
+  <button class="btn" data-market="us" onclick="switchMarket('us')">🇺🇸 US (50)</button>
   <button class="btn" data-market="europe" onclick="switchMarket('europe')">🇪🇺 Europe (30)</button>
   <button class="btn" data-market="emerging" onclick="switchMarket('emerging')">🌍 Emerging</button>
   
@@ -330,7 +330,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 
 <script>
 // ─── STATE ─────────────────────────────────────────────────────────────
-let state = { market: 'us', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'dark', showTracked: false, showUniverse: false, showPortfolio: false };
+let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'dark', showTracked: false, showUniverse: false, showPortfolio: false };
 let _portfolioMonthFilter = 'all';
 let _signalFilter = 'buy';
 let _taxReportMonth = '';
@@ -3447,7 +3447,7 @@ async function init() {
       document.querySelector('[data-market="europe"]').textContent = `🇪🇺 Europe (${euMeta.visible}/${euMeta.total})`;
       const emMeta = state._universeMeta.emerging;
       document.querySelector('[data-market="emerging"]').textContent = `🌍 Emerging (${emMeta.visible}/${emMeta.total})`;
-      document.getElementById('universeCount').textContent = us.length;
+      if (brMeta) document.getElementById('universeCount').textContent = brMeta.visible;
     } catch(e) { console.log('Universe load error:', e); }
   }, 50);
   // Phase 3: Correlation only — user must click SCAN explicitly
