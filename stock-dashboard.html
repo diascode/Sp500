@@ -350,11 +350,32 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
         <button class="btn" type="button" onclick="closeAuthModal()">CANCEL</button>
       </div>
     </form>
+    <div id="authForgotRow" style="text-align:right;margin:-4px 0 8px">
+      <button type="button" onclick="showForgotPassword()" style="background:none;border:none;color:var(--text-dim);font-size:10px;cursor:pointer;font-family:var(--font-mono);text-decoration:underline;padding:0" id="forgotPasswordLink">Forgot password?</button>
+    </div>
     <div style="margin-top:10px;text-align:center">
       <span style="font-size:12px;color:var(--text-dim)" id="authToggleText">Don't have an account?</span>
       <button class="btn" id="authToggleBtn" onclick="toggleAuthMode()" style="font-size:11px;padding:4px 10px">SIGN UP</button>
     </div>
     <div id="authError" style="margin-top:8px;font-size:11px;color:var(--red-bear);text-align:center;display:none"></div>
+  </div>
+</div>
+
+<!-- RESET PASSWORD MODAL -->
+<div class="modal-overlay" id="resetPasswordModal">
+  <div class="modal" style="max-width:380px">
+    <h2 id="resetModalTitle">🔑 SET NEW PASSWORD</h2>
+    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:14px" id="resetModalDesc">Enter and confirm your new password.</p>
+    <div style="margin-bottom:12px">
+      <input class="search-input" id="resetNewPassword" placeholder="New password (min 6 chars)" type="password" autocomplete="new-password" style="width:100%;margin-bottom:8px;font-size:13px">
+      <input class="search-input" id="resetConfirmPassword" placeholder="Confirm new password" type="password" autocomplete="new-password" style="width:100%;font-size:13px">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" id="resetSubmitBtn" onclick="submitResetPassword()" style="flex:1">SET PASSWORD</button>
+      <button class="btn" onclick="closeResetModal()">CANCEL</button>
+    </div>
+    <div id="resetError" style="margin-top:8px;font-size:11px;color:var(--red-bear);text-align:center;display:none"></div>
+    <div id="resetSuccess" style="margin-top:8px;font-size:11px;color:var(--green-bull);text-align:center;display:none"></div>
   </div>
 </div>
 
@@ -549,6 +570,8 @@ function showAuthModal() {
   document.getElementById('authError').style.display = 'none';
   document.getElementById('authEmail').value = '';
   document.getElementById('authPassword').value = '';
+  document.getElementById('forgotPasswordLink').textContent = t('auth_forgotLink');
+  document.getElementById('authForgotRow').style.display = 'block';
   document.getElementById('authModal').classList.add('show');
 }
 
@@ -561,6 +584,7 @@ function toggleAuthMode() {
   document.getElementById('authToggleText').textContent = authMode === 'login' ? t('auth_noAccount') : t('auth_haveAccount');
   document.getElementById('authToggleBtn').textContent = authMode === 'login' ? t('auth_signUp') : t('signIn');
   document.getElementById('authPassword').autocomplete = authMode === 'login' ? 'current-password' : 'new-password';
+  document.getElementById('authForgotRow').style.display = authMode === 'login' ? 'block' : 'none';
   document.getElementById('authError').style.display = 'none';
 }
 
@@ -590,6 +614,118 @@ async function submitAuth() {
   }
   btn.textContent = authMode === 'login' ? t('signIn') : t('auth_createAccount');
   btn.disabled = false;
+}
+
+// ─── FORGOT / RESET PASSWORD ─────────────────────────────────────────────
+
+function showForgotPassword() {
+  const inner = document.querySelector('#authModal .modal');
+  inner.innerHTML = `
+    <h2 style="font-family:var(--font-mono);font-size:14px;color:var(--accent-amber);margin-bottom:6px">${t('auth_forgotPassword')}</h2>
+    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:14px">${t('auth_enterEmail')}</p>
+    <form onsubmit="submitForgotPassword();return false" style="margin-bottom:0">
+      <input class="search-input" id="forgotEmail" type="email" placeholder="${t('auth_emailPlaceholder')}" autocomplete="email" style="width:100%;margin-bottom:10px;font-size:13px">
+      <div style="display:flex;gap:8px">
+        <button class="btn primary" id="forgotSubmitBtn" type="submit" style="flex:1">${t('auth_sendReset')}</button>
+        <button class="btn" type="button" onclick="showAuthModal()">${t('auth_backToSignIn')}</button>
+      </div>
+    </form>
+    <div id="forgotMsg" style="margin-top:10px;font-size:11px;text-align:center;display:none"></div>
+  `;
+  setTimeout(() => { const el = document.getElementById('forgotEmail'); if (el) el.focus(); }, 50);
+}
+
+async function submitForgotPassword() {
+  const email = (document.getElementById('forgotEmail').value || '').trim();
+  const msg = document.getElementById('forgotMsg');
+  const btn = document.getElementById('forgotSubmitBtn');
+  if (!email) { msg.textContent = t('auth_fillFields'); msg.style.color = 'var(--red-bear)'; msg.style.display = 'block'; return; }
+  btn.textContent = t('auth_resettingSend');
+  btn.disabled = true;
+  try {
+    await fetch('/api/auth/forgot-password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    msg.textContent = t('auth_checkEmail');
+    msg.style.color = 'var(--green-bull)';
+    msg.style.display = 'block';
+    btn.style.display = 'none';
+  } catch {
+    msg.textContent = t('auth_connectionError');
+    msg.style.color = 'var(--red-bear)';
+    msg.style.display = 'block';
+    btn.textContent = t('auth_sendReset');
+    btn.disabled = false;
+  }
+}
+
+let _resetToken = null;
+
+function checkResetHash() {
+  const hash = location.hash;
+  if (!hash.startsWith('#reset=')) return;
+  _resetToken = hash.slice(7);
+  history.replaceState(null, '', location.pathname + location.search);
+  showResetPasswordModal();
+}
+
+function showResetPasswordModal() {
+  const modal = document.getElementById('resetPasswordModal');
+  document.getElementById('resetModalTitle').textContent = t('auth_resetPassword');
+  document.getElementById('resetModalDesc').textContent = 'Enter and confirm your new password.';
+  document.getElementById('resetSubmitBtn').textContent = t('auth_setPassword');
+  document.getElementById('resetNewPassword').setAttribute('placeholder', t('auth_newPassword'));
+  document.getElementById('resetConfirmPassword').setAttribute('placeholder', t('auth_confirmPassword'));
+  document.getElementById('resetError').style.display = 'none';
+  document.getElementById('resetSuccess').style.display = 'none';
+  document.getElementById('resetNewPassword').value = '';
+  document.getElementById('resetConfirmPassword').value = '';
+  modal.classList.add('show');
+  setTimeout(() => document.getElementById('resetNewPassword').focus(), 50);
+}
+
+function closeResetModal() {
+  document.getElementById('resetPasswordModal').classList.remove('show');
+  _resetToken = null;
+}
+
+async function submitResetPassword() {
+  const newPassword = document.getElementById('resetNewPassword').value;
+  const confirm = document.getElementById('resetConfirmPassword').value;
+  const errEl = document.getElementById('resetError');
+  const succEl = document.getElementById('resetSuccess');
+  const btn = document.getElementById('resetSubmitBtn');
+  errEl.style.display = 'none';
+  succEl.style.display = 'none';
+  if (!newPassword || newPassword.length < 6) { errEl.textContent = t('auth_passwordTooShort'); errEl.style.display = 'block'; return; }
+  if (newPassword !== confirm) { errEl.textContent = t('auth_passwordMismatch'); errEl.style.display = 'block'; return; }
+  btn.textContent = t('auth_resettingSet');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/auth/reset-password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: _resetToken, newPassword })
+    });
+    const data = await res.json();
+    if (res.ok && data.token) {
+      succEl.textContent = t('auth_resetSuccess');
+      succEl.style.display = 'block';
+      setToken(data.token);
+      await checkAuth();
+      setTimeout(() => closeResetModal(), 1800);
+    } else {
+      errEl.textContent = data.error || t('auth_tokenExpired');
+      errEl.style.display = 'block';
+      btn.textContent = t('auth_setPassword');
+      btn.disabled = false;
+    }
+  } catch {
+    errEl.textContent = t('auth_connectionError');
+    errEl.style.display = 'block';
+    btn.textContent = t('auth_setPassword');
+    btn.disabled = false;
+  }
 }
 
 function logout() {
@@ -2528,6 +2664,22 @@ const LANGS = {
 
     // Auth
     auth_signUp: 'SIGN UP', auth_cancel: 'CANCEL',
+    auth_forgotPassword: 'FORGOT PASSWORD',
+    auth_forgotLink: 'Forgot password?',
+    auth_enterEmail: 'Enter your email and we\'ll send a reset link.',
+    auth_sendReset: 'SEND RESET LINK',
+    auth_resettingSend: 'SENDING...',
+    auth_backToSignIn: '← BACK TO SIGN IN',
+    auth_checkEmail: 'If that email is registered, a reset link has been sent. Check your inbox (and spam folder).',
+    auth_resetPassword: '🔑 SET NEW PASSWORD',
+    auth_newPassword: 'New password (min 6 chars)',
+    auth_confirmPassword: 'Confirm new password',
+    auth_setPassword: 'SET PASSWORD',
+    auth_resettingSet: 'UPDATING...',
+    auth_resetSuccess: '✅ Password updated! Signing you in...',
+    auth_tokenExpired: 'This reset link is invalid or has expired. Please request a new one.',
+    auth_passwordTooShort: 'Password must be at least 6 characters.',
+    auth_passwordMismatch: 'Passwords do not match.',
     auth_createAccount: 'CREATE ACCOUNT',
     auth_emailPlaceholder: 'Email',
     auth_passwordPlaceholder: 'Password (min 6 chars)',
@@ -2699,6 +2851,22 @@ const LANGS = {
 
     // Auth
     auth_signUp: 'CADASTRAR', auth_cancel: 'CANCELAR',
+    auth_forgotPassword: 'ESQUECI A SENHA',
+    auth_forgotLink: 'Esqueceu a senha?',
+    auth_enterEmail: 'Digite seu e-mail e enviaremos um link de redefinição.',
+    auth_sendReset: 'ENVIAR LINK',
+    auth_resettingSend: 'ENVIANDO...',
+    auth_backToSignIn: '← VOLTAR AO ACESSO',
+    auth_checkEmail: 'Se esse e-mail estiver cadastrado, um link foi enviado. Verifique sua caixa de entrada (e spam).',
+    auth_resetPassword: '🔑 DEFINIR NOVA SENHA',
+    auth_newPassword: 'Nova senha (mín. 6 caracteres)',
+    auth_confirmPassword: 'Confirmar nova senha',
+    auth_setPassword: 'SALVAR SENHA',
+    auth_resettingSet: 'SALVANDO...',
+    auth_resetSuccess: '✅ Senha atualizada! Entrando...',
+    auth_tokenExpired: 'Este link é inválido ou expirou. Solicite um novo.',
+    auth_passwordTooShort: 'A senha deve ter pelo menos 6 caracteres.',
+    auth_passwordMismatch: 'As senhas não coincidem.',
     auth_createAccount: 'CRIAR CONTA',
     auth_emailPlaceholder: 'E-mail',
     auth_passwordPlaceholder: 'Senha (mín. 6 caracteres)',
@@ -3641,7 +3809,8 @@ async function init() {
   const fs = parseFloat(localStorage.getItem('jerry_fontsize') || '1');
   document.documentElement.style.setProperty('--font-size', fs);
   document.body.style.zoom = fs;
-  loadTrackedPicks(); loadPortfolio(); loadCalendar(); applyLang(); renderFxBar();
+  loadTrackedPicks(); loadPortfolio(); loadCalendar(); applyLang(); renderFxBar(); checkResetHash();
+  window.addEventListener('hashchange', checkResetHash);
   
   // Background: auth check, universe data, then scan
   // Phase 1: Auth immediately (non-blocking)

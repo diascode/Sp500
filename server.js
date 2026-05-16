@@ -1,4 +1,5 @@
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -6,7 +7,7 @@ const crypto = require('crypto');
 // ─── LOAD ENV ───────────────────────────────────────────────────────────
 function loadEnv() {
   const envPath = path.join(__dirname, '.env');
-  const env = { PORT: '8080', HOST: '0.0.0.0', JWT_SECRET: '', APP_URL: 'http://localhost:8080', NODE_ENV: 'development' };
+  const env = { PORT: '8080', HOST: '0.0.0.0', JWT_SECRET: '', APP_URL: 'http://localhost:8080', NODE_ENV: 'development', RESEND_API_KEY: '', RESEND_FROM_EMAIL: '' };
   try {
     const lines = fs.readFileSync(envPath, 'utf8').split('\n');
     for (const line of lines) {
@@ -73,6 +74,33 @@ function verifyPassword(pw, stored) {
 }
 function findUser(email) { return users.find(u => u.email.toLowerCase() === email.toLowerCase()); }
 function nextId() { return users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1; }
+
+function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+async function sendEmail({ to, subject, html }) {
+  const apiKey = ENV.RESEND_API_KEY;
+  const from = ENV.RESEND_FROM_EMAIL || 'Momentum <onboarding@resend.dev>';
+  if (!apiKey) {
+    console.log(`[EMAIL] No RESEND_API_KEY — reset link for dev:\n  To: ${to}\n  Subject: ${subject}`);
+    return false;
+  }
+  return new Promise(resolve => {
+    const payload = JSON.stringify({ from, to: [to], subject, html });
+    const req = https.request({
+      hostname: 'api.resend.com', path: '/emails', method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+      },
+    }, r => { r.on('data', () => {}); r.on('end', () => resolve(r.statusCode < 300)); });
+    req.on('error', e => { console.error('[EMAIL] error:', e.message); resolve(false); });
+    req.write(payload);
+    req.end();
+  });
+}
 
 // ─── SUBSCRIPTION TIERS ─────────────────────────────────────────────────
 const TIERS = {
@@ -461,6 +489,50 @@ async function handleRequest(req, res) {
       user.password = hashPassword(body.newPassword);
       saveUsers(users);
       return sendJSON(res, 200, { ok: true });
+    }
+
+    if (pathname === '/api/auth/forgot-password' && req.method === 'POST') {
+      if (!checkAuthRateLimit(clientIp)) return sendError(res, 429, 'Too many attempts. Please wait.');
+      const body = await readBody(req);
+      const { email } = body;
+      if (!email) return sendError(res, 400, 'Email required');
+      const user = findUser(email);
+      if (user) {
+        const token = crypto.randomBytes(32).toString('hex');
+        user.resetToken = hashToken(token);
+        user.resetTokenExpiry = Date.now() + 60 * 60 * 1000; // 1 hour
+        saveUsers(users);
+        const appUrl = (ENV.APP_URL || 'http://localhost:8080').replace(/\/$/, '');
+        const resetUrl = `${appUrl}/#reset=${token}`;
+        const html = `<!DOCTYPE html><html><body style="font-family:monospace;background:#1a1410;color:#e8d5b7;margin:0;padding:0">
+<div style="max-width:520px;margin:40px auto;background:#231b14;border:1px solid #3d2e1c;border-radius:10px;padding:32px">
+  <h1 style="color:#c85a17;font-size:20px;margin:0 0 4px">🔑 MOMENTUM</h1>
+  <p style="color:#7a6650;font-size:11px;margin:0 0 24px;text-transform:uppercase;letter-spacing:1px">Password Reset Request</p>
+  <p style="color:#b8a080;line-height:1.6;margin:0 0 20px">We received a request to reset the password for <strong style="color:#e8d5b7">${user.email}</strong>.</p>
+  <p style="margin:0 0 20px"><a href="${resetUrl}" style="background:#c85a17;color:#fff;padding:12px 28px;text-decoration:none;border-radius:5px;font-family:monospace;font-weight:700;font-size:13px;display:inline-block">RESET PASSWORD →</a></p>
+  <p style="color:#7a6650;font-size:11px;line-height:1.6;margin:0 0 16px">This link expires in <strong style="color:#b8a080">1 hour</strong>. If you didn't request this, you can safely ignore this email — your password won't change.</p>
+  <p style="color:#5a4428;font-size:10px;border-top:1px solid #3d2e1c;padding-top:12px;margin:0">Or copy: ${resetUrl}</p>
+</div></body></html>`;
+        const sent = await sendEmail({ to: user.email, subject: 'Reset your Momentum password', html });
+        if (!sent) console.log(`[RESET LINK] ${resetUrl}`);
+      }
+      return sendJSON(res, 200, { ok: true });
+    }
+
+    if (pathname === '/api/auth/reset-password' && req.method === 'POST') {
+      const body = await readBody(req);
+      const { token, newPassword } = body;
+      if (!token || !newPassword || newPassword.length < 6) return sendError(res, 400, 'Token and new password (min 6 chars) required');
+      const tokenHash = hashToken(token);
+      const user = users.find(u => u.resetToken === tokenHash);
+      if (!user || !user.resetTokenExpiry || Date.now() > user.resetTokenExpiry) {
+        return sendError(res, 400, 'Reset link is invalid or has expired. Please request a new one.');
+      }
+      user.password = hashPassword(newPassword);
+      delete user.resetToken;
+      delete user.resetTokenExpiry;
+      saveUsers(users);
+      return sendJSON(res, 200, { token: signToken(user), user: { id: user.id, email: user.email, tier: user.tier } });
     }
 
     // ─── GDPR / ACCOUNT ─────────────────────────────────────────
