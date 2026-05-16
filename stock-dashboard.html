@@ -330,7 +330,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 
 <script>
 // ─── STATE ─────────────────────────────────────────────────────────────
-let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'dark', showTracked: false, showUniverse: false, showPortfolio: false };
+let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'dark', showTracked: false, showUniverse: false, showPortfolio: false, displayedStocks: [] };
 let _portfolioMonthFilter = 'all';
 let _signalFilter = 'buy';
 let _taxReportMonth = '';
@@ -879,9 +879,9 @@ function renderDashboard() {
       : results.filter(d => d.signal === 'buy');
     display = filtered;
   } else {
-    const buys = results.filter(d => d.signal === 'buy');
-    display = buys.length > 0 ? buys.slice(0, 3) : results.slice(0, 3);
+    display = results;
   }
+  state.displayedStocks = display;
 
   container.innerHTML = '';
 
@@ -2244,11 +2244,7 @@ function changeChartPeriod(idx, period) {
   const canvas = document.getElementById('chart-'+idx);
   if (!canvas) return;
   canvas.dataset.period = period;
-  // Find the stock data
-  const results = state.analyzed[state.market] || [];
-  const buys = results.filter(d => d.signal === 'buy');
-  const display = buys.length > 0 ? buys.slice(0, 3) : results.slice(0, 3);
-  const d = display[idx];
+  const d = state.displayedStocks[idx];
   if (!d) return;
   // Update active button styling
   const parent = canvas.parentElement;
