@@ -2535,10 +2535,11 @@ const LANGS = {
     brand: 'stock scanner &middot; live market data &middot; by jerry',
     scan: 'SCAN', scanAll: 'SCAN ALL', signals: 'SIGNALS',
     universe: 'ALL STOCKS', tracked: 'TRACKED', education: 'EDUCATION', simulate: 'PATTERNS',
-    sim_title: '🔍 PATTERN FINDER', sim_findBtn: 'FIND EXAMPLE', sim_scanFirst: 'No scan data — run a scan first to find real examples.',
-    sim_noMatch: 'No match found for this pattern in the current scan. Try scanning more markets.',
-    sim_bestMatch: 'Best match found:', sim_pattern: 'Pattern', sim_allMarkets: 'All scanned markets',
-    sim_disclaimer: 'This is the closest technical match from your scan — not a guarantee the pattern is forming.',
+    sim_title: '🔍 PATTERN FINDER', sim_scanFirst: 'No scan data — run a scan first to find real examples.',
+    sim_noMatch: 'No matches found for these filters. Try scanning more markets or changing the direction.',
+    sim_allDir: 'ALL', sim_allPatterns: 'ALL PATTERNS',
+    sim_results: 'matches found', sim_matchQuality: 'Match quality',
+    sim_disclaimer: 'Closest technical match from your scan — not a guarantee the pattern is forming.',
     portfolio: 'PORTFOLIO', signIn: 'SIGN IN', signOut: 'SIGN OUT',
     buy: 'BUY', sell: 'SELL', hold: 'HOLD',
     upgrade: 'GO PRO', admin: 'ADMIN',
@@ -2734,10 +2735,11 @@ const LANGS = {
     brand: 'analisador de a&ccedil;&otilde;es &middot; dados ao vivo &middot; por jerry',
     scan: 'VARRER', scanAll: 'VARRER TUDO', signals: 'SINAIS',
     universe: 'TODOS OS ATIVOS', tracked: 'RASTREADOS', education: 'EDUCAÇÃO', simulate: 'PADRÕES',
-    sim_title: '🔍 BUSCAR PADRÃO', sim_findBtn: 'BUSCAR EXEMPLO', sim_scanFirst: 'Sem dados — execute um scan primeiro para encontrar exemplos reais.',
-    sim_noMatch: 'Nenhum exemplo encontrado para este padrão no scan atual. Tente varrer mais mercados.',
-    sim_bestMatch: 'Melhor correspondência encontrada:', sim_pattern: 'Padrão', sim_allMarkets: 'Todos os mercados varridos',
-    sim_disclaimer: 'Esta é a correspondência técnica mais próxima do seu scan — não é garantia de que o padrão está se formando.',
+    sim_title: '🔍 BUSCAR PADRÃO', sim_scanFirst: 'Sem dados — execute um scan primeiro para encontrar exemplos reais.',
+    sim_noMatch: 'Nenhuma correspondência para estes filtros. Tente varrer mais mercados ou mudar a direção.',
+    sim_allDir: 'TODOS', sim_allPatterns: 'TODOS OS PADRÕES',
+    sim_results: 'correspondências encontradas', sim_matchQuality: 'Qualidade da correspondência',
+    sim_disclaimer: 'Correspondência técnica mais próxima do seu scan — não é garantia de que o padrão está se formando.',
     portfolio: 'PORTFÓLIO', signIn: 'ENTRAR', signOut: 'SAIR',
     buy: 'COMPRA', sell: 'VENDA', hold: 'MANTER',
     upgrade: 'PRO', admin: 'ADMIN',
@@ -3166,7 +3168,10 @@ function changeFontSize(d) {
 let _eduTopic = 'rsi';
 
 // ─── PATTERN FINDER ───────────────────────────────────────────────────────
-let _simPattern = PATTERNS[0].name;
+let _simPattern = null;  // null = all patterns
+let _simDir = 'all';     // 'all' | 'bull' | 'bear' | 'neutral'
+let _simExpanded = null; // ticker of expanded row, or null
+let _simCandles = [];
 
 function scorePatternMatch(d, patDef) {
   if (!d.candles || d.candles.length < 60) return 0;
@@ -3311,19 +3316,27 @@ function scorePatternMatch(d, patDef) {
   return score;
 }
 
-function findPatternExample(patternName) {
-  const patDef = PATTERNS.find(p => p.name === patternName);
-  if (!patDef) return null;
+function findAllPatternMatches() {
   const allStocks = [];
   ['us','brasil','europe','emerging'].forEach(mkt => (state.analyzed[mkt]||[]).forEach(d => allStocks.push(d)));
-  if (!allStocks.length) return null;
-  let best = null, bestScore = -1;
+  let patsToSearch = PATTERNS;
+  if (_simDir !== 'all') patsToSearch = patsToSearch.filter(p => p.dir === _simDir);
+  if (_simPattern) patsToSearch = patsToSearch.filter(p => p.name === _simPattern);
+  const results = [];
   allStocks.forEach(d => {
-    const score = scorePatternMatch(d, patDef);
-    if (score > bestScore) { bestScore = score; best = d; }
+    let bestScore = 0, bestPat = null;
+    patsToSearch.forEach(pat => {
+      const s = scorePatternMatch(d, pat);
+      if (s > bestScore) { bestScore = s; bestPat = pat; }
+    });
+    if (bestScore > 0 && bestPat) results.push({ ...d, matchScore: bestScore, matchPattern: bestPat });
   });
-  return best;
+  return results.sort((a, b) => b.matchScore - a.matchScore);
 }
+
+function setSimDir(dir) { _simDir = dir; _simPattern = null; _simExpanded = null; renderPatternFinder(); }
+function setSimPattern(idx) { _simPattern = idx === null ? null : PATTERNS[idx].name; _simExpanded = null; renderPatternFinder(); }
+function setSimExpanded(ticker) { _simExpanded = _simExpanded === ticker ? null : ticker; renderPatternFinder(); }
 
 function buildPatternOverlay(candles, patternName) {
   const n = candles.length;
@@ -3405,128 +3418,169 @@ function showSimulateView() {
   renderPatternFinder();
 }
 
-let _simCandles = [];
 function renderPatternFinder() {
   const container = document.getElementById('dashboard');
-  const patDef = PATTERNS.find(p => p.name === _simPattern) || PATTERNS[0];
-  const dirColor = patDef.dir === 'bull' ? 'var(--green-bull)' : patDef.dir === 'bear' ? 'var(--red-bear)' : 'var(--yellow-neutral)';
-  const dirLabel = patDef.dir === 'bull' ? '▲ BULLISH' : patDef.dir === 'bear' ? '▼ BEARISH' : '◈ NEUTRAL';
-
-  const match = findPatternExample(_simPattern);
   const hasData = ['us','brasil','europe','emerging'].some(m => (state.analyzed[m]||[]).length > 0);
+  const dirPatterns = _simDir === 'all' ? PATTERNS : PATTERNS.filter(p => p.dir === _simDir);
+
+  const dirs = [
+    { key:'all',     label: t('sim_allDir'),              color:'var(--text-secondary)' },
+    { key:'bull',    label: '▲ ' + t('edu_bullish'),      color:'var(--green-bull)' },
+    { key:'bear',    label: '▼ ' + t('edu_bearish'),      color:'var(--red-bear)' },
+    { key:'neutral', label: '◈ ' + t('edu_neutral'),      color:'var(--yellow-neutral)' },
+  ];
 
   let html = '<div class="card" style="padding:0;overflow:hidden">';
-  html += `<div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-    <div>
-      <span style="font-family:var(--font-mono);font-size:14px;color:var(--accent-amber);font-weight:700">${t('sim_title')}</span>
-      <span style="margin-left:10px;font-size:10px;color:${dirColor};font-family:var(--font-mono);font-weight:600">${dirLabel}</span>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <select id="simPatternSelect" onchange="_simPattern=this.value;renderPatternFinder()" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:6px 8px;border-radius:4px;font-family:var(--font-mono);font-size:10px">
-        ${PATTERNS.map(p => `<option value="${p.name}" ${p.name===_simPattern?'selected':''}>${p.name}</option>`).join('')}
-      </select>
-      <button class="btn" onclick="renderDashboard()" style="font-size:10px">${t('nav_back')}</button>
-    </div>
+
+  // Header
+  html += `<div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <span style="font-family:var(--font-mono);font-size:14px;color:var(--accent-amber);font-weight:700">${t('sim_title')}</span>
+    <button class="btn" onclick="renderDashboard()" style="font-size:10px">${t('nav_back')}</button>
   </div>`;
 
-  // Pattern description from PATTERNS array
-  html += `<div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
-    <div style="flex:1;min-width:200px">
-      <div style="font-size:11px;color:var(--text-secondary);line-height:1.6">${patDef.desc}</div>
-      <div style="font-size:10px;color:var(--accent-amber);margin-top:4px;font-family:var(--font-mono)">▶ ${patDef.play}</div>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.2);border-radius:4px;padding:4px;min-width:200px;height:60px">
-      <svg viewBox="0 0 200 60" width="200" height="60" style="display:block">${patDef.svg}</svg>
-    </div>
-  </div>`;
+  // Direction filter bar
+  html += `<div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+    <span style="font-size:10px;color:var(--text-dim);margin-right:2px;font-family:var(--font-mono)">${t('filter_show')}:</span>`;
+  dirs.forEach(d => {
+    const active = _simDir === d.key;
+    html += `<button onclick="setSimDir('${d.key}')" style="font-size:10px;padding:3px 10px;border-radius:4px;border:1px solid ${active ? d.color : 'var(--border)'};background:${active ? 'rgba(0,0,0,0.25)' : 'transparent'};color:${active ? d.color : 'var(--text-dim)'};cursor:pointer;font-family:var(--font-mono);font-weight:${active ? '700' : '400'}">${d.label}</button>`;
+  });
+  html += '</div>';
+
+  // Pattern chips
+  html += '<div style="padding:6px 12px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:4px">';
+  const allChipActive = !_simPattern;
+  html += `<button onclick="setSimPattern(null)" style="font-size:9px;padding:2px 8px;border-radius:10px;border:1px solid ${allChipActive ? 'var(--accent-amber)' : 'var(--border)'};background:${allChipActive ? 'rgba(200,90,23,0.15)' : 'transparent'};color:${allChipActive ? 'var(--accent-amber)' : 'var(--text-dim)'};cursor:pointer;font-family:var(--font-mono)">${t('sim_allPatterns')}</button>`;
+  dirPatterns.forEach((p, i) => {
+    const globalIdx = PATTERNS.indexOf(p);
+    const active = _simPattern === p.name;
+    const pColor = p.dir === 'bull' ? 'var(--green-bull)' : p.dir === 'bear' ? 'var(--red-bear)' : 'var(--yellow-neutral)';
+    html += `<button onclick="setSimPattern(${globalIdx})" style="font-size:9px;padding:2px 8px;border-radius:10px;border:1px solid ${active ? pColor : 'var(--border)'};background:${active ? 'rgba(0,0,0,0.2)' : 'transparent'};color:${active ? pColor : 'var(--text-dim)'};cursor:pointer;font-family:var(--font-mono)">${p.name}</button>`;
+  });
+  html += '</div>';
 
   if (!hasData) {
-    html += `<div style="padding:40px 20px;text-align:center">
-      <div style="font-size:32px;margin-bottom:12px">📡</div>
-      <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-dim)">${t('sim_scanFirst')}</div>
-    </div>`;
-  } else if (!match) {
-    html += `<div style="padding:40px 20px;text-align:center">
-      <div style="font-size:32px;margin-bottom:12px">🔍</div>
-      <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-dim)">${t('sim_noMatch')}</div>
-    </div>`;
-  } else {
-    const c = match.candles;
-    _simCandles = c;
-    const price = c[c.length-1].c;
-    const s9=calcSMA(c,9), s20=calcSMA(c,20), s50=calcSMA(c,50), s200=calcSMA(c,200);
-    const sma9=s9[s9.length-1]||price, sma20=s20[s20.length-1]||price, sma50=s50[s50.length-1]||price, sma200=s200[s200.length-1]||price;
-    const rsiA=calcRSI(c,14), rsi=parseFloat(rsiA[rsiA.length-1]?.toFixed(1))||50;
-    const macdA=calcMACD(c), macd=parseFloat(macdA[macdA.length-1]?.toFixed(2))||0;
-    const adxA=calcADX(c,14), adx=parseFloat(adxA[adxA.length-1]?.toFixed(1))||20;
-    const pA9=price>sma9, pA20=price>sma20, pA50=price>sma50, pA200=price>sma200;
-    const masAbove=[pA9,pA20,pA50,pA200].filter(Boolean).length;
-    const maAlign=masAbove>=3?'BULL ALIGNED':masAbove===0?'BEAR ALIGNED':masAbove>=2?'PARTIAL BULL':'PARTIAL BEAR';
-    const rsiD=rsi>55?'bull':rsi<40?'bear':'neutral', macdD=macd>0?'bull':'bear', adxD=adx>25?'bull':'neutral';
-    const signalColor = match.signal==='buy'?'var(--green-bull)':match.signal==='sell'?'var(--red-bear)':'var(--yellow-neutral)';
-    const signalLabel = match.signal==='buy'?t('buy'):match.signal==='sell'?t('sell'):t('hold');
-    const sym = getCurrencySymbol ? getCurrencySymbol(match.ticker) : '$';
-    const patternLines = buildPatternOverlay(c.slice(-60), _simPattern);
-
-    html += `<div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text-primary)">${match.ticker}</span>
-      <span style="font-size:10px;color:var(--text-secondary)">${match.name||''}</span>
-      <span style="font-size:10px;font-family:var(--font-mono);color:${signalColor};font-weight:700;background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:3px">${signalLabel}</span>
-      <span style="font-size:10px;color:var(--text-dim);font-family:var(--font-mono);margin-left:auto">${t('sim_bestMatch')} <strong style="color:var(--accent-amber)">${_simPattern}</strong></span>
-    </div>`;
-    html += `<div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;font-family:var(--font-mono);font-size:11px">
-      <span><span style="color:var(--text-dim)">Price:</span> <strong>${sym}${price.toFixed(2)}</strong></span>
-      <span><span style="color:var(--text-dim)">RSI:</span> <strong style="color:${rsiD==='bull'?'var(--green-bull)':rsiD==='bear'?'var(--red-bear)':'var(--yellow-neutral)'}">${rsi}</strong></span>
-      <span><span style="color:var(--text-dim)">MACD:</span> <strong style="color:${macdD==='bull'?'var(--green-bull)':'var(--red-bear)'}">${macd.toFixed(2)}</strong></span>
-      <span><span style="color:var(--text-dim)">ADX:</span> <strong style="color:${adxD==='bull'?'var(--green-bull)':'var(--yellow-neutral)'}">${adx.toFixed(1)}</strong></span>
-      <span><span style="color:var(--text-dim)">MA:</span> <strong style="color:${masAbove>=3?'var(--green-bull)':masAbove===0?'var(--red-bear)':'var(--yellow-neutral)'}">${maAlign}</strong></span>
-    </div>`;
-    html += '<div class="chart-container" style="margin:0"><canvas id="simChart" style="height:400px"></canvas></div>';
-    html += `<div style="padding:8px 14px;font-size:10px;color:var(--text-dim);font-family:var(--font-mono);border-top:1px solid var(--border)">${t('sim_disclaimer')}</div>`;
-    html += '</div>';
+    html += `<div style="padding:40px 20px;text-align:center"><div style="font-size:32px;margin-bottom:12px">📡</div><div style="font-family:var(--font-mono);font-size:12px;color:var(--text-dim)">${t('sim_scanFirst')}</div></div></div>`;
     container.innerHTML = html;
-
-    requestAnimationFrame(() => {
-      const cv = document.getElementById('simChart');
-      if (!cv) return;
-      const chartCandles = c.slice(-60);
-      const bbFull = calcBB(c,14,2);
-      drawChart(cv, chartCandles, {
-        sma9: c.length>9 ? calcSMA(c,9).slice(-60) : [],
-        sma20: c.length>20 ? calcSMA(c,20).slice(-60) : [],
-        sma50: c.length>50 ? calcSMA(c,50).slice(-60) : [],
-        sma200: c.length>200 ? calcSMA(c,200).slice(-60) : [],
-        bbU: bbFull.upper.slice(-60), bbL: bbFull.lower.slice(-60),
-        patternLines, ticker: match.ticker,
-      });
-      const parent = cv.parentElement;
-      const btnBar = document.createElement('div');
-      btnBar.style.cssText = 'display:flex;gap:4px;padding:4px 6px';
-      btnBar.innerHTML = '<button class="btn chart-period-btn active-period" onclick="changeSimPeriod(60)" style="font-size:8px;padding:3px 6px">3M</button><button class="btn chart-period-btn" onclick="changeSimPeriod(110)" style="font-size:8px;padding:3px 6px">6M</button><button class="btn chart-period-btn" onclick="changeSimPeriod(260)" style="font-size:8px;padding:3px 6px">ALL</button>';
-      parent.insertBefore(btnBar, parent.firstChild);
-    });
     return;
   }
+
+  const matches = findAllPatternMatches();
+
+  // Results count bar
+  html += `<div style="padding:7px 14px;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:10px;color:var(--text-dim)">
+    <strong style="color:var(--text-primary)">${matches.length}</strong> ${t('sim_results')}${_simPattern ? ` · <span style="color:var(--accent-amber)">${_simPattern}</span>` : ''}
+  </div>`;
+
+  if (!matches.length) {
+    html += `<div style="padding:40px 20px;text-align:center"><div style="font-size:32px;margin-bottom:12px">🔍</div><div style="font-family:var(--font-mono);font-size:12px;color:var(--text-dim)">${t('sim_noMatch')}</div></div>`;
+  } else {
+    matches.forEach(d => {
+      const isExpanded = _simExpanded === d.ticker;
+      const sigColor = d.signal==='buy'?'var(--green-bull)':d.signal==='sell'?'var(--red-bear)':'var(--yellow-neutral)';
+      const sigLabel = d.signal==='buy'?t('buy'):d.signal==='sell'?t('sell'):t('hold');
+      const patColor = d.matchPattern.dir==='bull'?'var(--green-bull)':d.matchPattern.dir==='bear'?'var(--red-bear)':'var(--yellow-neutral)';
+      const scorePct = Math.min(100, Math.round((d.matchScore / 9) * 100));
+      const rsiC = d.rsi>55?'var(--green-bull)':d.rsi<40?'var(--red-bear)':'var(--yellow-neutral)';
+      const macdC = d.macd>0?'var(--green-bull)':'var(--red-bear)';
+      const adxC = d.adx>25?'var(--green-bull)':'var(--yellow-neutral)';
+      const sym = typeof getCurrencySymbol === 'function' ? getCurrencySymbol(d.ticker) : '$';
+
+      html += `<div style="border-bottom:1px solid var(--border)">
+        <div onclick="setSimExpanded('${d.ticker}')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:${isExpanded ? 'rgba(200,90,23,0.06)' : 'transparent'}">
+          <svg viewBox="0 0 200 62" style="width:60px;height:22px;flex-shrink:0;border-radius:3px;background:#0d0906;border:1px solid var(--border)">
+            <line x1="0" y1="31" x2="200" y2="31" stroke="#1f1812" stroke-width="0.5"/>
+            ${d.matchPattern.svg || ''}
+          </svg>
+          <div style="display:flex;flex-direction:column;min-width:55px">
+            <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text-primary)">${d.ticker}</span>
+            <span style="font-size:8px;color:${patColor};font-family:var(--font-mono)">${d.matchPattern.name}</span>
+          </div>
+          <span style="font-size:10px;color:${sigColor};font-family:var(--font-mono);font-weight:700;background:rgba(0,0,0,0.2);padding:2px 6px;border-radius:3px">${sigLabel}</span>
+          <span style="font-size:10px;color:var(--text-dim);font-family:var(--font-mono)">${sym}${d.price.toFixed(2)}</span>
+          <div style="display:flex;gap:8px;font-family:var(--font-mono);font-size:10px">
+            <span><span style="color:var(--text-dim)">RSI</span> <span style="color:${rsiC}">${d.rsi.toFixed(1)}</span></span>
+            <span><span style="color:var(--text-dim)">MACD</span> <span style="color:${macdC}">${d.macd.toFixed(2)}</span></span>
+            <span><span style="color:var(--text-dim)">ADX</span> <span style="color:${adxC}">${d.adx.toFixed(1)}</span></span>
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <div title="${t('sim_matchQuality')}" style="width:44px;height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+              <div style="width:${scorePct}%;height:100%;background:${patColor};border-radius:2px"></div>
+            </div>
+            <span style="font-size:9px;color:var(--text-dim);font-family:var(--font-mono)">${d.matchScore}/9</span>
+            <span style="font-size:9px;color:var(--text-dim)">${isExpanded ? '▲' : '▼'}</span>
+          </div>
+        </div>`;
+
+      if (isExpanded) {
+        html += `<div style="border-top:1px solid var(--border)">
+          <div style="display:flex;gap:4px;padding:4px 8px;border-bottom:1px solid var(--border)">
+            <button class="btn chart-period-btn" data-ticker="${d.ticker}" data-period="1"    onclick="changeSimChartPeriod('${d.ticker}',1)"    style="font-size:8px;padding:3px 6px">1D</button>
+            <button class="btn chart-period-btn" data-ticker="${d.ticker}" data-period="22"   onclick="changeSimChartPeriod('${d.ticker}',22)"   style="font-size:8px;padding:3px 6px">1M</button>
+            <button class="btn chart-period-btn active-period" data-ticker="${d.ticker}" data-period="60" onclick="changeSimChartPeriod('${d.ticker}',60)" style="font-size:8px;padding:3px 6px">3M</button>
+            <button class="btn chart-period-btn" data-ticker="${d.ticker}" data-period="110"  onclick="changeSimChartPeriod('${d.ticker}',110)"  style="font-size:8px;padding:3px 6px">6M</button>
+            <button class="btn chart-period-btn" data-ticker="${d.ticker}" data-period="252"  onclick="changeSimChartPeriod('${d.ticker}',252)"  style="font-size:8px;padding:3px 6px">1Y</button>
+            <button class="btn chart-period-btn" data-ticker="${d.ticker}" data-period="1260" onclick="changeSimChartPeriod('${d.ticker}',1260)" style="font-size:8px;padding:3px 6px">5Y</button>
+          </div>
+          <div class="chart-container" style="margin:0"><canvas id="pfChart_${d.ticker}" style="height:280px"></canvas></div>
+          <div style="padding:6px 12px;font-size:9px;color:var(--text-dim);font-family:var(--font-mono)">${t('sim_disclaimer')}</div>
+        </div>`;
+      }
+
+      html += '</div>';
+    });
+  }
+
+  html += '</div>';
   container.innerHTML = html;
+
+  // Draw chart for expanded row
+  if (_simExpanded) {
+    const d = matches.find(m => m.ticker === _simExpanded);
+    if (d && d.candles) {
+      requestAnimationFrame(() => {
+        const cv = document.getElementById('pfChart_' + d.ticker);
+        if (!cv) return;
+        _simCandles = d.candles;
+        const c = d.candles, chartCandles = c.slice(-60);
+        const bbFull = calcBB(c, 14, 2);
+        const patternLines = buildPatternOverlay(chartCandles, d.matchPattern.name);
+        drawChart(cv, chartCandles, {
+          sma9:  c.length>9  ? calcSMA(c,9).slice(-60)  : [],
+          sma20: c.length>20 ? calcSMA(c,20).slice(-60) : [],
+          sma50: c.length>50 ? calcSMA(c,50).slice(-60) : [],
+          sma200:c.length>200? calcSMA(c,200).slice(-60): [],
+          bbU: bbFull.upper.slice(-60), bbL: bbFull.lower.slice(-60),
+          patternLines, ticker: d.ticker,
+        });
+      });
+    }
+  }
 }
 
-function changeSimPeriod(period) {
-  const cv = document.getElementById('simChart');
-  if (!cv || !_simCandles.length) return;
-  const count = Math.min(period, _simCandles.length);
-  const chartCandles = _simCandles.slice(-count);
-  const bbFull = calcBB(_simCandles,14,2);
-  const patternLines = buildPatternOverlay(chartCandles, _simPattern);
-  const parent = cv.parentElement;
-  parent.querySelectorAll('.chart-period-btn').forEach(b => b.classList.remove('active-period'));
-  parent.querySelectorAll('.chart-period-btn').forEach(b => { if(b.getAttribute('onclick')?.includes('changeSimPeriod('+period+')')) b.classList.add('active-period'); });
+function changeSimChartPeriod(ticker, period) {
+  if (!_simCandles || !_simCandles.length) return;
+  // Update active button styling
+  document.querySelectorAll('.chart-period-btn[data-ticker="' + ticker + '"]').forEach(btn => {
+    btn.classList.toggle('active-period', parseInt(btn.dataset.period) === period);
+  });
+  const cv = document.getElementById('pfChart_' + ticker);
+  if (!cv) return;
+  const c = _simCandles;
+  const count = Math.min(period, c.length);
+  const chartCandles = c.slice(-count);
+  // Find the match to get pattern overlay
+  const matches = findAllPatternMatches();
+  const d = matches.find(m => m.ticker === ticker);
+  const patternLines = d ? buildPatternOverlay(chartCandles, d.matchPattern.name) : [];
+  const bbFull = calcBB(c, 14, 2);
   drawChart(cv, chartCandles, {
-    sma9: _simCandles.length>9 ? calcSMA(_simCandles,9).slice(-count) : [],
-    sma20: _simCandles.length>20 ? calcSMA(_simCandles,20).slice(-count) : [],
-    sma50: _simCandles.length>50 ? calcSMA(_simCandles,50).slice(-count) : [],
-    sma200: _simCandles.length>200 ? calcSMA(_simCandles,200).slice(-count) : [],
+    sma9:  c.length>9  ? calcSMA(c,9).slice(-count)  : [],
+    sma20: c.length>20 ? calcSMA(c,20).slice(-count) : [],
+    sma50: c.length>50 ? calcSMA(c,50).slice(-count) : [],
+    sma200:c.length>200? calcSMA(c,200).slice(-count): [],
     bbU: bbFull.upper.slice(-count), bbL: bbFull.lower.slice(-count),
-    patternLines,
+    patternLines, ticker,
   });
 }
 
