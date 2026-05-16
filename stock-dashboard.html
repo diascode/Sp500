@@ -198,6 +198,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 
 <div class="market-tabs" id="marketTabs">
   <button class="btn active-market" data-market="us" onclick="switchMarket('us')">🇺🇸 US (50)</button>
+  <button class="btn" data-market="brasil" onclick="switchMarket('brasil')">🇧🇷 Brasil</button>
   <button class="btn" data-market="europe" onclick="switchMarket('europe')">🇪🇺 Europe (30)</button>
   <button class="btn" data-market="emerging" onclick="switchMarket('emerging')">🌍 Emerging</button>
   
@@ -751,8 +752,9 @@ function analyze(ticker, name, sector, candles) {
 // ─── CHART DRAWING ──────────────────────────────────────────────────────
 function drawChart(canvas, candles, extra) {
   const ctx=canvas.getContext('2d'), dpr=window.devicePixelRatio||1, rect=canvas.getBoundingClientRect();
-  canvas.width=rect.width*dpr; canvas.height=rect.height*dpr; ctx.scale(dpr,dpr);
-  const W=rect.width, H=rect.height, vH=18, pad={t:14,b:vH+4,l:36,r:4}, cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
+  const W=rect.width||canvas.offsetWidth||canvas.parentElement?.offsetWidth||800, H=rect.height||300;
+  canvas.width=W*dpr; canvas.height=H*dpr; ctx.scale(dpr,dpr);
+  const vH=18, pad={t:14,b:vH+4,l:36,r:4}, cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
   let hi=-Infinity, lo=Infinity; candles.forEach(c=>{if(c.h>hi)hi=c.h;if(c.l<lo)lo=c.l;});
   const range=hi-lo||1, y=v=>pad.t+ch-((v-lo)/range)*ch, x=i=>pad.l+(i/candles.length)*cw;
   ctx.fillStyle=getComputedStyle(canvas).getPropertyValue('--bg-term').trim()||'#0d0906'; ctx.fillRect(0,0,W,H);
@@ -907,7 +909,7 @@ function renderDashboard() {
     const change = d.candles.length > 0 ? ((d.price - d.candles[0].c) / d.candles[0].c * 100) : 0;
     const changeClass = change >= 0 ? 'change-pos' : 'change-neg';
     const signalLabel = d.signal === 'buy' ? t('signal_buy') : d.signal === 'sell' ? t('signal_sell') : t('signal_hold');
-    const marketLabel = state.market === 'us' ? '🇺🇸' : state.market === 'europe' ? '🇪🇺' : '🇧🇷';
+    const marketLabel = state.market === 'us' ? '🇺🇸' : state.market === 'brasil' ? '🇧🇷' : state.market === 'europe' ? '🇪🇺' : '🌍';
     const pills = [
       {l:'RSI',v:d.rsi.toFixed(1),c:d.rsiDir},
       {l:'MACD',v:(d.macd>0?'+':'')+d.macd.toFixed(2),c:d.macdDir},
@@ -971,11 +973,11 @@ function renderDashboard() {
       <div class="verdict-bar ${d.signal}">${d.signal === 'buy' ? t('signal_buyVerdict') + d.maAlign : d.signal === 'sell' ? t('signal_sellVerdict') : t('signal_neutralVerdict')}</div>
     `;
     container.appendChild(card);
-    // Draw chart after DOM update
-    requestAnimationFrame(() => {
+    // Double RAF: first frame appends to DOM, second frame has final layout
+    requestAnimationFrame(() => requestAnimationFrame(() => {
       const cv = document.getElementById('chart-'+idx);
       if (cv) { changeChartPeriod(idx, 55); }
-    });
+    }));
   });
 }
 
@@ -2698,8 +2700,7 @@ async function fetchFxRate(code) {
 async function refreshFxRates(codes) {
   const cache = loadFxCache();
   const now = Date.now();
-  const stale = codes.filter(c => c !== 'BRL' && (!cache[c] || (now - (cache[c].fetchedAt || 0)) > FX_CACHE_TTL));
-  await Promise.all(stale.map(async code => {
+  await Promise.all(codes.filter(c => c !== 'BRL').map(async code => {
     const rate = await fetchFxRate(code);
     if (rate && rate > 0) cache[code] = { rate, manual: false, fetchedAt: now };
   }));
@@ -3435,10 +3436,13 @@ async function init() {
   setTimeout(async () => {
     try {
       const us = await loadUniverse('us');
-      const eu = await loadUniverse('europe');
-      const em = await loadUniverse('emerging');
+      await loadUniverse('brasil');
+      await loadUniverse('europe');
+      await loadUniverse('emerging');
       const usMeta = state._universeMeta.us;
       document.querySelector('[data-market="us"]').textContent = `🇺🇸 US (${usMeta.visible}/${usMeta.total})`;
+      const brMeta = state._universeMeta.brasil;
+      if (brMeta) document.querySelector('[data-market="brasil"]').textContent = `🇧🇷 Brasil (${brMeta.visible}/${brMeta.total})`;
       const euMeta = state._universeMeta.europe;
       document.querySelector('[data-market="europe"]').textContent = `🇪🇺 Europe (${euMeta.visible}/${euMeta.total})`;
       const emMeta = state._universeMeta.emerging;
