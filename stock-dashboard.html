@@ -304,8 +304,12 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 
 <div class="side-section">
   <div class="side-card">
-    <h3>📅 ECONOMIC CALENDAR</h3>
+    <h3 id="calTitle">📅 ECONOMIC CALENDAR</h3>
     <div id="calendarContent"><div style="color:var(--text-dim);font-size:11px">Loading...</div></div>
+  </div>
+  <div class="side-card" style="margin-top:12px">
+    <h3 id="newsSentimentTitle">📰 MARKET NEWS</h3>
+    <div id="newsSentimentContent"><div style="color:var(--text-dim);font-size:11px" id="newsSentimentEmpty">Run a scan to see news.</div></div>
   </div>
 </div>
 
@@ -350,32 +354,11 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
         <button class="btn" type="button" onclick="closeAuthModal()">CANCEL</button>
       </div>
     </form>
-    <div id="authForgotRow" style="text-align:right;margin:-4px 0 8px">
-      <button type="button" onclick="showForgotPassword()" style="background:none;border:none;color:var(--text-dim);font-size:10px;cursor:pointer;font-family:var(--font-mono);text-decoration:underline;padding:0" id="forgotPasswordLink">Forgot password?</button>
-    </div>
     <div style="margin-top:10px;text-align:center">
       <span style="font-size:12px;color:var(--text-dim)" id="authToggleText">Don't have an account?</span>
       <button class="btn" id="authToggleBtn" onclick="toggleAuthMode()" style="font-size:11px;padding:4px 10px">SIGN UP</button>
     </div>
     <div id="authError" style="margin-top:8px;font-size:11px;color:var(--red-bear);text-align:center;display:none"></div>
-  </div>
-</div>
-
-<!-- RESET PASSWORD MODAL -->
-<div class="modal-overlay" id="resetPasswordModal">
-  <div class="modal" style="max-width:380px">
-    <h2 id="resetModalTitle">🔑 SET NEW PASSWORD</h2>
-    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:14px" id="resetModalDesc">Enter and confirm your new password.</p>
-    <div style="margin-bottom:12px">
-      <input class="search-input" id="resetNewPassword" placeholder="New password (min 6 chars)" type="password" autocomplete="new-password" style="width:100%;margin-bottom:8px;font-size:13px">
-      <input class="search-input" id="resetConfirmPassword" placeholder="Confirm new password" type="password" autocomplete="new-password" style="width:100%;font-size:13px">
-    </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn primary" id="resetSubmitBtn" onclick="submitResetPassword()" style="flex:1">SET PASSWORD</button>
-      <button class="btn" onclick="closeResetModal()">CANCEL</button>
-    </div>
-    <div id="resetError" style="margin-top:8px;font-size:11px;color:var(--red-bear);text-align:center;display:none"></div>
-    <div id="resetSuccess" style="margin-top:8px;font-size:11px;color:var(--green-bull);text-align:center;display:none"></div>
   </div>
 </div>
 
@@ -570,8 +553,6 @@ function showAuthModal() {
   document.getElementById('authError').style.display = 'none';
   document.getElementById('authEmail').value = '';
   document.getElementById('authPassword').value = '';
-  document.getElementById('forgotPasswordLink').textContent = t('auth_forgotLink');
-  document.getElementById('authForgotRow').style.display = 'block';
   document.getElementById('authModal').classList.add('show');
 }
 
@@ -584,7 +565,6 @@ function toggleAuthMode() {
   document.getElementById('authToggleText').textContent = authMode === 'login' ? t('auth_noAccount') : t('auth_haveAccount');
   document.getElementById('authToggleBtn').textContent = authMode === 'login' ? t('auth_signUp') : t('signIn');
   document.getElementById('authPassword').autocomplete = authMode === 'login' ? 'current-password' : 'new-password';
-  document.getElementById('authForgotRow').style.display = authMode === 'login' ? 'block' : 'none';
   document.getElementById('authError').style.display = 'none';
 }
 
@@ -614,118 +594,6 @@ async function submitAuth() {
   }
   btn.textContent = authMode === 'login' ? t('signIn') : t('auth_createAccount');
   btn.disabled = false;
-}
-
-// ─── FORGOT / RESET PASSWORD ─────────────────────────────────────────────
-
-function showForgotPassword() {
-  const inner = document.querySelector('#authModal .modal');
-  inner.innerHTML = `
-    <h2 style="font-family:var(--font-mono);font-size:14px;color:var(--accent-amber);margin-bottom:6px">${t('auth_forgotPassword')}</h2>
-    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:14px">${t('auth_enterEmail')}</p>
-    <form onsubmit="submitForgotPassword();return false" style="margin-bottom:0">
-      <input class="search-input" id="forgotEmail" type="email" placeholder="${t('auth_emailPlaceholder')}" autocomplete="email" style="width:100%;margin-bottom:10px;font-size:13px">
-      <div style="display:flex;gap:8px">
-        <button class="btn primary" id="forgotSubmitBtn" type="submit" style="flex:1">${t('auth_sendReset')}</button>
-        <button class="btn" type="button" onclick="showAuthModal()">${t('auth_backToSignIn')}</button>
-      </div>
-    </form>
-    <div id="forgotMsg" style="margin-top:10px;font-size:11px;text-align:center;display:none"></div>
-  `;
-  setTimeout(() => { const el = document.getElementById('forgotEmail'); if (el) el.focus(); }, 50);
-}
-
-async function submitForgotPassword() {
-  const email = (document.getElementById('forgotEmail').value || '').trim();
-  const msg = document.getElementById('forgotMsg');
-  const btn = document.getElementById('forgotSubmitBtn');
-  if (!email) { msg.textContent = t('auth_fillFields'); msg.style.color = 'var(--red-bear)'; msg.style.display = 'block'; return; }
-  btn.textContent = t('auth_resettingSend');
-  btn.disabled = true;
-  try {
-    await fetch('/api/auth/forgot-password', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    msg.textContent = t('auth_checkEmail');
-    msg.style.color = 'var(--green-bull)';
-    msg.style.display = 'block';
-    btn.style.display = 'none';
-  } catch {
-    msg.textContent = t('auth_connectionError');
-    msg.style.color = 'var(--red-bear)';
-    msg.style.display = 'block';
-    btn.textContent = t('auth_sendReset');
-    btn.disabled = false;
-  }
-}
-
-let _resetToken = null;
-
-function checkResetHash() {
-  const hash = location.hash;
-  if (!hash.startsWith('#reset=')) return;
-  _resetToken = hash.slice(7);
-  history.replaceState(null, '', location.pathname + location.search);
-  showResetPasswordModal();
-}
-
-function showResetPasswordModal() {
-  const modal = document.getElementById('resetPasswordModal');
-  document.getElementById('resetModalTitle').textContent = t('auth_resetPassword');
-  document.getElementById('resetModalDesc').textContent = 'Enter and confirm your new password.';
-  document.getElementById('resetSubmitBtn').textContent = t('auth_setPassword');
-  document.getElementById('resetNewPassword').setAttribute('placeholder', t('auth_newPassword'));
-  document.getElementById('resetConfirmPassword').setAttribute('placeholder', t('auth_confirmPassword'));
-  document.getElementById('resetError').style.display = 'none';
-  document.getElementById('resetSuccess').style.display = 'none';
-  document.getElementById('resetNewPassword').value = '';
-  document.getElementById('resetConfirmPassword').value = '';
-  modal.classList.add('show');
-  setTimeout(() => document.getElementById('resetNewPassword').focus(), 50);
-}
-
-function closeResetModal() {
-  document.getElementById('resetPasswordModal').classList.remove('show');
-  _resetToken = null;
-}
-
-async function submitResetPassword() {
-  const newPassword = document.getElementById('resetNewPassword').value;
-  const confirm = document.getElementById('resetConfirmPassword').value;
-  const errEl = document.getElementById('resetError');
-  const succEl = document.getElementById('resetSuccess');
-  const btn = document.getElementById('resetSubmitBtn');
-  errEl.style.display = 'none';
-  succEl.style.display = 'none';
-  if (!newPassword || newPassword.length < 6) { errEl.textContent = t('auth_passwordTooShort'); errEl.style.display = 'block'; return; }
-  if (newPassword !== confirm) { errEl.textContent = t('auth_passwordMismatch'); errEl.style.display = 'block'; return; }
-  btn.textContent = t('auth_resettingSet');
-  btn.disabled = true;
-  try {
-    const res = await fetch('/api/auth/reset-password', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: _resetToken, newPassword })
-    });
-    const data = await res.json();
-    if (res.ok && data.token) {
-      succEl.textContent = t('auth_resetSuccess');
-      succEl.style.display = 'block';
-      setToken(data.token);
-      await checkAuth();
-      setTimeout(() => closeResetModal(), 1800);
-    } else {
-      errEl.textContent = data.error || t('auth_tokenExpired');
-      errEl.style.display = 'block';
-      btn.textContent = t('auth_setPassword');
-      btn.disabled = false;
-    }
-  } catch {
-    errEl.textContent = t('auth_connectionError');
-    errEl.style.display = 'block';
-    btn.textContent = t('auth_setPassword');
-    btn.disabled = false;
-  }
 }
 
 function logout() {
@@ -998,7 +866,7 @@ async function scanMarket(market) {
         if (c.length > 100) {
           const a = analyze(s.t, s.n, s.s||'', c);
           if (a.signal === 'buy' || a.signal === 'neutral') {
-            fetchNews(s.t).then(news => { a.news = news; renderDashboard(); }).catch(()=>{});
+            fetchNews(s.t).then(news => { a.news = news; renderDashboard(); renderNewsSentiment(); }).catch(()=>{});
           }
           results.push(a);
         }
@@ -1020,6 +888,7 @@ async function scanAll() {
   await scanMarket(state.market);
   renderDashboard();
   updateStats();
+  renderNewsSentiment();
   document.getElementById('scanStatus').textContent = 'READY';
   document.getElementById('updateTime').textContent = new Date().toISOString().replace('T',' ').slice(0,19)+' UTC';
   btn.innerHTML = '⟳ SCAN';
@@ -1150,11 +1019,6 @@ function renderDashboard() {
         <div class="analysis-box"><div class="label">${t('card_entryZone')}</div><div class="value">${getCurrencySymbol(d.ticker)}${d.sup1.toFixed(2)} – ${getCurrencySymbol(d.ticker)}${d.price.toFixed(2)}</div></div>
         <div class="analysis-box"><div class="label">${t('card_exitZone')}</div><div class="value bull">${getCurrencySymbol(d.ticker)}${d.tp.toFixed(2)} – ${getCurrencySymbol(d.ticker)}${d.res2.toFixed(2)}</div></div>
       </div>
-      ${d.news && d.news.length > 0 ? `
-      <div class="news-list">
-        <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px">${t('card_news')}</div>
-        ${d.news.slice(0,3).map(n => `<div class="news-item"><div class="news-title"><a href="${n.link}" target="_blank" rel="noopener" style="color:var(--text-primary);text-decoration:none">${n.title}</a></div><div class="news-source">${n.publisher||''} ${n.link ? '↗' : ''}</div></div>`).join('')}
-      </div>` : ''}
       <div style="display:flex;gap:8px;margin-top:6px">
         <button class="btn track-btn" data-ticker="${d.ticker}" data-market="${state.market}" data-price="${d.price}" data-tp="${d.tp}" data-sl="${d.sl}" style="flex:1;font-size:10px">${t('card_trackPick')}</button>
         <button class="btn portfolio-add-btn" data-ticker="${d.ticker}" data-price="${d.price}" style="flex:1;font-size:10px;color:var(--green-bull);border-color:rgba(76,175,80,0.4)">${t('card_myStocks')}</button>
@@ -1283,12 +1147,70 @@ async function loadCalendar() {
     if (!el) return;
     const events = Array.isArray(data) ? data : (data.events || []);
     if (!events.length) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">' + t('calendar_noEvents') + '</div>'; return; }
-    el.innerHTML = events.map(e => `<div class="calendar-item">
-      <span class="calendar-date">${e.date || ''}</span>
-      <span class="calendar-impact ${e.impact || 'medium'}">${(e.impact || '').toUpperCase()}</span>
-      <span>${e.title || ''}</span>
-    </div>`).join('');
+    el.innerHTML = events.map(e => {
+      const title = (_lang === 'pt' && e.title_pt) ? e.title_pt : e.title;
+      const note  = (_lang === 'pt' && e.note_pt)  ? e.note_pt  : e.note;
+      const mktFlag = e.market === 'brasil' ? '🇧🇷' : e.market === 'us' ? '🇺🇸' : '🌐';
+      const impactColor = e.impact === 'high' ? 'var(--red-bear)' : e.impact === 'medium' ? 'var(--accent-amber)' : 'var(--text-dim)';
+      let tickersHtml = '';
+      if (e.tickers_up && e.tickers_up.length) {
+        tickersHtml += '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px;align-items:center"><span style="font-size:8px;color:var(--text-dim)">' + t('cal_tickersUp') + '</span>';
+        e.tickers_up.forEach(tk => { tickersHtml += '<span style="font-size:8px;background:rgba(76,175,80,0.15);color:var(--green-bull);border:1px solid rgba(76,175,80,0.3);border-radius:3px;padding:1px 4px">📈 ' + tk + '</span>'; });
+        tickersHtml += '</div>';
+      }
+      if (e.tickers_down && e.tickers_down.length) {
+        tickersHtml += '<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px;align-items:center"><span style="font-size:8px;color:var(--text-dim)">' + t('cal_tickersDown') + '</span>';
+        e.tickers_down.forEach(tk => { tickersHtml += '<span style="font-size:8px;background:rgba(229,57,53,0.15);color:var(--red-bear);border:1px solid rgba(229,57,53,0.3);border-radius:3px;padding:1px 4px">📉 ' + tk + '</span>'; });
+        tickersHtml += '</div>';
+      }
+      let linksHtml = '';
+      if (e.links && e.links.length) {
+        linksHtml = '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center"><span style="font-size:8px;color:var(--text-dim)">' + t('cal_sources') + '</span>';
+        e.links.forEach(lk => { linksHtml += '<a href="' + lk.url + '" target="_blank" rel="noopener" style="font-size:8px;color:var(--accent-amber);text-decoration:none;border:1px solid rgba(200,90,23,0.3);border-radius:3px;padding:1px 5px">' + lk.label + ' ↗</a>'; });
+        linksHtml += '</div>';
+      }
+      return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
+        + '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'
+        + '<span style="font-size:9px;color:var(--text-dim);font-family:var(--font-mono)">' + e.date + '</span>'
+        + '<span style="font-size:8px;color:' + impactColor + ';font-family:var(--font-mono);border:1px solid ' + impactColor + ';border-radius:2px;padding:0 3px">' + (e.impact || '').toUpperCase() + '</span>'
+        + '<span style="font-size:10px">' + mktFlag + '</span>'
+        + '</div>'
+        + '<div style="font-size:11px;color:var(--text-primary);margin-top:2px;line-height:1.3">' + title + '</div>'
+        + (note ? '<div style="font-size:9px;color:var(--text-dim);margin-top:2px;line-height:1.4">' + note + '</div>' : '')
+        + tickersHtml + linksHtml
+        + '</div>';
+    }).join('');
   } catch { const el = document.getElementById('calendarContent'); if (el) el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">' + t('calendar_loadError') + '</div>'; }
+}
+
+function renderNewsSentiment() {
+  const el = document.getElementById('newsSentimentContent');
+  if (!el) return;
+  const allNews = [];
+  const seen = new Set();
+  ['us','brasil','europe','emerging'].forEach(mkt => {
+    (state.analyzed[mkt] || []).forEach(d => {
+      if (!d.news) return;
+      d.news.slice(0,3).forEach(n => {
+        if (!n.title || seen.has(n.title)) return;
+        seen.add(n.title);
+        allNews.push({ ticker: d.ticker, signal: d.signal, ...n });
+      });
+    });
+  });
+  if (!allNews.length) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">' + t('cal_noNews') + '</div>'; return; }
+  const signalColor = s => s === 'buy' ? 'var(--green-bull)' : s === 'sell' ? 'var(--red-bear)' : 'var(--text-dim)';
+  el.innerHTML = allNews.slice(0,8).map(n =>
+    '<div style="padding:7px 0;border-bottom:1px solid var(--border)">'
+    + '<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px">'
+    + '<span style="font-size:8px;font-family:var(--font-mono);color:' + signalColor(n.signal) + ';border:1px solid ' + signalColor(n.signal) + ';border-radius:2px;padding:0 3px">' + n.ticker + '</span>'
+    + (n.publisher ? '<span style="font-size:8px;color:var(--text-dim)">' + n.publisher + '</span>' : '')
+    + '</div>'
+    + '<div style="font-size:10px;color:var(--text-secondary);line-height:1.4">'
+    + (n.link ? '<a href="' + n.link + '" target="_blank" rel="noopener" style="color:var(--text-secondary);text-decoration:none">' + n.title + ' ↗</a>' : n.title)
+    + '</div>'
+    + '</div>'
+  ).join('');
 }
 
 // ─── CORRELATION ────────────────────────────────────────────────────────
@@ -1673,21 +1595,13 @@ function renderPortfolioView() {
   // Monthly profit breakdown — grouped by currency then month
   // realizedByMonth: { sym: { month: number } }
   const realizedByMonth = {};
-  const unrealizedByMonth = {};
-  const nowDate = new Date();
   state.portfolio.forEach(p => {
-    const sym = getCurrencySymbol(p.ticker);
     if (p.status === 'sold' && p.sellPrice) {
+      const sym = getCurrencySymbol(p.ticker);
       const profit = (p.sellPrice - p.buyPrice) * p.quantity;
       const sellMonth = p.sellDate ? p.sellDate.slice(0,7) : (p.buyDate ? p.buyDate.slice(0,7) : 'unknown');
       if (!realizedByMonth[sym]) realizedByMonth[sym] = {};
       realizedByMonth[sym][sellMonth] = (realizedByMonth[sym][sellMonth] || 0) + profit;
-    } else if (p.status === 'holding') {
-      const buyMonth = p.buyDate ? p.buyDate.slice(0,7) : 'unknown';
-      const currPrice = getPortfolioPrice(p.ticker);
-      const profit = currPrice ? ((currPrice - p.buyPrice) * p.quantity) : 0;
-      if (!unrealizedByMonth[sym]) unrealizedByMonth[sym] = {};
-      unrealizedByMonth[sym][buyMonth] = (unrealizedByMonth[sym][buyMonth] || 0) + profit;
     }
   });
   
@@ -1707,11 +1621,9 @@ function renderPortfolioView() {
   }
   
   const realizedSymbols = Object.keys(realizedByMonth);
-  const unrealizedSymbols = Object.keys(unrealizedByMonth);
   const hasFilteredRealized = realizedSymbols.some(sym => filterMonths(Object.keys(realizedByMonth[sym]), _portfolioMonthFilter).length > 0);
-  const hasFilteredUnrealized = unrealizedSymbols.some(sym => filterMonths(Object.keys(unrealizedByMonth[sym]), _portfolioMonthFilter).length > 0);
 
-  const hasProfits = hasFilteredRealized || hasFilteredUnrealized;
+  const hasProfits = hasFilteredRealized;
   if (hasProfits) {
     html += '<div class="card" style="padding:14px;margin-bottom:14px">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
@@ -1740,25 +1652,6 @@ function renderPortfolioView() {
           html += '<tr><td style="color:var(--text-dim)">' + month + '</td><td class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + sym + profit.toFixed(2) + '</td></tr>';
         });
         html += '<tr><td style="font-weight:700;color:var(--text-primary)">' + t('portfolio_totalRealized') + '</td><td class="' + (grand >= 0 ? 'pnl-up' : 'pnl-dn') + '" style="font-weight:700">' + (grand >= 0 ? '+' : '') + sym + grand.toFixed(2) + '</td></tr>';
-        html += '</tbody></table>';
-      });
-    }
-
-    // Unrealized — one table per currency
-    if (hasFilteredUnrealized) {
-      html += '<div style="font-size:10px;color:var(--yellow-neutral);margin:8px 0 6px;font-family:var(--font-mono)">' + t('taxReport_unrealized') + '</div>';
-      unrealizedSymbols.forEach(sym => {
-        const months = filterMonths(Object.keys(unrealizedByMonth[sym]).sort(), _portfolioMonthFilter);
-        if (months.length === 0) return;
-        html += '<div style="font-size:9px;color:var(--accent-amber);font-family:var(--font-mono);margin-bottom:3px">' + sym + '</div>';
-        html += '<table class="tracked-table" style="margin-bottom:10px"><thead><tr><th>MONTH</th><th>EST. PROFIT / DEFICIT</th></tr></thead><tbody>';
-        let grand = 0;
-        months.forEach(month => {
-          const profit = unrealizedByMonth[sym][month];
-          grand += profit;
-          html += '<tr><td style="color:var(--text-dim)">' + month + '</td><td class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + sym + profit.toFixed(2) + '</td></tr>';
-        });
-        html += '<tr><td style="font-weight:700;color:var(--text-primary)">' + t('portfolio_totalUnrealized') + '</td><td class="' + (grand >= 0 ? 'pnl-up' : 'pnl-dn') + '" style="font-weight:700">' + (grand >= 0 ? '+' : '') + sym + grand.toFixed(2) + '</td></tr>';
         html += '</tbody></table>';
       });
     }
@@ -2064,27 +1957,6 @@ function generateTaxReport() {
     html += '</tbody></table></div>';
   }
   
-  // Unrealized gains/losses (holding)
-  html += '<div style="padding:14px;border-bottom:1px solid var(--border)">';
-  html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--yellow-neutral);margin-bottom:10px">' + t('taxReport_unrealized') + '</h3>';
-  if (holdingItems.length === 0) {
-    html += '<div style="color:var(--text-dim);font-size:11px">' + t('taxReport_allClosed') + '</div>';
-  } else {
-    html += '<table class="tracked-table"><thead><tr><th>TICKER</th><th>QTY</th><th>' + t('portfolio_buyPrice') + '</th><th>' + t('portfolio_currentSell') + '</th><th>UNREALIZED P&amp;L</th><th>BUY DATE</th></tr></thead><tbody>';
-    const unrealizedByCur = {};
-    holdingItems.forEach(p => {
-      const sym = getCurrencySymbol(p.ticker);
-      const currPrice = getPortfolioPrice(p.ticker);
-      const price = currPrice || p.buyPrice;
-      const profit = (price - p.buyPrice) * p.quantity;
-      unrealizedByCur[sym] = (unrealizedByCur[sym] || 0) + profit;
-      html += '<tr><td class="tkr">' + p.ticker + '</td><td>' + p.quantity + '</td><td>' + sym + p.buyPrice.toFixed(2) + '</td><td>' + (currPrice ? sym + currPrice.toFixed(2) : '<span style="color:var(--text-dim)">—</span>') + '</td><td class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + sym + profit.toFixed(2) + '</td><td style="color:var(--text-dim)">' + (p.buyDate || '—') + '</td></tr>';
-    });
-    Object.entries(unrealizedByCur).forEach(([sym, total]) => {
-      html += '<tr><td style="font-weight:700">' + t('portfolio_totalUnrealized') + ' (' + sym + ')</td><td></td><td></td><td></td><td class="' + (total >= 0 ? 'pnl-up' : 'pnl-dn') + '" style="font-weight:700">' + (total >= 0 ? '+' : '') + sym + total.toFixed(2) + '</td><td></td></tr>';
-    });
-    html += '</tbody></table></div>';
-  }
   
   // Tax estimate — per-currency breakdown + grand total in BRL
   const taxRate = parseFloat(localStorage.getItem('jerry_tax_rate') || '30');
@@ -2664,22 +2536,6 @@ const LANGS = {
 
     // Auth
     auth_signUp: 'SIGN UP', auth_cancel: 'CANCEL',
-    auth_forgotPassword: 'FORGOT PASSWORD',
-    auth_forgotLink: 'Forgot password?',
-    auth_enterEmail: 'Enter your email and we\'ll send a reset link.',
-    auth_sendReset: 'SEND RESET LINK',
-    auth_resettingSend: 'SENDING...',
-    auth_backToSignIn: '← BACK TO SIGN IN',
-    auth_checkEmail: 'If that email is registered, a reset link has been sent. Check your inbox (and spam folder).',
-    auth_resetPassword: '🔑 SET NEW PASSWORD',
-    auth_newPassword: 'New password (min 6 chars)',
-    auth_confirmPassword: 'Confirm new password',
-    auth_setPassword: 'SET PASSWORD',
-    auth_resettingSet: 'UPDATING...',
-    auth_resetSuccess: '✅ Password updated! Signing you in...',
-    auth_tokenExpired: 'This reset link is invalid or has expired. Please request a new one.',
-    auth_passwordTooShort: 'Password must be at least 6 characters.',
-    auth_passwordMismatch: 'Passwords do not match.',
     auth_createAccount: 'CREATE ACCOUNT',
     auth_emailPlaceholder: 'Email',
     auth_passwordPlaceholder: 'Password (min 6 chars)',
@@ -2739,6 +2595,12 @@ const LANGS = {
     // Calendar
     calendar_noEvents: 'No upcoming events.',
     calendar_loadError: 'Could not load calendar.',
+    cal_title: '📅 ECONOMIC CALENDAR',
+    cal_newsTitle: '📰 MARKET NEWS',
+    cal_noNews: 'Run a scan to see market news.',
+    cal_tickersUp: 'Likely up:',
+    cal_tickersDown: 'Likely down:',
+    cal_sources: 'Sources:',
 
     // Correlation
     correlation_scanFirst: 'Scan at least 2 tickers to show correlation.',
@@ -2820,9 +2682,6 @@ const LANGS = {
     edu_bollingerBody: '<strong>Middle band:</strong> 20-day SMA<br><strong>Upper band:</strong> Middle + 2 standard deviations<br><strong>Lower band:</strong> Middle - 2 standard deviations<br><br><strong>Reading Bollinger Bands:</strong><br>• Price touching <strong>upper band</strong> = overextended (possible pullback)<br>• Price touching <strong>lower band</strong> = oversold (possible bounce)<br>• <strong>Squeeze:</strong> bands narrowing = low volatility about to explode<br>• <strong>Walk:</strong> price walking up the upper band = strong uptrend<br><br><strong>How MOMENTUM uses it:</strong><br>• Price at upper band = bearish signal (extended)<br>• Price at lower band = bullish signal (oversold)<br>• Used as secondary confirmation, not scored',
     edu_patternsTitle: 'Chart Patterns - Technical Formations',
     edu_patternsBody: 'Each pattern provides a directional <strong>bias</strong> that confirms or contradicts the signal engine.<br><br><strong>Using Patterns:</strong><br>• BUY signal + bullish pattern = <strong>strong conviction</strong><br>• BUY signal + bearish pattern = <strong>conflicting - skip</strong><br>• NEUTRAL signal + bullish pattern = <strong>watch for entry</strong><br><br><strong>Patterns are detected automatically on your charts.</strong>',
-    edu_darfTitle: 'DARF — Brazilian Income Tax (B3)',
-    edu_darfSubtitle: 'How to calculate, file, and manage your B3 tax obligation inside Momentum.',
-    edu_darfBody: '<strong>What is DARF?</strong><br>DARF (Documento de Arrecadação de Receitas Federais) is the Brazilian federal tax on realized capital gains from variable income — B3 stocks, ETFs, and BDRs. It is filed and paid monthly via <em>Sicalc</em> at the Receita Federal.<br><br><strong>Tax Rates:</strong><br>• <strong>📈 Swing Trade — 15%</strong> on net gains. If gross sales for the month ≤ R$20,000, the gain is <strong>exempt</strong>.<br>• <strong>⚡ Day Trade — 20%</strong> on net gains. No exemption — always taxable.<br>• <strong>Dedo-duro:</strong> a small advance withheld by your broker (0.005% of gross for swing / 1% of net gain for daytrade). Momentum deducts this automatically from the DARF due.<br>• <strong>Loss carryforward:</strong> losses in one month reduce taxable gains in future months. Momentum tracks swing and daytrade buckets separately.<br><br><strong>How to use in Momentum:</strong><br>① Add a B3 ticker in <strong>Portfolio</strong> — tickers must end in <strong>.SA</strong> (e.g. PETR4.SA, VALE3.SA)<br>② Choose <strong>Trade Type</strong>: 📈 Swing or ⚡ Day Trade before saving<br>③ When you sell, click <strong>Sell</strong> on the position and enter the sell price<br>④ Go to <strong>Portfolio → Tax Report</strong> — the DARF panel appears automatically for BRL positions<br>⑤ If you had losses in previous months, enter the accumulated value in the <strong>Accrued Loss</strong> fields and click 💾 Save Losses<br><br><strong>Example — Swing Trade (exempt):</strong><div style="background:rgba(0,0,0,0.3);border-radius:6px;padding:10px 12px;margin-top:6px;font-family:var(--font-mono);font-size:11px;line-height:2">Bought 200 × PETR4.SA @ R$32.00 → cost R$6,400<br>Sold 200 × PETR4.SA @ R$38.50 → gross sales <strong>R$7,700</strong><br>Gross sales ≤ R$20k → <strong style="color:#4caf50">EXEMPT · DARF = R$0.00</strong></div><br><strong>Example — Swing Trade (taxable):</strong><div style="background:rgba(0,0,0,0.3);border-radius:6px;padding:10px 12px;margin-top:6px;font-family:var(--font-mono);font-size:11px;line-height:2">Bought 500 × VALE3.SA @ R$60.00 → cost R$30,000<br>Sold 500 × VALE3.SA @ R$64.00 → gross sales <strong>R$32,000</strong><br>Net gain R$2,000 · Tax 15% = R$300.00<br>Dedo-duro 0.005% × R$32,000 = R$1.60<br><strong style="color:#e8a846">Net DARF due = R$298.40 · Code 6015</strong></div><br><strong>Example — Day Trade (always taxable):</strong><div style="background:rgba(0,0,0,0.3);border-radius:6px;padding:10px 12px;margin-top:6px;font-family:var(--font-mono);font-size:11px;line-height:2">Bought + sold ITUB4.SA same day → net gain <strong>R$1,400</strong><br>Tax 20% = R$280.00<br>Dedo-duro 1% × R$1,400 = R$14.00<br><strong style="color:#e8a846">Net DARF due = R$266.00 · Code 6015</strong></div>',
 
     // Footer
     footer_version: 'MOMENTUM · v5.0 · live from market data',
@@ -2854,22 +2713,6 @@ const LANGS = {
 
     // Auth
     auth_signUp: 'CADASTRAR', auth_cancel: 'CANCELAR',
-    auth_forgotPassword: 'ESQUECI A SENHA',
-    auth_forgotLink: 'Esqueceu a senha?',
-    auth_enterEmail: 'Digite seu e-mail e enviaremos um link de redefinição.',
-    auth_sendReset: 'ENVIAR LINK',
-    auth_resettingSend: 'ENVIANDO...',
-    auth_backToSignIn: '← VOLTAR AO ACESSO',
-    auth_checkEmail: 'Se esse e-mail estiver cadastrado, um link foi enviado. Verifique sua caixa de entrada (e spam).',
-    auth_resetPassword: '🔑 DEFINIR NOVA SENHA',
-    auth_newPassword: 'Nova senha (mín. 6 caracteres)',
-    auth_confirmPassword: 'Confirmar nova senha',
-    auth_setPassword: 'SALVAR SENHA',
-    auth_resettingSet: 'SALVANDO...',
-    auth_resetSuccess: '✅ Senha atualizada! Entrando...',
-    auth_tokenExpired: 'Este link é inválido ou expirou. Solicite um novo.',
-    auth_passwordTooShort: 'A senha deve ter pelo menos 6 caracteres.',
-    auth_passwordMismatch: 'As senhas não coincidem.',
     auth_createAccount: 'CRIAR CONTA',
     auth_emailPlaceholder: 'E-mail',
     auth_passwordPlaceholder: 'Senha (mín. 6 caracteres)',
@@ -2929,6 +2772,12 @@ const LANGS = {
     // Calendar
     calendar_noEvents: 'Nenhum evento próximo.',
     calendar_loadError: 'Não foi possível carregar o calendário.',
+    cal_title: '📅 CALENDÁRIO ECONÔMICO',
+    cal_newsTitle: '📰 NOTÍCIAS DO MERCADO',
+    cal_noNews: 'Execute um scan para ver notícias do mercado.',
+    cal_tickersUp: 'Provável alta:',
+    cal_tickersDown: 'Provável queda:',
+    cal_sources: 'Fontes:',
 
     // Correlation
     correlation_scanFirst: 'Faça a varredura de pelo menos 2 ativos para mostrar correlação.',
@@ -3010,9 +2859,6 @@ const LANGS = {
     edu_bollingerBody: '<strong>Banda do meio:</strong> SMA de 20 dias<br><strong>Banda superior:</strong> Meio + 2 desvios padrão<br><strong>Banda inferior:</strong> Meio - 2 desvios padrão<br><br><strong>Lendo as Bandas de Bollinger:</strong><br>• Preço tocando a <strong>banda superior</strong> = sobreextendido (possível recuo)<br>• Preço tocando a <strong>banda inferior</strong> = sobrevendido (possível recuperação)<br>• <strong>Contração:</strong> bandas estreitando = baixa volatilidade prestes a explodir<br>• <strong>Caminhada:</strong> preço andando pela banda superior = tendência de alta forte<br><br><strong>Como o MOMENTUM utiliza:</strong><br>• Preço na banda superior = sinal baixista (estendido)<br>• Preço na banda inferior = sinal altista (sobrevendido)<br>• Usado como confirmação secundária, não pontuado',
     edu_patternsTitle: 'Padrões Gráficos - Formações Técnicas',
     edu_patternsBody: 'Cada padrão fornece um <strong>viés</strong> direcional que confirma ou contradiz o motor de sinais.<br><br><strong>Usando Padrões:</strong><br>• Sinal de COMPRA + padrão altista = <strong>forte convicção</strong><br>• Sinal de COMPRA + padrão baixista = <strong>conflitante - evitar</strong><br>• Sinal NEUTRO + padrão altista = <strong>aguardar entrada</strong><br><br><strong>Os padrões são detectados automaticamente nos seus gráficos.</strong>',
-    edu_darfTitle: 'DARF — Imposto de Renda (Renda Variável B3)',
-    edu_darfSubtitle: 'Como calcular, recolher e gerenciar seu IR de B3 dentro do Momentum.',
-    edu_darfBody: '<strong>O que é o DARF?</strong><br>O DARF (Documento de Arrecadação de Receitas Federais) é o recolhimento federal sobre ganhos de capital em renda variável — ações, ETFs e BDRs da B3. É pago mensalmente via <em>Sicalc</em> na Receita Federal.<br><br><strong>Alíquotas:</strong><br>• <strong>📈 Swing Trade — 15%</strong> sobre o lucro líquido. Se as vendas brutas do mês forem ≤ R$20.000, o ganho é <strong>isento</strong>.<br>• <strong>⚡ Day Trade — 20%</strong> sobre o lucro líquido. Sem isenção — sempre tributável.<br>• <strong>Dedo-duro:</strong> retenção antecipada feita pela corretora (0,005% do bruto no swing / 1% do lucro no daytrade). O Momentum desconta automaticamente do DARF a pagar.<br>• <strong>Prejuízo acumulado:</strong> perdas de meses anteriores reduzem os ganhos tributáveis futuros. O Momentum controla os buckets de swing e daytrade separadamente.<br><br><strong>Como usar no Momentum:</strong><br>① Adicione um ticker B3 no <strong>Portfólio</strong> — use o sufixo <strong>.SA</strong> (ex: PETR4.SA, VALE3.SA)<br>② Escolha o <strong>Tipo de Operação</strong>: 📈 Swing ou ⚡ Day Trade antes de salvar<br>③ Ao vender, clique em <strong>Vender</strong> na posição e informe o preço de venda<br>④ Acesse <strong>Portfólio → Relatório Fiscal</strong> — o painel DARF aparece automaticamente para posições em BRL<br>⑤ Se teve prejuízo em meses anteriores, informe o valor acumulado nos campos <strong>Prejuízo Acumulado</strong> e clique em 💾 Salvar Prejuízos<br><br><strong>Exemplo — Swing Trade (isento):</strong><div style="background:rgba(0,0,0,0.3);border-radius:6px;padding:10px 12px;margin-top:6px;font-family:var(--font-mono);font-size:11px;line-height:2">Compra: 200 × PETR4.SA @ R$32,00 → custo R$6.400<br>Venda: 200 × PETR4.SA @ R$38,50 → vendas brutas <strong>R$7.700</strong><br>Vendas brutas ≤ R$20k → <strong style="color:#4caf50">ISENTO · DARF = R$0,00</strong></div><br><strong>Exemplo — Swing Trade (tributável):</strong><div style="background:rgba(0,0,0,0.3);border-radius:6px;padding:10px 12px;margin-top:6px;font-family:var(--font-mono);font-size:11px;line-height:2">Compra: 500 × VALE3.SA @ R$60,00 → custo R$30.000<br>Venda: 500 × VALE3.SA @ R$64,00 → vendas brutas <strong>R$32.000</strong><br>Lucro R$2.000 · IR 15% = R$300,00<br>Dedo-duro 0,005% × R$32.000 = R$1,60<br><strong style="color:#e8a846">DARF líquido = R$298,40 · Código 6015</strong></div><br><strong>Exemplo — Day Trade (sempre tributável):</strong><div style="background:rgba(0,0,0,0.3);border-radius:6px;padding:10px 12px;margin-top:6px;font-family:var(--font-mono);font-size:11px;line-height:2">Compra + venda ITUB4.SA no mesmo dia → lucro líquido <strong>R$1.400</strong><br>IR 20% = R$280,00<br>Dedo-duro 1% × R$1.400 = R$14,00<br><strong style="color:#e8a846">DARF líquido = R$266,00 · Código 6015</strong></div>',
 
     // Footer
     footer_version: 'MOMENTUM · v5.0 · dados ao vivo do mercado',
@@ -3166,6 +3012,10 @@ function applyLang() {
     const n = cnt ? cnt.textContent : '0';
     trackedTabBtn.innerHTML = '📋 ' + t('tracked') + ' (<span id="trackedCount">' + n + '</span>)';
   }
+
+  // Calendar + news panel titles
+  set('calTitle', t('cal_title'));
+  set('newsSentimentTitle', t('cal_newsTitle'));
 
   // Status bar defaults
   const scanStatus = document.getElementById('scanStatus');
@@ -3650,11 +3500,8 @@ function renderEdu() {
     { id:'patterns', icon:'📐', name:'Patterns', color:'#4caf50',
       title:t('edu_patternsTitle'),
       subtitle:'20 common patterns detected from swing highs and lows.',
-      body:t('edu_patternsBody') },
-    { id:'darf', icon:'🇧🇷', name:'DARF', color:'#e8a846',
-      title:t('edu_darfTitle'),
-      subtitle:t('edu_darfSubtitle'),
-      body:t('edu_darfBody') },
+      body:t('edu_patternsBody'),
+      svg:'<rect x="2" y="8" width="6" height="46" fill="#4caf50" opacity="0.6" rx="1"/><rect x="12" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="22" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="32" y="22" width="6" height="32" fill="#e53935" rx="1"/><rect x="42" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="52" y="26" width="6" height="28" fill="#e53935" opacity="0.5" rx="1"/><rect x="62" y="8" width="6" height="46" fill="#4caf50" rx="1"/><rect x="72" y="18" width="6" height="36" fill="#4caf50" rx="1"/><rect x="82" y="4" width="6" height="50" fill="#4caf50" rx="1"/><rect x="92" y="20" width="6" height="34" fill="#e53935" rx="1"/><rect x="102" y="6" width="6" height="48" fill="#4caf50" rx="1"/><rect x="112" y="14" width="6" height="40" fill="#4caf50" rx="1"/><rect x="122" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="132" y="10" width="6" height="44" fill="#4caf50" rx="1"/><rect x="142" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="152" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="162" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="172" y="2" width="6" height="52" fill="#4caf50" rx="1"/><rect x="182" y="2" width="6" height="52" fill="#4caf50" rx="1"/>' },
   ];
 
   const current = topics.find(t => t.id === _eduTopic) || topics[0];
@@ -3671,10 +3518,18 @@ function renderEdu() {
   html += '</div>';
   
   // Content
-  html += `<div style="padding:16px">
-      <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:${current.color}">${current.icon} ${current.title}</div>
-      <div style="font-size:11px;color:var(--text-dim);margin-top:2px">${current.subtitle}</div>
-      <div style="margin-top:10px;font-size:12px;color:var(--text-secondary);line-height:1.8">${current.body}</div>
+  html += `<div style="padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+      <div style="flex-shrink:0;width:220px;height:68px">
+        <svg viewBox="0 0 200 62" style="width:220px;height:68px;border-radius:6px;background:#0d0906;border:1px solid var(--border)">
+          <line x1="0" y1="31" x2="200" y2="31" stroke="#2a2018" stroke-width="1.5"/>
+          ${current.svg || ''}
+        </svg>
+      </div>
+      <div style="flex:1;min-width:250px">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:${current.color}">${current.icon} ${current.title}</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:2px">${current.subtitle}</div>
+        <div style="margin-top:10px;font-size:12px;color:var(--text-secondary);line-height:1.8">${current.body}</div>
+      </div>
     </div>`;
   
   // If patterns tab, show pattern grid
@@ -3810,8 +3665,7 @@ async function init() {
   const fs = parseFloat(localStorage.getItem('jerry_fontsize') || '1');
   document.documentElement.style.setProperty('--font-size', fs);
   document.body.style.zoom = fs;
-  loadTrackedPicks(); loadPortfolio(); loadCalendar(); applyLang(); renderFxBar(); checkResetHash();
-  window.addEventListener('hashchange', checkResetHash);
+  loadTrackedPicks(); loadPortfolio(); loadCalendar(); applyLang(); renderFxBar();
   
   // Background: auth check, universe data, then scan
   // Phase 1: Auth immediately (non-blocking)

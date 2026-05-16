@@ -1,5 +1,4 @@
 const http = require('http');
-const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -7,7 +6,7 @@ const crypto = require('crypto');
 // ─── LOAD ENV ───────────────────────────────────────────────────────────
 function loadEnv() {
   const envPath = path.join(__dirname, '.env');
-  const env = { PORT: '8080', HOST: '0.0.0.0', JWT_SECRET: '', APP_URL: 'http://localhost:8080', NODE_ENV: 'development', RESEND_API_KEY: '', RESEND_FROM_EMAIL: '' };
+  const env = { PORT: '8080', HOST: '0.0.0.0', JWT_SECRET: '', APP_URL: 'http://localhost:8080', NODE_ENV: 'development' };
   try {
     const lines = fs.readFileSync(envPath, 'utf8').split('\n');
     for (const line of lines) {
@@ -74,33 +73,6 @@ function verifyPassword(pw, stored) {
 }
 function findUser(email) { return users.find(u => u.email.toLowerCase() === email.toLowerCase()); }
 function nextId() { return users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1; }
-
-function hashToken(token) {
-  return crypto.createHash('sha256').update(token).digest('hex');
-}
-
-async function sendEmail({ to, subject, html }) {
-  const apiKey = ENV.RESEND_API_KEY;
-  const from = ENV.RESEND_FROM_EMAIL || 'Momentum <onboarding@resend.dev>';
-  if (!apiKey) {
-    console.log(`[EMAIL] No RESEND_API_KEY — reset link for dev:\n  To: ${to}\n  Subject: ${subject}`);
-    return false;
-  }
-  return new Promise(resolve => {
-    const payload = JSON.stringify({ from, to: [to], subject, html });
-    const req = https.request({
-      hostname: 'api.resend.com', path: '/emails', method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload),
-      },
-    }, r => { r.on('data', () => {}); r.on('end', () => resolve(r.statusCode < 300)); });
-    req.on('error', e => { console.error('[EMAIL] error:', e.message); resolve(false); });
-    req.write(payload);
-    req.end();
-  });
-}
 
 // ─── SUBSCRIPTION TIERS ─────────────────────────────────────────────────
 const TIERS = {
@@ -380,23 +352,191 @@ async function yahooNews(ticker) {
 }
 
 // ─── ECONOMIC CALENDAR ──────────────────────────────────────────────────
-function generateCalendar() {
-  const now = new Date(), y = now.getFullYear(), m = now.getMonth();
-  const events = [
-    { date: nextWeekday(now, 0), title: '🛢️ EIA Crude Oil Inventories', impact: 'medium' },
-    { date: nextWeekday(now, 1), title: '📊 Jobless Claims', impact: 'high' },
-    { date: nextWeekday(now, 2), title: '🏠 Existing Home Sales', impact: 'medium' },
-    { date: nextWeekday(now, 3), title: '📈 S&P Flash Manufacturing PMI', impact: 'high' },
-    { date: nextWeekday(now, 4), title: '🔨 Durable Goods Orders', impact: 'high' },
-  ];
-  events.push({ date: nthWeekday(y, m, 2, 3), title: '🏛️ FOMC Minutes Release', impact: 'high' });
-  events.push({ date: nthWeekday(y, m, 3, 4), title: '📊 GDP (Second Estimate)', impact: 'high' });
-  events.push({ date: lastDay(y, m + 1), title: '📊 PCE Price Index (Core)', impact: 'high' });
-  return events.sort((a, b) => new Date(a.date) - new Date(b.date));
-}
 function nextWeekday(from, offset) { const d = new Date(from); d.setDate(d.getDate() + offset); return d.toISOString().slice(0, 10); }
 function nthWeekday(year, month, n, dow) { let count = 0; for (let day = 1; day <= 31; day++) { const d = new Date(year, month, day); if (d.getMonth() !== month) break; if (d.getDay() === dow) { count++; if (count === n) return d.toISOString().slice(0, 10); } } return ''; }
 function lastDay(year, month) { const d = new Date(year, month, 0); return d.toISOString().slice(0, 10); }
+function nextMonday(from) { const d = new Date(from); const day = d.getDay(); const diff = day === 1 ? 7 : (8 - day) % 7 || 7; d.setDate(d.getDate() + diff); return d.toISOString().slice(0, 10); }
+function lastWeekdayOfMonth(year, month) { const d = new Date(year, month + 1, 0); while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); }
+function addDays(dateStr, n) { const d = new Date(dateStr); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+
+function generateCalendar() {
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() + 60);
+  const todayStr = now.toISOString().slice(0, 10);
+
+  const allEvents = [];
+
+  // ── US events ──────────────────────────────────────────────────────────
+  allEvents.push({
+    date: nextWeekday(now, 0),
+    title: '🛢️ EIA Crude Oil Inventories',
+    title_pt: '🛢️ Estoques de Petróleo EIA',
+    impact: 'medium', market: 'us',
+    note: 'Rising inventories bearish for oil → watch PETR4',
+    note_pt: 'Estoques em alta são baixistas para petróleo → observar PETR4',
+    tickers_up: ['PETR4.SA', 'XOM', 'CVX'], tickers_down: [],
+    links: [{ label: 'EIA', url: 'https://www.eia.gov/petroleum/supply/weekly/' }],
+  });
+  allEvents.push({
+    date: nextWeekday(now, 1),
+    title: '📊 Jobless Claims',
+    title_pt: '📊 Pedidos de Seguro-Desemprego',
+    impact: 'high', market: 'us',
+    note: 'Lower claims = strong labor market, broadly bullish',
+    note_pt: 'Menos pedidos = mercado de trabalho forte, amplamente altista',
+    tickers_up: ['SPY', 'VALE3.SA'], tickers_down: [],
+    links: [{ label: 'BLS', url: 'https://www.bls.gov/news.release/jobsit.nr0.htm' }],
+  });
+  allEvents.push({
+    date: nextWeekday(now, 2),
+    title: '🏠 Existing Home Sales',
+    title_pt: '🏠 Vendas de Imóveis Usados (EUA)',
+    impact: 'medium', market: 'us',
+    note: 'Housing data affects construction and mortgage rates',
+    note_pt: 'Dados de habitação afetam construção e taxas de hipotecas',
+    tickers_up: [], tickers_down: [],
+    links: [{ label: 'NAR', url: 'https://www.nar.realtor/research-and-statistics' }],
+  });
+  allEvents.push({
+    date: nextWeekday(now, 3),
+    title: '📈 S&P Flash Manufacturing PMI',
+    title_pt: '📈 PMI Industrial S&P Flash',
+    impact: 'high', market: 'us',
+    note: 'PMI > 50 signals expansion — bullish for equities and commodities',
+    note_pt: 'PMI > 50 sinaliza expansão — altista para ações e commodities',
+    tickers_up: ['SPY', 'VALE3.SA'], tickers_down: [],
+    links: [{ label: 'S&P Global', url: 'https://www.spglobal.com/marketintelligence/en/mi/research-analysis/pmi.html' }],
+  });
+  allEvents.push({
+    date: nextWeekday(now, 4),
+    title: '🔨 Durable Goods Orders',
+    title_pt: '🔨 Pedidos de Bens Duráveis (EUA)',
+    impact: 'high', market: 'us',
+    note: 'Strong orders signal industrial demand',
+    note_pt: 'Pedidos fortes sinalizam demanda industrial',
+    tickers_up: ['BA', 'CAT'], tickers_down: [],
+    links: [{ label: 'Census', url: 'https://www.census.gov/economic-indicators/' }],
+  });
+  allEvents.push({
+    date: nthWeekday(y, m, 2, 3),
+    title: '🏛️ FOMC Minutes Release',
+    title_pt: '🏛️ Ata do FOMC (Fed)',
+    impact: 'high', market: 'us',
+    note: 'Fed tone shapes global risk appetite — hawkish = USD up, BRL down',
+    note_pt: 'Tom do Fed molda apetite global — hawkish = USD sobe, BRL cai',
+    tickers_up: [], tickers_down: [],
+    links: [{ label: 'Fed', url: 'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm' }],
+  });
+  allEvents.push({
+    date: nthWeekday(y, m, 3, 4),
+    title: '📊 GDP (Second Estimate)',
+    title_pt: '📊 PIB EUA (Segunda Estimativa)',
+    impact: 'high', market: 'us',
+    note: 'US GDP miss may strengthen Fed dovish case — positive for equities',
+    note_pt: 'PIB abaixo pode fortalecer caso dovish do Fed — positivo para ações',
+    tickers_up: ['SPY'], tickers_down: [],
+    links: [{ label: 'BEA', url: 'https://www.bea.gov/news/schedule' }],
+  });
+  allEvents.push({
+    date: lastDay(y, m + 1),
+    title: '📊 PCE Price Index (Core)',
+    title_pt: '📊 Índice de Preços PCE (Núcleo)',
+    impact: 'high', market: 'us',
+    note: 'Core PCE is Fed\'s preferred inflation gauge — hot reading = rate concern',
+    note_pt: 'PCE é o indicador de inflação preferido do Fed — leitura quente = preocupação com juros',
+    tickers_up: [], tickers_down: [],
+    links: [{ label: 'BEA PCE', url: 'https://www.bea.gov/data/personal-consumption-expenditures-price-index' }],
+  });
+
+  // ── Brazilian events ───────────────────────────────────────────────────
+  // COPOM meeting dates 2026
+  const copomDates = [
+    '2026-01-29','2026-03-19','2026-05-07','2026-06-18',
+    '2026-07-30','2026-09-17','2026-11-05','2026-12-10',
+  ];
+  copomDates.forEach(date => {
+    allEvents.push({
+      date,
+      title: '🏦 COPOM Meeting (SELIC Rate)',
+      title_pt: '🏦 Reunião do COPOM (Taxa SELIC)',
+      impact: 'high', market: 'brasil',
+      note: 'SELIC rate decision — rate cut favors banks and retail; rate hike pressures equities',
+      note_pt: 'Decisão da taxa SELIC — corte favorece bancos e varejo; alta pressiona ações',
+      tickers_up: ['ITUB4.SA', 'BBDC4.SA', 'BBAS3.SA', 'LREN3.SA'],
+      tickers_down: ['MGLU3.SA', 'RENT3.SA'],
+      links: [
+        { label: 'BCB', url: 'https://www.bcb.gov.br/controleinflacao/copom' },
+        { label: 'InfoMoney', url: 'https://www.infomoney.com.br/mercados/' },
+      ],
+    });
+    // Ata do COPOM — 6 days after each meeting
+    allEvents.push({
+      date: addDays(date, 6),
+      title: '📋 COPOM Minutes (Ata)',
+      title_pt: '📋 Ata do COPOM',
+      impact: 'medium', market: 'brasil',
+      note: 'Meeting minutes may signal next rate direction — watch hawkish/dovish tone',
+      note_pt: 'Ata pode sinalizar próxima direção da taxa — atenção ao tom hawkish/dovish',
+      tickers_up: ['ITUB4.SA', 'BBDC4.SA'],
+      tickers_down: [],
+      links: [{ label: 'Atas BCB', url: 'https://www.bcb.gov.br/publicacoes/atascopom' }],
+    });
+  });
+
+  // IPCA — 9th of current month or next month if past
+  const ipcaDay = 9;
+  let ipcaDate = new Date(y, m, ipcaDay);
+  if (ipcaDate <= now) ipcaDate = new Date(y, m + 1, ipcaDay);
+  allEvents.push({
+    date: ipcaDate.toISOString().slice(0, 10),
+    title: '📊 IPCA — Brazil CPI Release',
+    title_pt: '📊 IPCA — Índice de Preços ao Consumidor',
+    impact: 'high', market: 'brasil',
+    note: 'Inflation above estimate pressures SELIC — negative for rate-sensitive stocks',
+    note_pt: 'Inflação acima do esperado pressiona SELIC — negativo para ações sensíveis a juros',
+    tickers_up: ['VALE3.SA', 'PETR4.SA'],
+    tickers_down: ['LREN3.SA', 'MGLU3.SA', 'ITUB4.SA'],
+    links: [
+      { label: 'IBGE', url: 'https://www.ibge.gov.br/explica/inflacao.php' },
+      { label: 'BCB Metas', url: 'https://www.bcb.gov.br/controleinflacao/historicotaxasinflacao' },
+    ],
+  });
+
+  // Balança Comercial — next Monday from today
+  allEvents.push({
+    date: nextMonday(now),
+    title: '⚖️ Brazil Trade Balance',
+    title_pt: '⚖️ Balança Comercial Brasileira',
+    impact: 'medium', market: 'brasil',
+    note: 'Trade surplus strengthens BRL — positive for importers; surplus driven by commodity exports',
+    note_pt: 'Superávit fortalece o BRL — positivo para importadores; superávit impulsionado por exportações de commodities',
+    tickers_up: ['VALE3.SA', 'PETR4.SA', 'SUZB3.SA'],
+    tickers_down: [],
+    links: [
+      { label: 'MDIC', url: 'https://balanca.economia.gov.br/balanca/' },
+      { label: 'B3 Data', url: 'https://www.b3.com.br/pt_br/market-data-e-indices/' },
+    ],
+  });
+
+  // PIB Brazil — last weekday of current month
+  allEvents.push({
+    date: lastWeekdayOfMonth(y, m),
+    title: '📈 Brazil GDP (PIB)',
+    title_pt: '📈 PIB Brasil (Produto Interno Bruto)',
+    impact: 'high', market: 'brasil',
+    note: 'GDP above estimate is broadly bullish; strong domestic data favors consumer and bank stocks',
+    note_pt: 'PIB acima do esperado é amplamente altista; dados domésticos fortes favorecem consumo e bancos',
+    tickers_up: ['ITUB4.SA', 'BBDC4.SA', 'LREN3.SA', 'WEGE3.SA'],
+    tickers_down: [],
+    links: [{ label: 'IBGE PIB', url: 'https://www.ibge.gov.br/explica/pib.php' }],
+  });
+
+  // Filter: only future events within 60 days, sort by date ascending
+  return allEvents
+    .filter(e => e.date >= todayStr && new Date(e.date) <= cutoff)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+}
 
 // ─── HTTP HELPERS ──────────────────────────────────────────────────────
 function sendJSON(res, code, data) {
@@ -489,50 +629,6 @@ async function handleRequest(req, res) {
       user.password = hashPassword(body.newPassword);
       saveUsers(users);
       return sendJSON(res, 200, { ok: true });
-    }
-
-    if (pathname === '/api/auth/forgot-password' && req.method === 'POST') {
-      if (!checkAuthRateLimit(clientIp)) return sendError(res, 429, 'Too many attempts. Please wait.');
-      const body = await readBody(req);
-      const { email } = body;
-      if (!email) return sendError(res, 400, 'Email required');
-      const user = findUser(email);
-      if (user) {
-        const token = crypto.randomBytes(32).toString('hex');
-        user.resetToken = hashToken(token);
-        user.resetTokenExpiry = Date.now() + 60 * 60 * 1000; // 1 hour
-        saveUsers(users);
-        const appUrl = (ENV.APP_URL || 'http://localhost:8080').replace(/\/$/, '');
-        const resetUrl = `${appUrl}/#reset=${token}`;
-        const html = `<!DOCTYPE html><html><body style="font-family:monospace;background:#1a1410;color:#e8d5b7;margin:0;padding:0">
-<div style="max-width:520px;margin:40px auto;background:#231b14;border:1px solid #3d2e1c;border-radius:10px;padding:32px">
-  <h1 style="color:#c85a17;font-size:20px;margin:0 0 4px">🔑 MOMENTUM</h1>
-  <p style="color:#7a6650;font-size:11px;margin:0 0 24px;text-transform:uppercase;letter-spacing:1px">Password Reset Request</p>
-  <p style="color:#b8a080;line-height:1.6;margin:0 0 20px">We received a request to reset the password for <strong style="color:#e8d5b7">${user.email}</strong>.</p>
-  <p style="margin:0 0 20px"><a href="${resetUrl}" style="background:#c85a17;color:#fff;padding:12px 28px;text-decoration:none;border-radius:5px;font-family:monospace;font-weight:700;font-size:13px;display:inline-block">RESET PASSWORD →</a></p>
-  <p style="color:#7a6650;font-size:11px;line-height:1.6;margin:0 0 16px">This link expires in <strong style="color:#b8a080">1 hour</strong>. If you didn't request this, you can safely ignore this email — your password won't change.</p>
-  <p style="color:#5a4428;font-size:10px;border-top:1px solid #3d2e1c;padding-top:12px;margin:0">Or copy: ${resetUrl}</p>
-</div></body></html>`;
-        const sent = await sendEmail({ to: user.email, subject: 'Reset your Momentum password', html });
-        if (!sent) console.log(`[RESET LINK] ${resetUrl}`);
-      }
-      return sendJSON(res, 200, { ok: true });
-    }
-
-    if (pathname === '/api/auth/reset-password' && req.method === 'POST') {
-      const body = await readBody(req);
-      const { token, newPassword } = body;
-      if (!token || !newPassword || newPassword.length < 6) return sendError(res, 400, 'Token and new password (min 6 chars) required');
-      const tokenHash = hashToken(token);
-      const user = users.find(u => u.resetToken === tokenHash);
-      if (!user || !user.resetTokenExpiry || Date.now() > user.resetTokenExpiry) {
-        return sendError(res, 400, 'Reset link is invalid or has expired. Please request a new one.');
-      }
-      user.password = hashPassword(newPassword);
-      delete user.resetToken;
-      delete user.resetTokenExpiry;
-      saveUsers(users);
-      return sendJSON(res, 200, { token: signToken(user), user: { id: user.id, email: user.email, tier: user.tier } });
     }
 
     // ─── GDPR / ACCOUNT ─────────────────────────────────────────
