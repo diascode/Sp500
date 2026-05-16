@@ -1395,12 +1395,12 @@ function renderPortfolioView() {
   // Portfolio table
   html += '<div class="card" style="padding:0;overflow-x:auto;margin-bottom:14px">';
   html += '<table class="tracked-table"><thead><tr>';
-  html += '<th>#</th><th>TICKER</th><th>QTY</th><th>BUY $</th><th>CURRENT/SELL $</th><th>' + t('portfolio_costBasis') + '</th><th>' + t('portfolio_valueNow') + '</th><th>' + t('portfolio_pnlPct') + '</th><th>' + t('portfolio_pnlDollar') + '</th><th>STATUS</th><th>' + t('portfolio_monthProfit') + '</th><th></th><th></th><th></th>';
+  html += '<th>#</th><th>TICKER</th><th>QTY</th><th>' + t('portfolio_buyPrice') + '</th><th>' + t('portfolio_currentSell') + '</th><th>' + t('portfolio_costBasis') + '</th><th>' + t('portfolio_valueNow') + '</th><th>' + t('portfolio_pnlPct') + '</th><th>' + t('portfolio_pnlDollar') + '</th><th>STATUS</th><th>' + t('portfolio_monthProfit') + '</th><th></th><th></th><th></th>';
   html += '</tr></thead><tbody>';
   
-  // Track totals for summary
-  let totalCost = 0, totalValue = 0, totalPnL = 0;
-  
+  // Track totals per currency symbol for summary
+  const byCurrency = {}; // { symbol: { cost, value, realized, unrealized } }
+
   state.portfolio.forEach((p, i) => {
     const currPrice = getPortfolioPrice(p.ticker);
     const hasPrice = currPrice !== null && !isNaN(currPrice);
@@ -1409,9 +1409,12 @@ function renderPortfolioView() {
     const valueNow = currentVal * p.quantity;
     const pnlDollar = valueNow - costBasis;
     const pnlPercent = costBasis > 0 ? ((valueNow - costBasis) / costBasis * 100) : 0;
-    totalCost += costBasis;
-    totalValue += valueNow;
-    totalPnL += pnlDollar;
+    const sym = getCurrencySymbol(p.ticker);
+    if (!byCurrency[sym]) byCurrency[sym] = { cost: 0, value: 0, realized: 0, unrealized: 0 };
+    byCurrency[sym].cost += costBasis;
+    byCurrency[sym].value += valueNow;
+    if (p.status === 'sold' && p.sellPrice) byCurrency[sym].realized += pnlDollar;
+    else byCurrency[sym].unrealized += pnlDollar;
     
     // Per-row profit: realized for sold, unrealized for holding
     const rowProfit = p.status === 'sold' && p.sellPrice ? ((p.sellPrice - p.buyPrice) * p.quantity) : ((hasPrice ? currPrice : p.buyPrice) - p.buyPrice) * p.quantity;
@@ -1442,23 +1445,26 @@ function renderPortfolioView() {
   
   html += '</tbody></table></div>';
   
-  // Summary
-  const totalPnlClass = totalPnL >= 0 ? 'pnl-up' : 'pnl-dn';
-  const realizedGain = state.portfolio.filter(p => p.status === 'sold' && p.sellPrice).reduce((sum, p) => sum + ((p.sellPrice - p.buyPrice) * p.quantity), 0);
-  const unrealizedGain = state.portfolio.filter(p => p.status === 'holding').reduce((sum, p) => {
-    const cp = getPortfolioPrice(p.ticker);
-    return sum + ((cp || p.buyPrice) - p.buyPrice) * p.quantity;
-  }, 0);
-  const rgClass = realizedGain >= 0 ? 'pnl-up' : 'pnl-dn';
-  const ugClass = unrealizedGain >= 0 ? 'pnl-up' : 'pnl-dn';
-  html += '<div style="display:flex;flex-wrap:wrap;gap:16px;font-family:var(--font-mono);font-size:11px;margin-bottom:14px;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px">';
-  // aggregate across mixed currencies — symbol intentionally left as $
-  html += '<div><span style="color:var(--text-dim)">' + t('portfolio_costBasis') + ':</span> <strong>$' + totalCost.toFixed(2) + '</strong></div>';
-  html += '<div><span style="color:var(--text-dim)">' + t('portfolio_valueNow') + ':</span> <strong>$' + totalValue.toFixed(2) + '</strong></div>';
-  html += '<div><span style="color:var(--text-dim)">Total P&amp;L:</span> <strong class="' + totalPnlClass + '">' + (totalPnL >= 0 ? '+' : '') + '$' + totalPnL.toFixed(2) + '</strong></div>';
-  html += '<div><span style="color:var(--text-dim)">' + t('portfolio_totalRealized') + ':</span> <strong class="' + rgClass + '">' + (realizedGain >= 0 ? '+' : '') + '$' + realizedGain.toFixed(2) + '</strong></div>';
-  html += '<div><span style="color:var(--text-dim)">' + t('portfolio_totalUnrealized') + ':</span> <strong class="' + ugClass + '">' + (unrealizedGain >= 0 ? '+' : '') + '$' + unrealizedGain.toFixed(2) + '</strong></div>';
-  html += '<div><span style="color:var(--text-dim)">Positions:</span> <strong>' + state.portfolio.length + '</strong> (' + state.portfolio.filter(p => p.status === 'holding').length + ' holding, ' + state.portfolio.filter(p => p.status === 'sold').length + ' sold)</div>';
+  // Summary — one block per currency, no cross-currency aggregation
+  const currencies = Object.keys(byCurrency);
+  html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">';
+  currencies.forEach(sym => {
+    const g = byCurrency[sym];
+    const totalPnl = g.realized + g.unrealized;
+    const pnlClass = totalPnl >= 0 ? 'pnl-up' : 'pnl-dn';
+    const rgClass = g.realized >= 0 ? 'pnl-up' : 'pnl-dn';
+    const ugClass = g.unrealized >= 0 ? 'pnl-up' : 'pnl-dn';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:16px;font-family:var(--font-mono);font-size:11px;padding:10px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;align-items:center">';
+    html += '<div style="color:var(--accent-amber);font-weight:700;min-width:28px">' + sym + '</div>';
+    html += '<div><span style="color:var(--text-dim)">' + t('portfolio_costBasis') + ':</span> <strong>' + sym + g.cost.toFixed(2) + '</strong></div>';
+    html += '<div><span style="color:var(--text-dim)">' + t('portfolio_valueNow') + ':</span> <strong>' + sym + g.value.toFixed(2) + '</strong></div>';
+    html += '<div><span style="color:var(--text-dim)">P&amp;L:</span> <strong class="' + pnlClass + '">' + (totalPnl >= 0 ? '+' : '') + sym + totalPnl.toFixed(2) + '</strong></div>';
+    html += '<div><span style="color:var(--text-dim)">' + t('portfolio_totalRealized') + ':</span> <strong class="' + rgClass + '">' + (g.realized >= 0 ? '+' : '') + sym + g.realized.toFixed(2) + '</strong></div>';
+    html += '<div><span style="color:var(--text-dim)">' + t('portfolio_totalUnrealized') + ':</span> <strong class="' + ugClass + '">' + (g.unrealized >= 0 ? '+' : '') + sym + g.unrealized.toFixed(2) + '</strong></div>';
+    html += '</div>';
+  });
+  html += '<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);padding:2px 4px">';
+  html += 'Positions: <strong style="color:var(--text-primary)">' + state.portfolio.length + '</strong> (' + state.portfolio.filter(p => p.status === 'holding').length + ' holding, ' + state.portfolio.filter(p => p.status === 'sold').length + ' sold)</div>';
   html += '</div>';
   
   // Monthly profit breakdown — realized from sold dates, unrealized shown separately
@@ -2310,6 +2316,7 @@ const LANGS = {
     portfolio_confirmSale: '✅ CONFIRM SALE',
     portfolio_back: '← BACK',
     status_scanFor: 'SCAN FOR',
+    portfolio_buyPrice: 'BUY PRICE', portfolio_currentSell: 'CURRENT/SELL',
     portfolio_costBasis: 'COST BASIS', portfolio_valueNow: 'VALUE NOW',
     portfolio_pnlPct: 'P&L %', portfolio_pnlDollar: 'P&L $',
     portfolio_monthProfit: 'MONTH PROFIT',
@@ -2456,6 +2463,7 @@ const LANGS = {
     portfolio_confirmSale: '✅ CONFIRMAR VENDA',
     portfolio_back: '← VOLTAR',
     status_scanFor: 'VARRER',
+    portfolio_buyPrice: 'PREÇO COMPRA', portfolio_currentSell: 'ATUAL/VENDA',
     portfolio_costBasis: 'CUSTO BASE', portfolio_valueNow: 'VALOR ATUAL',
     portfolio_pnlPct: 'L/P %', portfolio_pnlDollar: 'L/P $',
     portfolio_monthProfit: 'LUCRO MENSAL',
