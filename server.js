@@ -643,14 +643,15 @@ async function handleRequest(req, res) {
       return sendJSON(res, 200, { stocks: limited, total: allStocks.length, visible: limited.length, tier: tier.name });
     }
 
-    const historyMatch = pathname.match(/^\/api\/history\/([A-Za-z0-9.]+)$/);
+    const historyMatch = pathname.match(/^\/api\/history\/([A-Za-z0-9.=%]+)$/);
     if (historyMatch) {
       const authUser = getAuthUser(req);
       if (!authUser) return sendError(res, 401, 'Sign in required to scan');
       const limit = checkScanLimit(authUser.email);
       if (!limit.allowed) return sendJSON(res, 429, { error: 'Scan limit reached for today', limit, tier: limit.tier });
       try {
-        const data = await yahooFetch(historyMatch[1]);
+        const ticker = decodeURIComponent(historyMatch[1]);
+        const data = await yahooFetch(ticker);
         return sendJSON(res, 200, data);
       } catch (err) { return sendError(res, 502, err.message); }
     }

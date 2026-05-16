@@ -159,6 +159,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
     <div class="brand-logo">MOMENTUM <span class="cursor">▌</span></div>
     <div class="brand-sub">// stock scanner · live market data · by jerry</div>
   </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
   <div class="header-controls">
     <div class="last-update">LAST SCAN<br><span id="updateTime">--:--:-- UTC</span></div>
     <button class="btn primary" id="refreshBtn" onclick="scanAll()">⟳ SCAN</button>
@@ -190,6 +191,8 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
         </div>
       </div>
     </div>
+  </div>
+  <div id="fxBar" style="display:none;align-items:center;gap:8px;font-family:var(--font-mono);font-size:10px;padding:3px 6px;background:rgba(0,0,0,0.15);border:1px solid var(--border);border-radius:5px"></div>
   </div>
 </header>
 
@@ -830,6 +833,7 @@ async function scanAll() {
   document.getElementById('updateTime').textContent = new Date().toISOString().replace('T',' ').slice(0,19)+' UTC';
   btn.innerHTML = '⟳ SCAN';
   btn.disabled = false;
+  autoFetchFxRates(false);
 }
 
 
@@ -1895,7 +1899,7 @@ function generateTaxReport() {
   html += '<span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">%</span>';
   html += '<button class="btn" onclick="saveTaxRate()" style="font-size:10px;padding:4px 10px">💾 SET</button>';
   if (foreignCodes.length > 0) {
-    html += '<button class="btn" onclick="refreshFxRates(' + JSON.stringify(foreignCodes) + ')" style="font-size:10px;padding:4px 10px;color:var(--accent-amber);border-color:var(--accent-amber)">🔄 ' + (missingRates.length > 0 ? 'Carregar Cotações' : 'Atualizar Cotações') + '</button>';
+    html += '<button class="btn" onclick="autoFetchFxRates(true)" style="font-size:10px;padding:4px 10px;color:var(--accent-amber);border-color:var(--accent-amber)">🔄 ' + (missingRates.length > 0 ? 'Carregar Cotações' : 'Atualizar Cotações') + '</button>';
   }
   html += '</div>';
 
@@ -2676,8 +2680,16 @@ async function fetchFxRate(code) {
   if (!ticker) return null;
   try {
     const data = await api('/api/history/' + encodeURIComponent(ticker));
-    if (Array.isArray(data) && data.length > 0) {
-      return data[data.length - 1].close || data[data.length - 1].c || null;
+    // Yahoo chart format: {chart:{result:[{meta:{regularMarketPrice},indicators:{quote:[{close:[]}]}}]}}
+    const result = data?.chart?.result?.[0];
+    if (result) {
+      const price = result.meta?.regularMarketPrice;
+      if (price && price > 0) return price;
+      const closes = result.indicators?.quote?.[0]?.close;
+      if (Array.isArray(closes) && closes.length > 0) {
+        const last = closes.filter(Boolean).pop();
+        if (last) return last;
+      }
     }
   } catch {}
   return null;
@@ -2686,13 +2698,46 @@ async function fetchFxRate(code) {
 async function refreshFxRates(codes) {
   const cache = loadFxCache();
   const now = Date.now();
-  const stale = codes.filter(c => c !== 'BRL' && (!cache[c] || cache[c].manual || (now - (cache[c].fetchedAt || 0)) > FX_CACHE_TTL));
+  const stale = codes.filter(c => c !== 'BRL' && (!cache[c] || (now - (cache[c].fetchedAt || 0)) > FX_CACHE_TTL));
   await Promise.all(stale.map(async code => {
     const rate = await fetchFxRate(code);
     if (rate && rate > 0) cache[code] = { rate, manual: false, fetchedAt: now };
   }));
   saveFxCache(cache);
-  generateTaxReport();
+  renderFxBar();
+  if (document.getElementById('taxMonthSelect')) generateTaxReport();
+}
+
+function renderFxBar() {
+  const bar = document.getElementById('fxBar');
+  if (!bar) return;
+  const cache = getFxRates();
+  const codes = Object.keys(cache).filter(c => c !== 'BRL');
+  if (codes.length === 0) { bar.style.display = 'none'; return; }
+  const codeToSym = { USD:'$', GBP:'£', EUR:'€', INR:'₹', MXN:'MX$', ZAR:'R' };
+  const parts = codes.map(code => {
+    const entry = cache[code];
+    const age = entry.manual ? ' ✎' : (entry.fetchedAt ? ' ⏱' + new Date(entry.fetchedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '');
+    const sym = codeToSym[code] || code;
+    return `<span style="color:var(--text-dim)">${sym}</span><span style="color:var(--accent-amber);font-weight:700">R$${entry.rate.toFixed(2)}</span><span style="font-size:8px;color:var(--text-dim)">${age}</span>`;
+  });
+  bar.style.display = 'flex';
+  bar.innerHTML = `<span style="color:var(--text-dim);margin-right:2px">💱</span>${parts.join('<span style="color:var(--border-light);padding:0 3px">·</span>')}<button class="btn" onclick="autoFetchFxRates(true)" style="font-size:8px;padding:1px 6px;margin-left:4px;color:var(--accent-amber);border-color:var(--accent-amber)">🔄</button>`;
+}
+
+async function autoFetchFxRates(forceRefresh) {
+  const portfolioCodes = [...new Set(
+    state.portfolio.map(p => getCurrencyCode(getCurrencySymbol(p.ticker)))
+  )].filter(c => c !== 'BRL');
+  const defaultCodes = ['USD', 'EUR'];
+  const codes = [...new Set([...portfolioCodes, ...defaultCodes])];
+  const cache = loadFxCache();
+  const now = Date.now();
+  const toFetch = forceRefresh
+    ? codes
+    : codes.filter(c => !cache[c] || (now - (cache[c].fetchedAt || 0)) > FX_CACHE_TTL);
+  if (toFetch.length > 0) await refreshFxRates(toFetch);
+  else renderFxBar();
 }
 
 function switchLang(l) { _lang = l; localStorage.setItem('jerry_lang', l); applyLang(); renderDashboard(); }
@@ -3381,7 +3426,7 @@ async function init() {
   const fs = parseFloat(localStorage.getItem('jerry_fontsize') || '1');
   document.documentElement.style.setProperty('--font-size', fs);
   document.body.style.zoom = fs;
-  loadTrackedPicks(); loadPortfolio(); loadCalendar(); applyLang();
+  loadTrackedPicks(); loadPortfolio(); loadCalendar(); applyLang(); renderFxBar();
   
   // Background: auth check, universe data, then scan
   // Phase 1: Auth immediately (non-blocking)
