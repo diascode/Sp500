@@ -266,7 +266,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
   <h2>⏎ PAPER TRADING SIMULATOR</h2>
   <p id="missionText"><strong>Educational tool.</strong> Technical analysis screen across <strong>🇺🇸 US · 🇪🇺 Europe · 🌍 Emerging Markets</strong>. Filters to high-scoring signals. Each scan re-fetches live market data — RSI, MACD, ADX, SMA crossovers, Bollinger, pattern detection. <strong>Paper trading only. Not financial advice.</strong></p>
   <div class="stats" id="marketStats">
-    <div><span id="lbl_universe">UNIVERSE</span>: <span id="universeCount">0</span> <span id="lbl_stocks">stocks</span></div>
+    <div><span id="universeCount">0</span> <span id="lbl_stocks">stocks</span></div>
     <div><span id="lbl_buySignals">BUY SIGNALS</span>: <span id="buyCount">0</span></div>
     <div><span id="lbl_hold">HOLD</span>: <span id="holdCount">0</span></div>
     <div><span id="lbl_sell">SELL</span>: <span id="sellCount">0</span></div>
@@ -1607,12 +1607,13 @@ function renderPortfolioView() {
   
   // Filter months based on selected range
   function filterMonths(months, range) {
+    if (range === 'all') return months;
+    if (!['3m','6m','12m'].includes(range)) return months.filter(m => m === range); // specific month
     const now = new Date();
     const cutoff = new Date(now);
     if (range === '3m') cutoff.setMonth(cutoff.getMonth() - 3);
     else if (range === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
     else if (range === '12m') cutoff.setMonth(cutoff.getMonth() - 12);
-    else return months; // 'all'
     return months.filter(m => {
       if (m === 'unknown') return true;
       const d = new Date(m + '-01');
@@ -1623,17 +1624,30 @@ function renderPortfolioView() {
   const realizedSymbols = Object.keys(realizedByMonth);
   const hasFilteredRealized = realizedSymbols.some(sym => filterMonths(Object.keys(realizedByMonth[sym]), _portfolioMonthFilter).length > 0);
 
+  // Collect all unique months across all symbols for the dropdown
+  const allMonthsSet = new Set();
+  Object.values(realizedByMonth).forEach(byMonth => Object.keys(byMonth).forEach(m => { if (m !== 'unknown') allMonthsSet.add(m); }));
+  const allMonthsSorted = Array.from(allMonthsSet).sort().reverse();
+
   const hasProfits = hasFilteredRealized;
   if (hasProfits) {
     html += '<div class="card" style="padding:14px;margin-bottom:14px">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
-    html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--accent-amber);text-transform:uppercase;letter-spacing:1px">📅 MONTHLY PROFIT / DEFICIT BREAKDOWN</h3>';
-    html += '<div style="display:flex;gap:4px;flex-wrap:wrap">';
+    html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--accent-amber);text-transform:uppercase;letter-spacing:1px">📅 ' + t('portfolio_monthlyBreakdown') + '</h3>';
+    html += '<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">';
     const ranges = [{v:'3m',l:'3M'},{v:'6m',l:'6M'},{v:'12m',l:'12M'},{v:'all',l:'ALL'}];
     ranges.forEach(r => {
       const active = _portfolioMonthFilter === r.v;
       html += '<button class="btn" onclick="filterPortfolioMonths(\'' + r.v + '\')" style="font-size:9px;padding:3px 8px;' + (active ? 'background:var(--accent-burnt);border-color:var(--accent-amber);color:#fff' : '') + '">' + r.l + '</button>';
     });
+    // Month dropdown
+    const specificActive = !['3m','6m','12m','all'].includes(_portfolioMonthFilter);
+    html += '<select onchange="filterPortfolioMonths(this.value)" style="background:var(--bg-term);border:1px solid ' + (specificActive ? 'var(--accent-amber)' : 'var(--border)') + ';color:' + (specificActive ? 'var(--accent-amber)' : 'var(--text-secondary)') + ';padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:9px">';
+    html += '<option value="all">' + t('portfolio_month') + '...</option>';
+    allMonthsSorted.forEach(m => {
+      html += '<option value="' + m + '"' + (_portfolioMonthFilter === m ? ' selected' : '') + '>' + m + '</option>';
+    });
+    html += '</select>';
     html += '<button class="btn" onclick="generateTaxReport()" style="font-size:10px;color:var(--accent-amber);border-color:var(--accent-amber)">' + t('taxReport_title') + '</button>';
     html += '</div></div>';
 
@@ -1644,7 +1658,7 @@ function renderPortfolioView() {
         const months = filterMonths(Object.keys(realizedByMonth[sym]).sort(), _portfolioMonthFilter);
         if (months.length === 0) return;
         html += '<div style="font-size:9px;color:var(--accent-amber);font-family:var(--font-mono);margin-bottom:3px">' + sym + '</div>';
-        html += '<table class="tracked-table" style="margin-bottom:10px"><thead><tr><th>MONTH</th><th>PROFIT / DEFICIT</th></tr></thead><tbody>';
+        html += '<table class="tracked-table" style="margin-bottom:10px"><thead><tr><th>' + t('portfolio_month') + '</th><th>' + t('portfolio_profitDeficit') + '</th></tr></thead><tbody>';
         let grand = 0;
         months.forEach(month => {
           const profit = realizedByMonth[sym][month];
@@ -2607,6 +2621,8 @@ const LANGS = {
     portfolio_costBasis: 'COST BASIS', portfolio_valueNow: 'VALUE NOW',
     portfolio_pnlPct: 'P&L %', portfolio_pnlDollar: 'P&L $',
     portfolio_monthProfit: 'MONTH PROFIT',
+    portfolio_monthlyBreakdown: 'MONTHLY PROFIT / DEFICIT BREAKDOWN',
+    portfolio_month: 'MONTH', portfolio_profitDeficit: 'PROFIT / DEFICIT',
     portfolio_totalRealized: 'TOTAL REALIZED',
     portfolio_totalUnrealized: 'TOTAL UNREALIZED',
     portfolio_freeTierLimit: 'Free tier: max 3 positions.',
@@ -2807,6 +2823,8 @@ const LANGS = {
     portfolio_costBasis: 'CUSTO BASE', portfolio_valueNow: 'VALOR ATUAL',
     portfolio_pnlPct: 'P&L %', portfolio_pnlDollar: 'P&L R$',
     portfolio_monthProfit: 'LUCRO DO MÊS',
+    portfolio_monthlyBreakdown: 'RESULTADO MENSAL POR ATIVO',
+    portfolio_month: 'MÊS', portfolio_profitDeficit: 'LUCRO / DÉFICIT',
     portfolio_totalRealized: 'TOTAL REALIZADO',
     portfolio_totalUnrealized: 'TOTAL NÃO REALIZADO',
     portfolio_freeTierLimit: 'Nível gratuito: máx 3 posições.',
@@ -3094,7 +3112,6 @@ function applyLang() {
   }
 
   // Stats bar labels
-  set('lbl_universe', t('lbl_universe'));
   set('lbl_stocks', t('lbl_stocks'));
   set('lbl_buySignals', t('lbl_buySignals'));
   set('lbl_hold', t('lbl_hold'));

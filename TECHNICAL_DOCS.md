@@ -1,6 +1,6 @@
 # MOMENTUM — Technical Documentation
 
-*Version 5.1 — May 2026*
+*Version 5.2 — May 2026*
 
 ---
 
@@ -49,7 +49,7 @@ MOMENTUM is a **monolithic, server-rendered single-page application** deliberate
 ┌─────────────────────────────────────────────────────┐
 │                     Browser                         │
 │                                                     │
-│  stock-dashboard.html  (Vanilla JS SPA ~3,400 lines)│
+│  stock-dashboard.html  (Vanilla JS SPA ~3,900 lines)│
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐            │
 │  │  Auth UI │ │ Scanner  │ │Portfolio │  ...        │
 │  └──────────┘ └──────────┘ └──────────┘            │
@@ -536,14 +536,15 @@ Grant or revoke admin tier.
 
 #### `GET /api/universes`
 
-Return metadata for all three markets, with tier-aware `visibleCount`.
+Return metadata for all four markets, with tier-aware `visibleCount`.
 
 **Response 200:**
 ```json
 [
-  { "id": "us", "name": "United States", "label": "🇺🇸 S&P 500", "count": 50, "visibleCount": 5 },
-  { "id": "europe", "name": "Europe", "label": "🇪🇺 STOXX 600", "count": 30, "visibleCount": 5 },
-  { "id": "emerging", "name": "Emerging Markets", "label": "🌍 Emerging Markets", "count": 44, "visibleCount": 5 }
+  { "id": "us",       "name": "United States",    "label": "🇺🇸 S&P 500",          "count": 50, "visibleCount": 5 },
+  { "id": "brasil",   "name": "Brasil B3",        "label": "🇧🇷 B3",               "count": 24, "visibleCount": 5 },
+  { "id": "europe",   "name": "Europe",           "label": "🇪🇺 STOXX 600",        "count": 30, "visibleCount": 5 },
+  { "id": "emerging", "name": "Emerging Markets", "label": "🌍 Emerging Markets",  "count": 44, "visibleCount": 5 }
 ]
 ```
 
@@ -583,6 +584,40 @@ Proxy to Yahoo Finance chart API. Returns 5-year daily OHLCV data for the given 
 | 401 | Not authenticated |
 | 429 | Daily scan limit reached |
 | 502 | Yahoo returned an error |
+
+**Response 200 — Example (abbreviated):**
+```json
+{
+  "chart": {
+    "result": [
+      {
+        "meta": {
+          "currency": "USD",
+          "symbol": "AAPL",
+          "exchangeName": "NMS",
+          "regularMarketPrice": 213.49,
+          "previousClose": 210.62
+        },
+        "timestamp": [1704067200, 1704153600, 1704240000],
+        "indicators": {
+          "quote": [
+            {
+              "open":  [185.59, 183.92, 184.35],
+              "high":  [186.74, 185.26, 185.88],
+              "low":   [183.43, 183.31, 183.50],
+              "close": [185.85, 184.37, 184.92],
+              "volume":[71879800, 52455900, 44694300]
+            }
+          ]
+        }
+      }
+    ],
+    "error": null
+  }
+}
+```
+
+The server passes the raw Yahoo Finance response directly. The frontend reads timestamps + indicators.quote[0] arrays to build the OHLCV candle array for indicator computation and charting.
 
 ---
 
@@ -681,8 +716,30 @@ Return a list of upcoming economic calendar events generated server-side (no ext
 **Response 200:**
 ```json
 [
-  { "date": "2026-05-12", "title": "📊 Jobless Claims", "impact": "high" },
-  { "date": "2026-05-13", "title": "🏠 Existing Home Sales", "impact": "medium" }
+  {
+    "date": "2026-05-21",
+    "title": "🛢️ EIA Crude Oil Inventories",
+    "title_pt": "🛢️ Estoques de Petróleo EIA",
+    "impact": "medium",
+    "market": "us",
+    "note": "Rising inventories bearish for oil → watch PETR4",
+    "note_pt": "Estoques em alta são baixistas para petróleo → observar PETR4",
+    "tickers_up": ["PETR4.SA", "XOM", "CVX"],
+    "tickers_down": [],
+    "links": [{ "label": "EIA", "url": "https://www.eia.gov/petroleum/supply/weekly/" }]
+  },
+  {
+    "date": "2026-05-22",
+    "title": "📊 US Jobless Claims",
+    "title_pt": "📊 Pedidos de Auxílio-Desemprego EUA",
+    "impact": "high",
+    "market": "us",
+    "note": "Weak claims → growth concern → defensive rotation",
+    "note_pt": "Pedidos fracos → preocupação com crescimento → rotação defensiva",
+    "tickers_up": [],
+    "tickers_down": ["SPY", "QQQ"],
+    "links": [{ "label": "DOL", "url": "https://www.dol.gov/ui/data.pdf" }]
+  }
 ]
 ```
 
@@ -701,6 +758,11 @@ let _currentMarket = 'us';     // 'us' | 'europe' | 'emerging'
 let _signalFilter = 'buy';     // 'buy' | 'neutral' | 'sell' | 'all'
 let _taxReportMonth = '';      // 'YYYY-MM' or '' for all time
 let _lastScanResults = null;   // raw scan data cache
+let _simPattern     = null;    // active pattern name filter (null = all)
+let _simDir         = 'all';   // 'all' | 'bull' | 'bear' | 'neutral'
+let _simExpanded    = null;    // ticker of expanded pattern-finder row
+let _simCandles     = [];      // candles for currently expanded row
+let _portfolioMonthFilter = 'all'; // '3m'|'6m'|'12m'|'all'|'YYYY-MM'
 ```
 
 **Persistent state (localStorage keys):**
@@ -715,6 +777,8 @@ let _lastScanResults = null;   // raw scan data cache
 | `jerry_portfolio` | JSON array | Portfolio positions |
 | `jerry_prices` | JSON object | Last known prices per ticker |
 | `jerry_tax_rate` | string | Tax rate for estimate (default: `'30'`) |
+| `darf_carry_swing` | number | Accumulated swing loss carryforward (R$) |
+| `darf_carry_daytrade` | number | Accumulated day-trade loss carryforward (R$) |
 | `momentum_consent` | `'1'` | Cookie/LGPD consent accepted flag |
 
 ### 6.2 i18n System
@@ -799,6 +863,7 @@ All views are rendered by injecting HTML strings into container elements. There 
 | `showUniverseView()` | `#dashboard` | Tab click |
 | `showEducationView()` | `#dashboard` | Tab click |
 | `showAdminView()` | `#dashboard` | Tab click (admin only) |
+| `renderPatternFinder()` | `#dashboard` | showSimulateView(), direction/pattern filter, expand row |
 | `updatePortfolioSidebar()` | `.side-card` | Any portfolio mutation |
 
 **Navigation pattern:**
@@ -812,6 +877,8 @@ function showPortfolioView() {
 ```
 
 Tabs do not use routing or URLs — they are purely in-memory view switches.
+
+**Stats bar:** The stats bar no longer shows the "UNIVERSE:" / "UNIVERSO:" label — only the count and "stocks"/"ativos" label are displayed.
 
 ### 6.4 Technical Analysis Engine
 
@@ -986,6 +1053,56 @@ Existing positions without `tradeType` are treated as `'swing'` at read time wit
 
 Both keys persist in localStorage alongside the portfolio. They are displayed (read-only) in the DARF summary panel and recalculated every time `computeDARF()` is called.
 
+**Monthly Profit / Deficit Breakdown**
+
+The breakdown card above the disclaimer shows realized P&L grouped by month. The filter bar offers four range presets (3M / 6M / 12M / ALL) plus a `<select>` dropdown populated with all individual months that have realized trades. Selecting a specific month overrides the range preset. The section title, table column headers (MONTH / PROFIT / DEFICIT), and badge labels are all wired to `t()` for EN/PT translation.
+
+---
+
+### 6.7 Pattern Finder (PATTERNS Tab)
+
+The Pattern Finder scans all stocks from `state.analyzed` against the 20 canonical chart patterns and renders a ranked, filterable result list.
+
+**State variables:**
+
+| Variable | Default | Description |
+|---|---|---|
+| `_simPattern` | `null` | Active pattern name filter; `null` = all patterns |
+| `_simDir` | `'all'` | Direction filter: `'all'` \| `'bull'` \| `'bear'` \| `'neutral'` |
+| `_simExpanded` | `null` | Ticker of the currently expanded row (one at a time) |
+| `_simCandles` | `[]` | Full candle history of the expanded stock (used by period buttons) |
+
+**PATTERNS array (20 entries):**
+
+Each entry has:
+```js
+{
+  name:    'Rounding Bottom',
+  dir:     'bull',           // 'bull' | 'bear' | 'neutral'
+  svg:     `<path .../>`,    // inline SVG for the pattern thumbnail
+  desc:    'Gradual U-shaped bottom...',
+  play:    'Buy above rounding top on uptrend confirmation.',
+  desc_pt: 'Fundo gradual em forma de U...',
+  play_pt: 'Comprar acima do topo arredondado...',
+}
+```
+
+**`scorePatternMatch(d, patDef)`** — scores a stock against one pattern (max 9 pts):
+- Direction alignment layer (0–4 pts): compares RSI, MACD, ADX, and SMA position against pattern `dir`.
+- Candle shape layer (0–5 pts): heuristic inspection of the last 30–90 candles (high/low/close arrays) for structural features matching the pattern (e.g. U-shape for Rounding Bottom, higher-lows for Ascending Triangle).
+
+**`findAllPatternMatches()`** — loops all markets in `state.analyzed`, applies `_simDir` and `_simPattern` filters, scores every stock against every matching pattern, keeps the best score per stock, and returns a score-descending array.
+
+**UI structure:**
+1. Direction buttons: ALL / ▲ BULLISH / ▼ BEARISH / ◈ NEUTRAL
+2. Pattern chips: one chip per pattern in the active direction (tap to narrow further)
+3. Result rows: SVG thumbnail · ticker · pattern name · signal badge · price · RSI/MACD/ADX · score bar (X/9) · expand arrow
+4. Expanded row: period button bar (1D/1M/3M/6M/1Y/5Y) + candlestick chart with SMAs, Bollinger Bands, and pattern overlay lines
+
+**`changeSimChartPeriod(ticker, period)`** — updates the active period button, slices `_simCandles` to the requested window, and redraws the chart via `drawChart()` with SMAs, Bollinger Bands, and `buildPatternOverlay()` lines.
+
+**`buildPatternOverlay(candles, patternName)`** — returns an array of `{x1,y1,x2,y2,color,dash,width,label}` line descriptors drawn on top of the candlestick chart to annotate the pattern geometry.
+
 ---
 
 ## 7. Stock Universes
@@ -995,8 +1112,9 @@ The universe is defined in `server.js` as a static `UNIVERSES` object.
 | Market | Count | Coverage |
 |---|---|---|
 | `us` | 50 | S&P 500 blue-chips across 12 sectors |
+| `brasil` | 24 | B3 blue-chips — Petrobras, Vale, Itaú, Bradesco, Ambev, WEG and 18 others |
 | `europe` | 30 | STOXX 600 blue-chips (Germany, France, UK, Netherlands, Spain, Italy, Belgium) |
-| `emerging` | 44 | Brazil B3 (24), Mexico (6), India (5), China ADRs (5), South Africa (2), Chile (1), Poland (1) |
+| `emerging` | 44 | Mexico (6), India (5), China ADRs (5), South Africa (2), Chile (1), Poland (1) — note: B3 tickers moved to `brasil` market |
 
 **Stock record fields:**
 

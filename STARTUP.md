@@ -62,7 +62,7 @@ The user flow is deliberately narrow: scan → filter → track → journal. Eve
 | All Stocks Browser | Inline track + add-to-portfolio buttons | All |
 | Portfolio / Trading Journal | Positions, partial sells, monthly P&L, tax estimate, CSV/MD export, print-to-PDF | Pro |
 | Education | Deep-dives on RSI, MACD, ADX, SMA, Bollinger | All |
-| Paper Trading Simulator | Risk-free practice with the full scanner | All |
+| Paper Trading Simulator | Risk-free practice with the full scanner — includes Pattern Finder: 20 canonical chart patterns scored across all scanned stocks with direction/pattern filters and expandable candlestick charts | All |
 | Economic Calendar | Macro events relevant to held positions | All |
 | Themes / Accessibility | 7 themes, font size controls, EN/PT | All |
 | GDPR / LGPD | Data export, account deletion, cookie consent | All |
@@ -208,7 +208,7 @@ Defensibility lives in three places: (1) the PT-BR content moat compounds slowly
 ### Current Stack
 
 - **Backend**: Node.js, no framework. Single server file. JWT auth, scrypt hashing, rate limiting (10 attempts / 15min / IP), atomic file writes.
-- **Frontend**: Single HTML file (~3,400 lines), Vanilla JS, no build step.
+- **Frontend**: Single HTML file (~3,900 lines), Vanilla JS, no build step.
 - **Data**: Yahoo Finance unofficial API via server-side proxy, 60s cache.
 - **Storage**: JSON file for users; localStorage for portfolios.
 - **Deployment**: Docker, non-root user, Stripe for payments.
@@ -243,6 +243,9 @@ The architecture is deliberately boring and cheap to operate up to ~10k paying u
 ### Q3 2026 — Sprint 2: i18n, Currency, Auth Recovery, BR Onboarding, DARF, Mobile, Beta
 
 - **Full i18n completion** — LANGS expanded from ~7 to ~180 keys (EN + PT), all render functions wired to `t()`, `navigator.language` auto-detection, auth form `<form>` wrapper + `autocomplete` attributes, `scanAllMarkets()` dead code removed
+- **Pattern Finder (PATTERNS tab)** — replaces the single-result simulator; scans all stocks from the last scan against 20 patterns; direction filter buttons (ALL/BULLISH/BEARISH/NEUTRAL) + pattern chips; ranked result rows with SVG thumbnail, score bar, RSI/MACD/ADX; click-to-expand candlestick chart with 1D/1M/3M/6M/1Y/5Y period controls and pattern overlay
+- **Stats bar cleanup** — removed redundant "UNIVERSE:"/"UNIVERSO:" label; count + unit label only
+- **Portfolio monthly breakdown** — month `<select>` dropdown added alongside 3M/6M/12M/ALL buttons; section title and column headers translated to Portuguese
 - **Currency smart labeling** — `getCurrencySymbol(ticker)` helper (suffix → symbol: `.SA`→R$, `.L`→£, `.DE/.PA/.AS/.MC/.MI/.BR`→€, `.NS/.BO`→₹, `.MX`→MX$, `.JO`→R, no suffix→$); all ~25 hardcoded `$` price strings replaced across cards, charts, portfolio, tracked picks, and exports
 - **Auth & email recovery** — email verification on signup (Resend), forgot-password flow (email link → reset form), 1-hour token expiry
 - **Brazilian onboarding** — B3 ticker auto-suggest during scan/add, CPF field in user profile (prerequisite for DARF), BRL display via currency smart labeling
