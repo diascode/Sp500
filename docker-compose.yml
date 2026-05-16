@@ -3,7 +3,7 @@ services:
     build: .
     container_name: jerry-stock-dashboard
     ports:
-      - "8081:8080"
+      - "0.0.0.0:8081:8080"
     restart: unless-stopped
     environment:
       - NODE_ENV=production

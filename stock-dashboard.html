@@ -258,7 +258,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
   <button class="btn" onclick="showTrackedView()" id="trackedTabBtn">📋 TRACKED (<span id="trackedCount">0</span>)</button>
   <button class="btn" onclick="showUniverseView()" id="universeTabBtn">📈 ALL STOCKS</button>
   <button class="btn" onclick="showEducationView()" id="patternsTabBtn" style="display:none">📘 EDUCATION</button>
-  <button class="btn" onclick="showSimulateView()" id="simulateTabBtn" style="display:none">🎲 SIMULATE</button>
+  <button class="btn" onclick="showSimulateView()" id="simulateTabBtn" style="display:none">🔍 PATTERNS</button>
   <button class="btn" onclick="showPortfolioView()" id="portfolioTabBtn">📊 MY STOCKS AND TAX REPORTS</button>
 </div>
 
@@ -266,10 +266,10 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
   <h2>⏎ PAPER TRADING SIMULATOR</h2>
   <p id="missionText"><strong>Educational tool.</strong> Technical analysis screen across <strong>🇺🇸 US · 🇪🇺 Europe · 🌍 Emerging Markets</strong>. Filters to high-scoring signals. Each scan re-fetches live market data — RSI, MACD, ADX, SMA crossovers, Bollinger, pattern detection. <strong>Paper trading only. Not financial advice.</strong></p>
   <div class="stats" id="marketStats">
-    <div>UNIVERSE: <span id="universeCount">0</span> stocks</div>
-    <div>BUY SIGNALS: <span id="buyCount">0</span></div>
-    <div>HOLD: <span id="holdCount">0</span></div>
-    <div>SELL: <span id="sellCount">0</span></div>
+    <div><span id="lbl_universe">UNIVERSE</span>: <span id="universeCount">0</span> <span id="lbl_stocks">stocks</span></div>
+    <div><span id="lbl_buySignals">BUY SIGNALS</span>: <span id="buyCount">0</span></div>
+    <div><span id="lbl_hold">HOLD</span>: <span id="holdCount">0</span></div>
+    <div><span id="lbl_sell">SELL</span>: <span id="sellCount">0</span></div>
   </div>
   <div id="proUpsell" style="display:none;margin:0 auto 16px;max-width:1400px;border-radius:10px;border:1px solid rgba(255,193,7,0.3);background:linear-gradient(135deg,rgba(255,193,7,0.08),rgba(200,90,23,0.12));padding:16px 20px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
@@ -675,7 +675,7 @@ function showComingSoon() {
           ✓ All stocks across all markets<br>
           ✓ Correlation Matrix<br>
           ✓ Education Reference &amp; 20 patterns<br>
-          ✓ Simulator with 15 pattern types<br>
+          ✓ Pattern Finder — real examples from your scan<br>
           ✓ Unlimited tracking &amp; portfolio<br>
           ✓ Priority scanning (faster)<br>
           ✓ Email/Telegram alerts<br>
@@ -949,14 +949,14 @@ function renderDashboard() {
     const holdN   = results.filter(d => d.signal === 'neutral').length;
     const sellN   = results.filter(d => d.signal === 'sell').length;
     const filters = [
-      { key: 'buy',     label: '↑ BUY',  count: buyN,  color: 'var(--green-bull)' },
-      { key: 'neutral', label: '◈ HOLD', count: holdN, color: 'var(--accent-amber)' },
-      { key: 'sell',    label: '↓ SELL', count: sellN, color: 'var(--red-bear)' },
-      { key: 'all',     label: 'ALL',    count: results.length, color: 'var(--text-secondary)' },
+      { key: 'buy',     label: '↑ ' + t('filter_buy'),  count: buyN,  color: 'var(--green-bull)' },
+      { key: 'neutral', label: '◈ ' + t('filter_hold'), count: holdN, color: 'var(--accent-amber)' },
+      { key: 'sell',    label: '↓ ' + t('filter_sell'), count: sellN, color: 'var(--red-bear)' },
+      { key: 'all',     label: t('filter_all'),          count: results.length, color: 'var(--text-secondary)' },
     ];
     const bar = document.createElement('div');
     bar.style.cssText = 'display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center;font-family:var(--font-mono)';
-    bar.innerHTML = '<span style="font-size:10px;color:var(--text-dim);margin-right:2px">SHOW:</span>' +
+    bar.innerHTML = '<span style="font-size:10px;color:var(--text-dim);margin-right:2px">' + t('filter_show') + ':</span>' +
       filters.map(f => {
         const active = _signalFilter === f.key;
         return `<button onclick="setSignalFilter('${f.key}')" style="font-size:10px;padding:3px 10px;border-radius:4px;border:1px solid ${active ? f.color : 'var(--border)'};background:${active ? 'rgba(0,0,0,0.25)' : 'transparent'};color:${active ? f.color : 'var(--text-dim)'};cursor:pointer;font-family:var(--font-mono);font-weight:${active ? '700' : '400'}">${f.label} <span style="opacity:0.7">(${f.count})</span></button>`;
@@ -2447,64 +2447,84 @@ const _S='stroke-width:2;fill:none;stroke-linecap:round', _T='stroke-dasharray:5
 const PATTERNS = [
   {name:'Ascending Triangle',dir:'bull',
    svg:`<path d="M10,50 L30,44 L45,46 L60,38 L75,40 L90,32 L105,34 L120,26 L135,28 L150,20 L170,16 L190,14" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Higher lows converging on flat resistance. Breakout above confirms uptrend.',play:'Buy on breakout above resistance with volume.'},
+   desc:'Higher lows converging on flat resistance. Breakout above confirms uptrend.',play:'Buy on breakout above resistance with volume.',
+   desc_pt:'Fundos mais altos convergindo para resistência horizontal. Rompimento acima confirma tendência de alta.',play_pt:'Comprar no rompimento acima da resistência com volume.'},
   {name:'Descending Triangle',dir:'bear',
    svg:`<path d="M10,12 L25,18 L40,14 L55,22 L70,18 L85,26 L100,22 L115,30 L130,28 L145,36 L160,40 L190,48" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Lower highs converging on flat support. Breakdown below confirms downtrend.',play:'Short on breakdown below support.'},
+   desc:'Lower highs converging on flat support. Breakdown below confirms downtrend.',play:'Short on breakdown below support.',
+   desc_pt:'Topos mais baixos convergindo para suporte horizontal. Rompimento abaixo confirma tendência de baixa.',play_pt:'Vender no rompimento abaixo do suporte.'},
   {name:'Symmetrical Triangle',dir:'neutral',
    svg:`<path d="M10,36 L25,32 L40,38 L55,28 L70,34 L85,26 L100,30 L115,26 L130,28 L150,30 L170,32 L190,34" stroke="#e8a846" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Converging trendlines — direction unknown until breakout.',play:'Wait for breakout with volume confirmation.'},
+   desc:'Converging trendlines — direction unknown until breakout.',play:'Wait for breakout with volume confirmation.',
+   desc_pt:'Linhas de tendência convergentes — direção indefinida até o rompimento.',play_pt:'Aguardar rompimento com confirmação de volume.'},
   {name:'Rising Channel',dir:'bull',
    svg:`<path d="M10,50 L30,44 L45,46 L60,38 L75,40 L90,32 L105,34 L120,26 L135,28 L150,20 L170,16 L190,14" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Price bouncing between two parallel rising lines. Trend is up.',play:'Buy dips near support line.'},
+   desc:'Price bouncing between two parallel rising lines. Trend is up.',play:'Buy dips near support line.',
+   desc_pt:'Preço oscilando entre duas linhas ascendentes paralelas. Tendência de alta.',play_pt:'Comprar nas quedas próximas à linha de suporte.'},
   {name:'Falling Channel',dir:'bear',
    svg:`<path d="M10,12 L25,18 L40,14 L55,22 L70,18 L85,26 L100,22 L115,30 L130,28 L150,36 L170,42 L190,46" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Price bouncing between parallel falling lines. Trend is down.',play:'Sell rallies near resistance line.'},
+   desc:'Price bouncing between parallel falling lines. Trend is down.',play:'Sell rallies near resistance line.',
+   desc_pt:'Preço oscilando entre linhas descendentes paralelas. Tendência de baixa.',play_pt:'Vender nas altas próximas à linha de resistência.'},
   {name:'Head and Shoulders',dir:'bear',
    svg:`<path d="M10,30 L25,16 L40,26 L55,40 L75,6 L90,20 L105,38 L120,14 L135,24 L150,40 L170,48 L190,52" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Three peaks: left shoulder, higher head, right shoulder. Break of neckline = downtrend.',play:'Short on neckline break.'},
+   desc:'Three peaks: left shoulder, higher head, right shoulder. Break of neckline = downtrend.',play:'Short on neckline break.',
+   desc_pt:'Três topos: ombro esquerdo, cabeça (mais alto), ombro direito. Rompimento do decote = tendência de baixa.',play_pt:'Vender no rompimento do decote.'},
   {name:'Inverse H&S',dir:'bull',
    svg:`<path d="M10,36 L25,50 L40,40 L55,24 L75,56 L90,38 L105,24 L120,50 L135,36 L150,22 L170,14 L190,10" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Three troughs: left, deeper head, right. Break of neckline = uptrend.',play:'Buy on neckline break.'},
+   desc:'Three troughs: left, deeper head, right. Break of neckline = uptrend.',play:'Buy on neckline break.',
+   desc_pt:'Três fundos: esquerdo, fundo mais profundo (cabeça), direito. Rompimento do decote = tendência de alta.',play_pt:'Comprar no rompimento do decote.'},
   {name:'Double Top',dir:'bear',
    svg:`<path d="M10,34 L25,4 L40,22 L55,40 L75,4 L90,22 L105,38 L125,46 L145,52 L165,56 L190,58" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Price hits same high twice, fails to break through. Reversal down.',play:'Short below valley low.'},
+   desc:'Price hits same high twice, fails to break through. Reversal down.',play:'Short below valley low.',
+   desc_pt:'Preço atinge o mesmo topo duas vezes sem conseguir romper. Reversão de baixa.',play_pt:'Vender abaixo do fundo entre os topos.'},
   {name:'Double Bottom',dir:'bull',
    svg:`<path d="M10,30 L25,56 L40,36 L55,18 L75,56 L90,34 L105,16 L125,10 L145,8 L165,6 L190,4" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Price hits same low twice, fails to break through. Reversal up.',play:'Buy above peak high.'},
+   desc:'Price hits same low twice, fails to break through. Reversal up.',play:'Buy above peak high.',
+   desc_pt:'Preço atinge o mesmo fundo duas vezes sem conseguir romper. Reversão de alta.',play_pt:'Comprar acima do topo entre os fundos.'},
   {name:'Triple Top',dir:'bear',
    svg:`<path d="M8,30 L20,4 L32,28 L44,42 L56,4 L68,26 L80,42 L92,4 L104,28 L116,40 L130,46 L150,52 L170,56 L190,58" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Three attempts at same resistance. Stronger reversal than Double Top.',play:'Short below lowest valley.'},
+   desc:'Three attempts at same resistance. Stronger reversal than Double Top.',play:'Short below lowest valley.',
+   desc_pt:'Três tentativas na mesma resistência. Reversão mais forte que o Topo Duplo.',play_pt:'Vender abaixo do vale mais baixo.'},
   {name:'Triple Bottom',dir:'bull',
    svg:`<path d="M8,34 L20,56 L32,30 L44,18 L56,56 L68,28 L80,14 L92,56 L104,26 L116,12 L130,8 L150,6 L170,4 L190,4" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Three touches of same support. Stronger reversal than Double Bottom.',play:'Buy above highest peak.'},
+   desc:'Three touches of same support. Stronger reversal than Double Bottom.',play:'Buy above highest peak.',
+   desc_pt:'Três toques no mesmo suporte. Reversão mais forte que o Fundo Duplo.',play_pt:'Comprar acima do pico mais alto.'},
   {name:'Bull Flag',dir:'bull',
    svg:`<path d="M10,52 L25,48 L40,44 L55,40 L70,8 L85,12 L100,8 L115,12 L130,8 L145,12 L160,8 L175,6 L190,4" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Sharp rally (flagpole) then consolidation. Continuation up.',play:'Buy on flag breakout above consolidation.'},
+   desc:'Sharp rally (flagpole) then consolidation. Continuation up.',play:'Buy on flag breakout above consolidation.',
+   desc_pt:'Alta abrupta (mastro) seguida de consolidação lateral. Continuação de alta.',play_pt:'Comprar no rompimento da bandeira acima da consolidação.'},
   {name:'Bear Flag',dir:'bear',
    svg:`<path d="M10,12 L25,16 L40,12 L55,18 L70,50 L85,46 L100,50 L115,46 L130,48 L145,44 L160,46 L175,50 L190,52" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Sharp drop (flagpole) then consolidation. Continuation down.',play:'Short on flag breakdown below consolidation.'},
+   desc:'Sharp drop (flagpole) then consolidation. Continuation down.',play:'Short on flag breakdown below consolidation.',
+   desc_pt:'Queda abrupta (mastro) seguida de consolidação lateral. Continuação de baixa.',play_pt:'Vender no rompimento da bandeira abaixo da consolidação.'},
   {name:'Cup and Handle',dir:'bull',
    svg:`<path d="M10,10 C30,14 50,18 65,40 C80,56 110,56 125,40 C140,18 155,14 170,12 L175,18 L180,14 L190,8" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'U-shaped rounding bottom + handle consolidation. Continuation up.',play:'Buy on handle breakout above cup rim.'},
+   desc:'U-shaped rounding bottom + handle consolidation. Continuation up.',play:'Buy on handle breakout above cup rim.',
+   desc_pt:'Fundo arredondado em forma de U seguido de consolidação (alça). Continuação de alta.',play_pt:'Comprar no rompimento da alça acima da borda da xícara.'},
   {name:'Inverted Cup and Handle',dir:'bear',
    svg:`<path d="M10,52 C30,48 50,42 65,22 C80,6 110,6 125,22 C140,42 155,48 170,50 L175,46 L180,48 L190,52" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Inverted U top + downward handle. Bearish continuation.',play:'Short on handle breakdown.'},
+   desc:'Inverted U top + downward handle. Bearish continuation.',play:'Short on handle breakdown.',
+   desc_pt:'Topo arredondado invertido em U seguido de alça descendente. Continuação de baixa.',play_pt:'Vender no rompimento descendente da alça.'},
   {name:'Rising Wedge',dir:'bear',
    svg:`<path d="M10,48 L25,42 L40,44 L55,36 L70,40 L85,32 L100,36 L115,30 L130,34 L150,30 L170,36 L190,40" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Both trendlines slope up but converging. Bearish reversal.',play:'Short on breakdown below support.'},
+   desc:'Both trendlines slope up but converging. Bearish reversal.',play:'Short on breakdown below support.',
+   desc_pt:'Ambas as linhas de tendência sobem mas convergem. Reversão de baixa.',play_pt:'Vender no rompimento abaixo do suporte.'},
   {name:'Falling Wedge',dir:'bull',
    svg:`<path d="M10,16 L25,22 L40,18 L55,26 L70,22 L85,30 L100,26 L115,32 L130,28 L150,26 L170,22 L190,18" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Both trendlines slope down but converging. Bullish reversal.',play:'Buy on breakout above resistance.'},
+   desc:'Both trendlines slope down but converging. Bullish reversal.',play:'Buy on breakout above resistance.',
+   desc_pt:'Ambas as linhas de tendência caem mas convergem. Reversão de alta.',play_pt:'Comprar no rompimento acima da resistência.'},
   {name:'Rounding Bottom',dir:'bull',
    svg:`<path d="M10,8 C30,40 50,52 70,56 C90,56 110,52 130,42 C150,28 170,16 190,8" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Gradual U-shaped bottom. Slow transition to uptrend. High reliability.',play:'Buy above rounding top on uptrend confirmation.'},
+   desc:'Gradual U-shaped bottom. Slow transition to uptrend. High reliability.',play:'Buy above rounding top on uptrend confirmation.',
+   desc_pt:'Fundo gradual em forma de U. Transição lenta para tendência de alta. Alta confiabilidade.',play_pt:'Comprar acima do topo arredondado na confirmação da tendência de alta.'},
   {name:'Rounding Top',dir:'bear',
    svg:`<path d="M10,52 C30,20 50,8 70,4 C90,4 110,8 130,18 C150,32 170,44 190,52" stroke="#e53935" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Gradual inverted U-shaped top. Slow transition to downtrend.',play:'Short below rounding bottom on downtrend confirmation.'},
+   desc:'Gradual inverted U-shaped top. Slow transition to downtrend.',play:'Short below rounding bottom on downtrend confirmation.',
+   desc_pt:'Topo gradual em forma de U invertido. Transição lenta para tendência de baixa.',play_pt:'Vender abaixo do fundo arredondado na confirmação da tendência de baixa.'},
   {name:'Pennant',dir:'neutral',
    svg:`<path d="M10,50 L25,46 L40,42 L55,38 L70,10 L82,14 L90,10 L98,14 L105,10 L112,14 L120,12 L135,8 L150,6 L170,4 L190,4" stroke="#e8a846" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-   desc:'Small triangle after sharp move. Brief consolidation before trend continues.',play:'Trade in prior move direction on breakout.'},
+   desc:'Small triangle after sharp move. Brief consolidation before trend continues.',play:'Trade in prior move direction on breakout.',
+   desc_pt:'Triângulo pequeno após movimento brusco. Breve consolidação antes da continuação da tendência.',play_pt:'Operar na direção do movimento anterior no rompimento.'},
 ];
 
 
@@ -2514,13 +2534,22 @@ const LANGS = {
     mission: 'Educational tool. Technical analysis across <strong>US &middot; Europe &middot; Emerging Markets</strong>. Filters high-scoring signals. Each scan fetches live market data &mdash; RSI, MACD, ADX, moving averages, Bollinger Bands, pattern detection.',
     brand: 'stock scanner &middot; live market data &middot; by jerry',
     scan: 'SCAN', scanAll: 'SCAN ALL', signals: 'SIGNALS',
-    universe: 'ALL STOCKS', tracked: 'TRACKED', education: 'EDUCATION', simulate: 'SIMULATE',
+    universe: 'ALL STOCKS', tracked: 'TRACKED', education: 'EDUCATION', simulate: 'PATTERNS',
+    sim_title: '🔍 PATTERN FINDER', sim_findBtn: 'FIND EXAMPLE', sim_scanFirst: 'No scan data — run a scan first to find real examples.',
+    sim_noMatch: 'No match found for this pattern in the current scan. Try scanning more markets.',
+    sim_bestMatch: 'Best match found:', sim_pattern: 'Pattern', sim_allMarkets: 'All scanned markets',
+    sim_disclaimer: 'This is the closest technical match from your scan — not a guarantee the pattern is forming.',
     portfolio: 'PORTFOLIO', signIn: 'SIGN IN', signOut: 'SIGN OUT',
     buy: 'BUY', sell: 'SELL', hold: 'HOLD',
     upgrade: 'GO PRO', admin: 'ADMIN',
 
     // Status
     status_idle: 'IDLE', status_ready: 'READY', status_scanning: 'SCANNING',
+
+    // Stats bar
+    lbl_universe: 'UNIVERSE', lbl_stocks: 'stocks', lbl_buySignals: 'BUY SIGNALS', lbl_hold: 'HOLD', lbl_sell: 'SELL',
+    // Filter bar
+    filter_show: 'SHOW', filter_buy: 'BUY', filter_hold: 'HOLD', filter_sell: 'SELL', filter_all: 'ALL',
 
     // Signals
     signal_buy: 'BUY ↑', signal_sell: 'SELL ↓', signal_hold: '◈ HOLD',
@@ -2688,7 +2717,7 @@ const LANGS = {
     edu_smaSubtitle: 'Four moving averages tracking different timeframes.',
     edu_bollingerSubtitle: 'Three bands that expand and contract with volatility.',
     edu_patternsSubtitle: '20 common patterns detected from swing highs and lows.',
-    edu_patternRef: 'PATTERN REFERENCE',
+    edu_patternsTab: 'Patterns', edu_patternRef: 'PATTERN REFERENCE',
     edu_bullish: '🟢 BULLISH',
     edu_bearish: '🔴 BEARISH',
     edu_neutral: '◈ NEUTRAL',
@@ -2701,16 +2730,25 @@ const LANGS = {
     footer_disclaimer: '⚠ PAPER TRADING — EDUCATIONAL PURPOSES ONLY. MOMENTUM is a technical analysis simulator. Nothing on this site constitutes financial advice, investment recommendation, or solicitation to buy or sell securities. All trades are simulated. Past performance does not guarantee future results. Consult a qualified financial advisor before making real investment decisions. By using this app you agree these are paper trades only.',
   },
   pt: {
-    mission: 'Ferramenta educacional. An&aacute;lise t&eacute;cnica em <strong>EUA &middot; Europa &middot; Mercados Emergentes</strong>. Filtra sinais de alta pontua&ccedil;&atilde;o. Cada varredura busca dados de mercado ao vivo &mdash; RSI, MACD, ADX, m&eacute;dias m&oacute;veis, Bandas de Bollinger, detec&ccedil;&atilde;o de padr&otilde;es.',
+    mission: 'Ferramenta educacional. An&aacute;lise t&eacute;cnica em <strong>🇧🇷 Brasil &middot; 🇺🇸 EUA &middot; 🇪🇺 Europa &middot; 🌍 Mercados Emergentes</strong>. Filtra sinais de alta pontua&ccedil;&atilde;o. Cada varredura busca dados ao vivo &mdash; <abbr title="&Iacute;ndice de For&ccedil;a Relativa">RSI</abbr>, <abbr title="Converg&ecirc;ncia e Diverg&ecirc;ncia de M&eacute;dias M&oacute;veis">MACD</abbr>, <abbr title="&Iacute;ndice Direcional M&eacute;dio">ADX</abbr>, m&eacute;dias m&oacute;veis, Bandas de Bollinger, detec&ccedil;&atilde;o de padr&otilde;es.',
     brand: 'analisador de a&ccedil;&otilde;es &middot; dados ao vivo &middot; por jerry',
     scan: 'VARRER', scanAll: 'VARRER TUDO', signals: 'SINAIS',
-    universe: 'TODOS OS ATIVOS', tracked: 'RASTREADOS', education: 'EDUCAÇÃO', simulate: 'SIMULAR',
+    universe: 'TODOS OS ATIVOS', tracked: 'RASTREADOS', education: 'EDUCAÇÃO', simulate: 'PADRÕES',
+    sim_title: '🔍 BUSCAR PADRÃO', sim_findBtn: 'BUSCAR EXEMPLO', sim_scanFirst: 'Sem dados — execute um scan primeiro para encontrar exemplos reais.',
+    sim_noMatch: 'Nenhum exemplo encontrado para este padrão no scan atual. Tente varrer mais mercados.',
+    sim_bestMatch: 'Melhor correspondência encontrada:', sim_pattern: 'Padrão', sim_allMarkets: 'Todos os mercados varridos',
+    sim_disclaimer: 'Esta é a correspondência técnica mais próxima do seu scan — não é garantia de que o padrão está se formando.',
     portfolio: 'PORTFÓLIO', signIn: 'ENTRAR', signOut: 'SAIR',
     buy: 'COMPRA', sell: 'VENDA', hold: 'MANTER',
     upgrade: 'PRO', admin: 'ADMIN',
 
     // Status
     status_idle: 'OCIOSO', status_ready: 'PRONTO', status_scanning: 'VARRENDO',
+
+    // Stats bar
+    lbl_universe: 'UNIVERSO', lbl_stocks: 'ativos', lbl_buySignals: 'SINAIS DE COMPRA', lbl_hold: 'MANTER', lbl_sell: 'VENDA',
+    // Filter bar
+    filter_show: 'MOSTRAR', filter_buy: 'COMPRA', filter_hold: 'MANTER', filter_sell: 'VENDA', filter_all: 'TODOS',
 
     // Signals
     signal_buy: 'COMPRA ↑', signal_sell: 'VENDA ↓', signal_hold: '◈ MANTER',
@@ -2878,7 +2916,7 @@ const LANGS = {
     edu_smaSubtitle: 'Quatro médias móveis rastreando diferentes períodos.',
     edu_bollingerSubtitle: 'Três bandas que expandem e contraem com a volatilidade.',
     edu_patternsSubtitle: '20 padrões comuns detectados a partir de topos e fundos.',
-    edu_patternRef: 'REFERÊNCIA DE PADRÕES',
+    edu_patternsTab: 'Padrões', edu_patternRef: 'REFERÊNCIA DE PADRÕES',
     edu_bullish: '🟢 ALTISTA',
     edu_bearish: '🔴 BAIXISTA',
     edu_neutral: '◈ NEUTRO',
@@ -3029,7 +3067,7 @@ function applyLang() {
   const patternsTab = document.getElementById('patternsTabBtn');
   if (patternsTab) patternsTab.textContent = '📘 ' + t('education');
   const simTab = document.getElementById('simulateTabBtn');
-  if (simTab) simTab.textContent = '🎲 ' + t('simulate');
+  if (simTab) simTab.textContent = '🔍 ' + t('simulate');
 
   // Tracked tab (preserve count span)
   const trackedTabBtn = document.getElementById('trackedTabBtn');
@@ -3052,6 +3090,13 @@ function applyLang() {
   if (dataStatus && (dataStatus.textContent === 'READY' || dataStatus.textContent === 'PRONTO' || dataStatus.textContent === t('status_ready') || dataStatus.textContent === LANGS.en.status_ready || dataStatus.textContent === LANGS.pt.status_ready)) {
     dataStatus.textContent = t('status_ready');
   }
+
+  // Stats bar labels
+  set('lbl_universe', t('lbl_universe'));
+  set('lbl_stocks', t('lbl_stocks'));
+  set('lbl_buySignals', t('lbl_buySignals'));
+  set('lbl_hold', t('lbl_hold'));
+  set('lbl_sell', t('lbl_sell'));
 
   // Auth modal static text
   const authModalTitle = document.getElementById('authModalTitle');
@@ -3120,365 +3165,368 @@ function changeFontSize(d) {
 
 let _eduTopic = 'rsi';
 
-// ─── SIMULATE ─────────────────────────────────────────────────────────────
-let _simPattern = 'Random Walk';
-const PAT_NAMES = ['Random Walk','Ascending Triangle','Descending Triangle','Symmetrical Triangle','Rising Channel','Falling Channel','Head and Shoulders','Inverse Head and Shoulders','Double Top','Double Bottom','Bull Flag','Bear Flag','Cup and Handle','Rounding Bottom','Rounding Top'];
+// ─── PATTERN FINDER ───────────────────────────────────────────────────────
+let _simPattern = PATTERNS[0].name;
 
-function candle(o_, c_, h_, l_, v_) {
-  return { o:o_, c:c_, h:Math.max(h_,c_,o_)+0.01, l:Math.max(0.01,Math.min(l_,c_,o_)-0.01), v:v_||Math.floor(1e6+Math.random()*1e7), d:new Date() };
-}
+function scorePatternMatch(d, patDef) {
+  if (!d.candles || d.candles.length < 60) return 0;
+  const c = d.candles, n = c.length;
+  const last30 = c.slice(-30), last60 = c.slice(-60);
+  let score = 0;
 
-function genAscTri(n) {
-  const base = 100 + Math.random()*30, res = base + 15 + Math.random()*10;
-  const c = []; let price = base + 3;
-  for(let i=0;i<n;i++){
-    const prog = i/n, support = base + prog*12, rng = res - support;
-    const pos = Math.random(), bounce = pos < 0.45 ? -1 : pos < 0.9 ? 1 : 1.5;
-    price = support + rng * (0.2 + Math.random()*0.5) * bounce;
-    if(i>n*0.85) price = res + 1 + Math.random()*3;
-    const body = Math.random()*rng*0.3, wick = body*(0.2+Math.random()*0.3);
-    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
+  // Direction alignment with signal
+  if (patDef.dir === 'bull' && d.signal === 'buy') score += 4;
+  else if (patDef.dir === 'bull' && d.signal === 'neutral') score += 1;
+  else if (patDef.dir === 'bear' && d.signal === 'sell') score += 4;
+  else if (patDef.dir === 'bear' && d.signal === 'neutral') score += 1;
+  else if (patDef.dir === 'neutral') score += 2;
+
+  const highs30 = last30.map(x => x.h), lows30 = last30.map(x => x.l);
+  const maxH30 = Math.max(...highs30), minL30 = Math.min(...lows30);
+  const earlyLow = Math.min(...lows30.slice(0, 10)), lateLow = Math.min(...lows30.slice(-10));
+  const earlyHigh = Math.max(...highs30.slice(0, 10)), lateHigh = Math.max(...highs30.slice(-10));
+  const flatResistance = highs30.filter(h => h > maxH30 * 0.985).length;
+  const flatSupport = lows30.filter(l => l < minL30 * 1.015).length;
+
+  switch (patDef.name) {
+    case 'Ascending Triangle':
+      if (flatResistance >= 3) score += 3;
+      if (lateLow > earlyLow * 1.01) score += 2;
+      break;
+    case 'Descending Triangle':
+      if (flatSupport >= 3) score += 3;
+      if (lateHigh < earlyHigh * 0.99) score += 2;
+      break;
+    case 'Symmetrical Triangle':
+      if (lateHigh < earlyHigh * 0.985 && lateLow > earlyLow * 1.015) score += 5;
+      break;
+    case 'Rising Channel':
+      if (lateLow > earlyLow * 1.02 && lateHigh > earlyHigh * 1.02) score += 5;
+      if (d.masAbove >= 3) score += 1;
+      break;
+    case 'Falling Channel':
+      if (lateLow < earlyLow * 0.98 && lateHigh < earlyHigh * 0.98) score += 5;
+      break;
+    case 'Head and Shoulders': {
+      const midHigh = Math.max(...last30.slice(8, 22).map(x => x.h));
+      const sideHigh = Math.max(Math.max(...last30.slice(0,10).map(x=>x.h)), Math.max(...last30.slice(-10).map(x=>x.h)));
+      if (midHigh > sideHigh * 1.02) score += 5;
+      break;
+    }
+    case 'Inverse H&S': {
+      const midLow = Math.min(...last30.slice(8, 22).map(x => x.l));
+      const sideLow = Math.min(Math.min(...last30.slice(0,10).map(x=>x.l)), Math.min(...last30.slice(-10).map(x=>x.l)));
+      if (midLow < sideLow * 0.98) score += 5;
+      break;
+    }
+    case 'Double Top': {
+      const firstHalf = Math.max(...last60.slice(0, 30).map(x => x.h));
+      const secondHalf = Math.max(...last60.slice(-30).map(x => x.h));
+      if (Math.abs(firstHalf - secondHalf) / firstHalf < 0.03) score += 5;
+      break;
+    }
+    case 'Double Bottom': {
+      const firstHalfL = Math.min(...last60.slice(0, 30).map(x => x.l));
+      const secondHalfL = Math.min(...last60.slice(-30).map(x => x.l));
+      if (Math.abs(firstHalfL - secondHalfL) / firstHalfL < 0.03) score += 5;
+      break;
+    }
+    case 'Bull Flag': {
+      const poleCandles = last60.slice(0, 20);
+      const flagCandles = last60.slice(-20);
+      const poleGain = (poleCandles[poleCandles.length-1].c - poleCandles[0].o) / poleCandles[0].o;
+      const flagRange = (Math.max(...flagCandles.map(x=>x.h)) - Math.min(...flagCandles.map(x=>x.l))) / poleCandles[poleCandles.length-1].c;
+      if (poleGain > 0.05 && flagRange < 0.06) score += 5;
+      break;
+    }
+    case 'Bear Flag': {
+      const poleCandles = last60.slice(0, 20);
+      const flagCandles = last60.slice(-20);
+      const poleDrop = (poleCandles[0].o - poleCandles[poleCandles.length-1].c) / poleCandles[0].o;
+      const flagRange = (Math.max(...flagCandles.map(x=>x.h)) - Math.min(...flagCandles.map(x=>x.l))) / poleCandles[poleCandles.length-1].c;
+      if (poleDrop > 0.05 && flagRange < 0.06) score += 5;
+      break;
+    }
+    case 'Cup and Handle': {
+      const cup = c.slice(-80, -20);
+      if (cup.length > 30) {
+        const cupStart = cup[0].c, cupMid = Math.min(...cup.map(x=>x.l)), cupEnd = cup[cup.length-1].c;
+        if (cupStart > cupMid * 1.05 && Math.abs(cupEnd - cupStart) / cupStart < 0.05) score += 5;
+      }
+      break;
+    }
+    case 'Inverted Cup and Handle': {
+      const cup = c.slice(-80, -20);
+      if (cup.length > 30) {
+        const cupStart = cup[0].c, cupMid = Math.max(...cup.map(x=>x.h)), cupEnd = cup[cup.length-1].c;
+        if (cupMid > cupStart * 1.05 && Math.abs(cupEnd - cupStart) / cupStart < 0.05) score += 5;
+      }
+      break;
+    }
+    case 'Rounding Bottom': {
+      const q1 = Math.min(...c.slice(-60,-45).map(x=>x.l));
+      const q2 = Math.min(...c.slice(-45,-30).map(x=>x.l));
+      const q3 = Math.min(...c.slice(-30,-15).map(x=>x.l));
+      if (q2 < q1 && q3 > q2) score += 5;
+      break;
+    }
+    case 'Rounding Top': {
+      const q1 = Math.max(...c.slice(-60,-45).map(x=>x.h));
+      const q2 = Math.max(...c.slice(-45,-30).map(x=>x.h));
+      const q3 = Math.max(...c.slice(-30,-15).map(x=>x.h));
+      if (q2 > q1 && q3 < q2) score += 5;
+      break;
+    }
+    case 'Triple Top': {
+      const t1H = Math.max(...c.slice(-90,-60).map(x=>x.h));
+      const t2H = Math.max(...c.slice(-60,-30).map(x=>x.h));
+      const t3H = Math.max(...c.slice(-30).map(x=>x.h));
+      const avg = (t1H+t2H+t3H)/3;
+      if (Math.abs(t1H-avg)/avg < 0.04 && Math.abs(t2H-avg)/avg < 0.04 && Math.abs(t3H-avg)/avg < 0.04) score += 5;
+      break;
+    }
+    case 'Triple Bottom': {
+      const t1L = Math.min(...c.slice(-90,-60).map(x=>x.l));
+      const t2L = Math.min(...c.slice(-60,-30).map(x=>x.l));
+      const t3L = Math.min(...c.slice(-30).map(x=>x.l));
+      const avg = (t1L+t2L+t3L)/3;
+      if (Math.abs(t1L-avg)/avg < 0.04 && Math.abs(t2L-avg)/avg < 0.04 && Math.abs(t3L-avg)/avg < 0.04) score += 5;
+      break;
+    }
+    case 'Rising Wedge':
+      if (lateHigh > earlyHigh && lateLow > earlyLow && (lateHigh - lateLow) < (earlyHigh - earlyLow) * 0.8) score += 5;
+      break;
+    case 'Falling Wedge':
+      if (lateHigh < earlyHigh && lateLow < earlyLow && (lateHigh - lateLow) < (earlyHigh - earlyLow) * 0.8) score += 5;
+      break;
+    case 'Pennant': {
+      const poleCandles = last60.slice(0, 20);
+      const flagCandles = last60.slice(-20);
+      const poleMove = Math.abs(poleCandles[poleCandles.length-1].c - poleCandles[0].o) / poleCandles[0].o;
+      const consolidation = (Math.max(...flagCandles.map(x=>x.h)) - Math.min(...flagCandles.map(x=>x.l))) / poleCandles[poleCandles.length-1].c;
+      if (poleMove > 0.04 && consolidation < 0.04) score += 5;
+      break;
+    }
   }
-  return c;
-}
-function genDescTri(n) {
-  const base = 100 + Math.random()*30, sup = base + 5;
-  const c = []; let price = base + 15;
-  for(let i=0;i<n;i++){
-    const prog = i/n, res = base + 15 - prog*12, rng = res - sup;
-    const pos = Math.random(), bounce = pos < 0.45 ? 1 : pos < 0.9 ? -1 : -1.5;
-    price = sup + rng * (0.2 + Math.random()*0.5) * bounce;
-    if(i>n*0.85) price = sup - 1 - Math.random()*3;
-    const body = Math.random()*rng*0.3, wick = body*(0.2+Math.random()*0.3);
-    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
-  }
-  return c;
-}
-function genSymTri(n) {
-  const mid = 110 + Math.random()*20;
-  const c = []; let price = mid + 10;
-  for(let i=0;i<n;i++){
-    const prog = i/n, range = 12 - prog*10;
-    price = mid + (Math.random()-0.5)*range*2;
-    const body = Math.random()*range*0.3, wick = body*(0.2+Math.random()*0.3);
-    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
-    if(i>n*0.85) price = mid + (Math.random()-0.5)*5;
-  }
-  return c;
-}
-function genRisingChan(n) {
-  const c = []; let price = 90+Math.random()*10;
-  for(let i=0;i<n;i++){
-    const prog = i/n, base = 90+prog*25, top = base+12;
-    price = base + Math.random()*12;
-    const body = 0.5+Math.random()*3, wick = body*(0.2+Math.random()*0.2);
-    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
-  }
-  return c;
-}
-function genFallingChan(n) {
-  const c = []; let price = 130+Math.random()*10;
-  for(let i=0;i<n;i++){
-    const prog = i/n, top = 130-prog*25, base = top-12;
-    price = base + Math.random()*12;
-    const body = 0.5+Math.random()*3, wick = body*(0.2+Math.random()*0.2);
-    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
-  }
-  return c;
-}
-function genHnS(n) {
-  const c=[], base=100, peak=130, neck=110;
-  let t1=Math.floor(n*0.25), t2=Math.floor(n*0.45), t3=Math.floor(n*0.65), t4=Math.floor(n*0.85);
-  for(let i=0;i<n;i++){
-    let p = base;
-    if(i<t1) p = base + (peak-base)*Math.sin(i*Math.PI/t1);
-    else if(i<t2) p = neck + (peak-neck)*Math.sin((i-t1)*Math.PI/(t2-t1));
-    else if(i<t3) p = neck + (peak-5-neck)*Math.sin((i-t2)*Math.PI/(t3-t2));
-    else if(i<t4) p = neck + (peak-5-neck)*0.5*(1-Math.sin((i-t3)*Math.PI/(t4-t3)));
-    else p = base - (i-t4)*0.3;
-    const body = 0.5+Math.random()*2.5, wick = body*(0.3+Math.random()*0.3);
-    c.push(candle(p-body/2, p+body/2, p+body/2+wick, p-body/2-wick));
-  }
-  return c;
-}
-function genInvHnS(n) {
-  const c=[], base=130, valley=100, neck=120;
-  let t1=Math.floor(n*0.25), t2=Math.floor(n*0.45), t3=Math.floor(n*0.65), t4=Math.floor(n*0.85);
-  for(let i=0;i<n;i++){
-    let p = base;
-    if(i<t1) p = base - (base-valley)*Math.sin(i*Math.PI/t1);
-    else if(i<t2) p = neck - (neck-valley)*Math.sin((i-t1)*Math.PI/(t2-t1));
-    else if(i<t3) p = neck - (neck-valley+5)*Math.sin((i-t2)*Math.PI/(t3-t2));
-    else if(i<t4) p = neck + (i-t4)*0.5;
-    else p = base + (i-t4)*0.5;
-    const body = 0.5+Math.random()*2.5, wick = body*(0.3+Math.random()*0.3);
-    c.push(candle(p-body/2, p+body/2, p+body/2+wick, p-body/2-wick));
-  }
-  return c;
-}
-function genDoubleTop(n) {
-  const base=100, peak=125, bottom=105;
-  let t1=Math.floor(n*0.25), t2=Math.floor(n*0.5), t3=Math.floor(n*0.75);
-  const c=[];
-  for(let i=0;i<n;i++){
-    let p;
-    if(i<t1) p = base + (peak-base)*Math.sin(i*Math.PI/(2*t1));
-    else if(i<t2) p = bottom + (peak-bottom)*Math.sin((i-t1)*Math.PI/(t2-t1));
-    else if(i<t3) p = base - 5 + (peak-bottom)*0.5*(1+Math.cos((i-t2)*Math.PI/(t3-t2)));
-    else p = base - 10 - (i-t3)*0.2;
-    const body=0.5+Math.random()*2, wick=body*(0.3+Math.random()*0.3);
-    c.push(candle(p-body/2, p+body/2, p+body/2+wick, p-body/2-wick));
-  }
-  return c;
-}
-function genDoubleBottom(n) {
-  const base=130, valley=100, mid=115;
-  let t1=Math.floor(n*0.25), t2=Math.floor(n*0.5), t3=Math.floor(n*0.75);
-  const c=[];
-  for(let i=0;i<n;i++){
-    let p;
-    if(i<t1) p = base - (base-valley)*Math.sin(i*Math.PI/(2*t1));
-    else if(i<t2) p = mid - (mid-valley)*Math.sin((i-t1)*Math.PI/(t2-t1));
-    else if(i<t3) p = base + (base-valley)*0.5*(1+Math.cos((i-t2)*Math.PI/(t3-t2)));
-    else p = base + 10 + (i-t3)*0.2;
-    const body=0.5+Math.random()*2, wick=body*(0.3+Math.random()*0.3);
-    c.push(candle(p-body/2, p+body/2, p+body/2+wick, p-body/2-wick));
-  }
-  return c;
-}
-function genBullFlag(n) {
-  const c=[]; let price=100+Math.random()*10;
-  const poleEnd=Math.floor(n*0.3);
-  for(let i=0;i<n;i++){
-    if(i<poleEnd) price+=2+Math.random()*1.5;
-    else { const drift=(Math.random()-0.5)*0.8; price+=drift; }
-    const body=0.3+Math.random()*2, wick=body*(0.2+Math.random()*0.3);
-    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
-    if(i===poleEnd-1){const b=price; for(let j=i+1;j<n;j++)price=b+5+(Math.random()-0.5)*3;}
-  }
-  return c;
-}
-function genBearFlag(n) {
-  const c=[]; let price=150+Math.random()*10;
-  const poleEnd=Math.floor(n*0.3);
-  for(let i=0;i<n;i++){
-    if(i<poleEnd) price-=2+Math.random()*1.5;
-    else { const drift=(Math.random()-0.5)*0.8; price+=drift; }
-    const body=0.3+Math.random()*2, wick=body*(0.2+Math.random()*0.3);
-    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
-    if(i===poleEnd-1){const b=price; for(let j=i+1;j<n;j++)price=b-5+(Math.random()-0.5)*3;}
-  }
-  return c;
-}
-function genCupHandle(n) {
-  const c=[]; let price=120+Math.random()*10;
-  const mid=Math.floor(n*0.6);
-  for(let i=0;i<n;i++){
-    const prog=i/n;
-    const curve=prog<0.6 ? Math.sin(prog/0.6*Math.PI) : 1-(prog-0.6)/0.4*0.3;
-    price=120 - 20*Math.sin(prog*Math.PI) + (Math.random()-0.5)*2;
-    if(prog>0.6) price=105-10*(prog-0.6)+Math.random()*2;
-    if(prog>0.9) price=102+3*Math.sin((prog-0.9)*10)+Math.random();
-    const body=0.3+Math.random()*2, wick=body*(0.2+Math.random()*0.3);
-    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
-  }
-  return c;
-}
-function genRoundingBottom(n) {
-  const c=[]; let price=110+Math.random()*10;
-  for(let i=0;i<n;i++){
-    const prog=i/n;
-    price=105 - 25*Math.sin(prog*Math.PI/2) + 5*(1-Math.cos(prog*Math.PI)) + (Math.random()-0.5)*2;
-    if(prog>0.7) price+=8*(prog-0.7);
-    const body=0.3+Math.random()*2, wick=body*(0.2+Math.random()*0.3);
-    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
-  }
-  return c;
-}
-function genRoundingTop(n) {
-  const c=[]; let price=130+Math.random()*10;
-  for(let i=0;i<n;i++){
-    const prog=i/n;
-    price=130 + 25*Math.sin(prog*Math.PI/2) - 8*(1-Math.cos(prog*Math.PI)) + (Math.random()-0.5)*2;
-    if(prog>0.7) price-=10*(prog-0.7);
-    const body=0.3+Math.random()*2, wick=body*(0.2+Math.random()*0.3);
-    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
-  }
-  return c;
-}
-function genRandom(n) {
-  const c=[]; let price=100+Math.random()*50, trend=0;
-  for(let i=0;i<n;i++){
-    trend+=(Math.random()-0.48)*0.15; trend=Math.max(-0.5,Math.min(0.5,trend));
-    const change=(Math.random()-0.5+trend)*3; price+=change;
-    const body=0.3+Math.random()*2, wick=body*(0.2+Math.random()*0.3);
-    c.push(candle(price-body/2, price+body/2, price+body/2+wick, price-body/2-wick));
-  }
-  return c;
+  return score;
 }
 
-function generateSimData(count) {
-  switch(_simPattern) {
-    case 'Ascending Triangle': return genAscTri(count);
-    case 'Descending Triangle': return genDescTri(count);
-    case 'Symmetrical Triangle': return genSymTri(count);
-    case 'Rising Channel': return genRisingChan(count);
-    case 'Falling Channel': return genFallingChan(count);
-    case 'Head and Shoulders': return genHnS(count);
-    case 'Inverse Head and Shoulders': return genInvHnS(count);
-    case 'Double Top': return genDoubleTop(count);
-    case 'Double Bottom': return genDoubleBottom(count);
-    case 'Bull Flag': return genBullFlag(count);
-    case 'Bear Flag': return genBearFlag(count);
-    case 'Cup and Handle': return genCupHandle(count);
-    case 'Rounding Bottom': return genRoundingBottom(count);
-    case 'Rounding Top': return genRoundingTop(count);
-    default: return genRandom(count);
+function findPatternExample(patternName) {
+  const patDef = PATTERNS.find(p => p.name === patternName);
+  if (!patDef) return null;
+  const allStocks = [];
+  ['us','brasil','europe','emerging'].forEach(mkt => (state.analyzed[mkt]||[]).forEach(d => allStocks.push(d)));
+  if (!allStocks.length) return null;
+  let best = null, bestScore = -1;
+  allStocks.forEach(d => {
+    const score = scorePatternMatch(d, patDef);
+    if (score > bestScore) { bestScore = score; best = d; }
+  });
+  return best;
+}
+
+function buildPatternOverlay(candles, patternName) {
+  const n = candles.length;
+  const highs = candles.map(c => c.h), lows = candles.map(c => c.l);
+  const maxH = Math.max(...highs), minL = Math.min(...lows);
+  switch (patternName) {
+    case 'Ascending Triangle': {
+      const res = maxH * 0.999;
+      const sup1 = lows[0], sup2 = lows[n-1];
+      return [{x1:0,y1:res,x2:n-1,y2:res,color:'#ff8c00',dash:[4,3],width:1.5,label:'RES'},
+              {x1:0,y1:sup1,x2:n-1,y2:sup2,color:'#4caf50',dash:[4,3],width:1.5,label:'SUP'}];
+    }
+    case 'Descending Triangle': {
+      const sup = minL * 1.001;
+      return [{x1:0,y1:sup,x2:n-1,y2:sup,color:'#4caf50',dash:[4,3],width:1.5,label:'SUP'},
+              {x1:0,y1:highs[0],x2:n-1,y2:highs[n-1],color:'#e53935',dash:[4,3],width:1.5,label:'RES'}];
+    }
+    case 'Symmetrical Triangle':
+    case 'Rising Wedge':
+    case 'Falling Wedge':
+      return [{x1:0,y1:highs[0],x2:n-1,y2:highs[n-1],color:'#ff8c00',dash:[4,3],width:1.2,label:'RES'},
+              {x1:0,y1:lows[0],x2:n-1,y2:lows[n-1],color:'#4caf50',dash:[4,3],width:1.2,label:'SUP'}];
+    case 'Rising Channel':
+      return [{x1:0,y1:highs[0],x2:n-1,y2:highs[n-1],color:'#ff8c00',dash:[4,3],width:1.2},
+              {x1:0,y1:lows[0],x2:n-1,y2:lows[n-1],color:'#4caf50',dash:[4,3],width:1.2}];
+    case 'Falling Channel':
+      return [{x1:0,y1:highs[0],x2:n-1,y2:highs[n-1],color:'#ff8c00',dash:[4,3],width:1.2},
+              {x1:0,y1:lows[0],x2:n-1,y2:lows[n-1],color:'#4caf50',dash:[4,3],width:1.2}];
+    case 'Head and Shoulders': {
+      const neck = (lows[Math.floor(n*0.25)] + lows[Math.floor(n*0.65)]) / 2;
+      return [{x1:Math.floor(n*0.15),y1:neck,x2:Math.floor(n*0.75),y2:neck,color:'#e8a846',dash:[5,3],width:1.5,label:'NECK'}];
+    }
+    case 'Inverse H&S': {
+      const neck = (highs[Math.floor(n*0.25)] + highs[Math.floor(n*0.65)]) / 2;
+      return [{x1:Math.floor(n*0.15),y1:neck,x2:Math.floor(n*0.75),y2:neck,color:'#e8a846',dash:[5,3],width:1.5,label:'NECK'}];
+    }
+    case 'Double Top': {
+      const peak = (highs[Math.floor(n*0.25)] + highs[Math.floor(n*0.6)]) / 2;
+      return [{x1:Math.floor(n*0.1),y1:peak,x2:Math.floor(n*0.7),y2:peak,color:'#ff8c00',dash:[4,3],width:1.3,label:'RES'}];
+    }
+    case 'Double Bottom': {
+      const valley = (lows[Math.floor(n*0.25)] + lows[Math.floor(n*0.6)]) / 2;
+      return [{x1:Math.floor(n*0.1),y1:valley,x2:Math.floor(n*0.7),y2:valley,color:'#4caf50',dash:[4,3],width:1.3,label:'SUP'}];
+    }
+    case 'Bull Flag': {
+      const mid = Math.floor(n*0.35);
+      const flagHi = Math.max(...highs.slice(mid)), flagLo = Math.min(...lows.slice(mid));
+      return [{x1:mid,y1:flagHi,x2:n-1,y2:flagHi,color:'#4caf50',dash:[3,3],width:1,label:'FLAG RES'},
+              {x1:mid,y1:flagLo,x2:n-1,y2:flagLo,color:'#e53935',dash:[3,3],width:1,label:'FLAG SUP'}];
+    }
+    case 'Bear Flag': {
+      const mid = Math.floor(n*0.35);
+      const flagHi = Math.max(...highs.slice(mid)), flagLo = Math.min(...lows.slice(mid));
+      return [{x1:mid,y1:flagHi,x2:n-1,y2:flagHi,color:'#e53935',dash:[3,3],width:1,label:'FLAG RES'},
+              {x1:mid,y1:flagLo,x2:n-1,y2:flagLo,color:'#4caf50',dash:[3,3],width:1,label:'FLAG SUP'}];
+    }
+    case 'Cup and Handle': {
+      const rim = (highs[0] + highs[n-1]) / 2;
+      return [{x1:0,y1:rim,x2:Math.floor(n*0.85),y2:rim,color:'#4caf50',dash:[4,3],width:1.2,label:'RIM'}];
+    }
+    case 'Rounding Bottom': {
+      const bot = minL;
+      return [{x1:Math.floor(n*0.3),y1:bot,x2:Math.floor(n*0.7),y2:bot,color:'#4caf50',dash:[4,3],width:1.2,label:'BASE'}];
+    }
+    case 'Rounding Top': {
+      const top = maxH;
+      return [{x1:Math.floor(n*0.3),y1:top,x2:Math.floor(n*0.7),y2:top,color:'#ff8c00',dash:[4,3],width:1.2,label:'TOP'}];
+    }
+    default: return [];
   }
 }
 
 function showSimulateView() {
   state.showTracked = false; state.showUniverse = false;
   if (!authUser || (authUser.tier !== 'pro' && authUser.tier !== 'admin')) {
-    document.getElementById('dashboard').innerHTML = '<div class="card" style="max-width:400px;margin:60px auto;text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:12px">🎲</div><h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">' + t('proGate_title') + '</h2><p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">' + t('proGate_signIn') + '<br><button class="btn primary" onclick="showAuthModal()" style="font-size:12px;margin-top:8px">🔑 ' + t('signIn') + '</button></p></div>';
+    document.getElementById('dashboard').innerHTML = '<div class="card" style="max-width:400px;margin:60px auto;text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:12px">🔍</div><h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">' + t('proGate_title') + '</h2><p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">' + t('proGate_signIn') + '<br><button class="btn primary" onclick="showAuthModal()" style="font-size:12px;margin-top:8px">🔑 ' + t('signIn') + '</button></p></div>';
     return;
   }
-  renderSim();
+  renderPatternFinder();
 }
 
-function renderSim() {
+let _simCandles = [];
+function renderPatternFinder() {
   const container = document.getElementById('dashboard');
-  const candles = generateSimData(260);
-  _simCandles = candles;
-  const price = candles[candles.length-1].c;
-  const s9 = calcSMA(candles,9), s20 = calcSMA(candles,20), s50 = calcSMA(candles,50), s200 = calcSMA(candles,200);
-  const sma9=s9[s9.length-1]||price, sma20=s20[s20.length-1]||price, sma50=s50[s50.length-1]||price, sma200=s200[s200.length-1]||price;
-  const rsiA=calcRSI(candles,14), rsi=parseFloat(rsiA[rsiA.length-1]?.toFixed(1))||50;
-  const macdA=calcMACD(candles), macd=parseFloat(macdA[macdA.length-1]?.toFixed(2))||0;
-  const adxA=calcADX(candles,14), adx=parseFloat(adxA[adxA.length-1]?.toFixed(1))||20;
-  const bb=calcBB(candles,14,2), bbM=bb.mid[bb.mid.length-1]||price;
-  const pA9=price>sma9, pA20=price>sma20, pA50=price>sma50, pA200=price>sma200;
-  const masAbove=[pA9,pA20,pA50,pA200].filter(Boolean).length;
-  const maAlign=masAbove>=3?'BULL ALIGNED':masAbove===0?'BEAR ALIGNED':'PARTIAL';
-  const rsiD=rsi>55?'bull':rsi<40?'bear':'neutral', macdD=macd>0?'bull':'bear', adxD=adx>25?'bull':'neutral';
-  
-  // Compute pattern lines for visualization
-  const candlesLen = candles.length;
-  const patName = _simPattern === 'Random Walk' ? '—' : _simPattern;
-  let patternLines = [];
-  if (_simPattern === 'Ascending Triangle') {
-    const res = Math.max.apply(null, candles.map(c=>c.h)) - 2;
-    const sup1 = candles[0].l;
-    const sup2 = candles[candlesLen-1].l;
-    patternLines = [{x1:0,y1:res,x2:candlesLen-1,y2:res,color:'#ff8c00',dash:[4,3],width:1.5,label:'RES'},{x1:0,y1:sup1,x2:candlesLen-1,y2:sup2,color:'#4caf50',dash:[4,3],width:1.5,label:'SUP'}];
-  } else if (_simPattern === 'Descending Triangle') {
-    const sup = Math.min.apply(null, candles.map(c=>c.l)) + 2;
-    const res1 = candles[0].h;
-    const res2 = candles[candlesLen-1].h;
-    patternLines = [{x1:0,y1:sup,x2:candlesLen-1,y2:sup,color:'#4caf50',dash:[4,3],width:1.5,label:'SUP'},{x1:0,y1:res1,x2:candlesLen-1,y2:res2,color:'#e53935',dash:[4,3],width:1.5,label:'RES'}];
-  } else if (_simPattern === 'Symmetrical Triangle') {
-    patternLines = [{x1:0,y1:candles[0].h,x2:candlesLen-1,y2:candles[candlesLen-1].h,color:'#ff8c00',dash:[4,3],width:1.2,label:'RES'},{x1:0,y1:candles[0].l,x2:candlesLen-1,y2:candles[candlesLen-1].l,color:'#4caf50',dash:[4,3],width:1.2,label:'SUP'}];
-  } else if (_simPattern === 'Rising Channel') {
-    patternLines = [{x1:0,y1:candles[0].h,x2:candlesLen-1,y2:candles[candlesLen-1].h,color:'#ff8c00',dash:[4,3],width:1.2},{x1:0,y1:candles[0].l,x2:candlesLen-1,y2:candles[candlesLen-1].l,color:'#4caf50',dash:[4,3],width:1.2}];
-  } else if (_simPattern === 'Falling Channel') {
-    patternLines = [{x1:0,y1:candles[0].h,x2:candlesLen-1,y2:candles[candlesLen-1].h,color:'#ff8c00',dash:[4,3],width:1.2},{x1:0,y1:candles[0].l,x2:candlesLen-1,y2:candles[candlesLen-1].l,color:'#4caf50',dash:[4,3],width:1.2}];
-  } else if (_simPattern === 'Head and Shoulders') {
-    const neck = (candles[Math.floor(candlesLen*0.25)].l + candles[Math.floor(candlesLen*0.65)].l) / 2;
-    patternLines = [{x1:Math.floor(candlesLen*0.2),y1:neck,x2:Math.floor(candlesLen*0.7),y2:neck,color:'#e8a846',dash:[5,3],width:1.5,label:'NECK'}];
-  } else if (_simPattern === 'Inverse Head and Shoulders') {
-    const neck = (candles[Math.floor(candlesLen*0.25)].h + candles[Math.floor(candlesLen*0.65)].h) / 2;
-    patternLines = [{x1:Math.floor(candlesLen*0.2),y1:neck,x2:Math.floor(candlesLen*0.7),y2:neck,color:'#e8a846',dash:[5,3],width:1.5,label:'NECK'}];
-  } else if (_simPattern === 'Double Top') {
-    const peak = (candles[Math.floor(candlesLen*0.2)].h + candles[Math.floor(candlesLen*0.5)].h) / 2;
-    patternLines = [{x1:Math.floor(candlesLen*0.15),y1:peak,x2:Math.floor(candlesLen*0.55),y2:peak,color:'#ff8c00',dash:[4,3],width:1.3,label:'RES'}];
-  } else if (_simPattern === 'Double Bottom') {
-    const valley = (candles[Math.floor(candlesLen*0.2)].l + candles[Math.floor(candlesLen*0.5)].l) / 2;
-    patternLines = [{x1:Math.floor(candlesLen*0.15),y1:valley,x2:Math.floor(candlesLen*0.55),y2:valley,color:'#4caf50',dash:[4,3],width:1.3,label:'SUP'}];
-  } else if (_simPattern === 'Bull Flag') {
-    const poleTop = Math.max.apply(null, candles.slice(0,Math.floor(candlesLen*0.35)).map(c=>c.h));
-    const flagHi = Math.max.apply(null, candles.slice(Math.floor(candlesLen*0.35)).map(c=>c.h));
-    const flagLo = Math.min.apply(null, candles.slice(Math.floor(candlesLen*0.35)).map(c=>c.l));
-    const mid = Math.floor(candlesLen*0.35);
-    patternLines = [{x1:mid,y1:flagHi,x2:candlesLen-1,y2:flagHi,color:'#4caf50',dash:[3,3],width:1,label:'FLAG RES'},{x1:mid,y1:flagLo,x2:candlesLen-1,y2:flagLo,color:'#e53935',dash:[3,3],width:1,label:'FLAG SUP'}];
-  } else if (_simPattern === 'Bear Flag') {
-    const poleBot = Math.min.apply(null, candles.slice(0,Math.floor(candlesLen*0.35)).map(c=>c.l));
-    const mid = Math.floor(candlesLen*0.35);
-    const flagHi = Math.max.apply(null, candles.slice(mid).map(c=>c.h));
-    const flagLo = Math.min.apply(null, candles.slice(mid).map(c=>c.l));
-    patternLines = [{x1:mid,y1:flagHi,x2:candlesLen-1,y2:flagHi,color:'#e53935',dash:[3,3],width:1,label:'FLAG RES'},{x1:mid,y1:flagLo,x2:candlesLen-1,y2:flagLo,color:'#4caf50',dash:[3,3],width:1,label:'FLAG SUP'}];
-  } else if (_simPattern === 'Cup and Handle') {
-    const rim = (candles[0].h + candles[candlesLen-1].h) / 2;
-    patternLines = [{x1:0,y1:rim,x2:Math.floor(candlesLen*0.85),y2:rim,color:'#4caf50',dash:[4,3],width:1.2,label:'RIM'}];
-  }
-  
+  const patDef = PATTERNS.find(p => p.name === _simPattern) || PATTERNS[0];
+  const dirColor = patDef.dir === 'bull' ? 'var(--green-bull)' : patDef.dir === 'bear' ? 'var(--red-bear)' : 'var(--yellow-neutral)';
+  const dirLabel = patDef.dir === 'bull' ? '▲ BULLISH' : patDef.dir === 'bear' ? '▼ BEARISH' : '◈ NEUTRAL';
+
+  const match = findPatternExample(_simPattern);
+  const hasData = ['us','brasil','europe','emerging'].some(m => (state.analyzed[m]||[]).length > 0);
+
   let html = '<div class="card" style="padding:0;overflow:hidden">';
   html += `<div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-    <div><span style="font-family:var(--font-mono);font-size:14px;color:var(--accent-amber);font-weight:700">🎲 SIMULATOR</span> <span style="font-size:10px;color:var(--text-dim);font-family:var(--font-mono)">${patName}</span></div>
+    <div>
+      <span style="font-family:var(--font-mono);font-size:14px;color:var(--accent-amber);font-weight:700">${t('sim_title')}</span>
+      <span style="margin-left:10px;font-size:10px;color:${dirColor};font-family:var(--font-mono);font-weight:600">${dirLabel}</span>
+    </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <select id="simPatternSelect" onchange="_simPattern=this.value;renderSim()" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:6px 8px;border-radius:4px;font-family:var(--font-mono);font-size:10px">
-        ${PAT_NAMES.map(p => `<option value="${p}" ${p===_simPattern?'selected':''}>${p}</option>`).join('')}
+      <select id="simPatternSelect" onchange="_simPattern=this.value;renderPatternFinder()" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:6px 8px;border-radius:4px;font-family:var(--font-mono);font-size:10px">
+        ${PATTERNS.map(p => `<option value="${p.name}" ${p.name===_simPattern?'selected':''}>${p.name}</option>`).join('')}
       </select>
-      <button class="btn primary" onclick="renderSim()" style="font-size:11px">🎲 GENERATE</button>
       <button class="btn" onclick="renderDashboard()" style="font-size:10px">${t('nav_back')}</button>
     </div>
   </div>`;
-  html += `<div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;font-family:var(--font-mono);font-size:11px">
-    <span><span style="color:var(--text-dim)">Price:</span> <strong style="color:var(--text-primary)">$${price.toFixed(2)}</strong></span>
-    <span><span style="color:var(--text-dim)">RSI:</span> <strong style="color:${rsiD==='bull'?'var(--green-bull)':rsiD==='bear'?'var(--red-bear)':'var(--yellow-neutral)'}">${rsi}</strong></span>
-    <span><span style="color:var(--text-dim)">MACD:</span> <strong style="color:${macdD==='bull'?'var(--green-bull)':'var(--red-bear)'}">${macd.toFixed(2)}</strong></span>
-    <span><span style="color:var(--text-dim)">ADX:</span> <strong style="color:${adxD==='bull'?'var(--green-bull)':'var(--yellow-neutral)'}">${adx.toFixed(1)}</strong></span>
-    <span><span style="color:var(--text-dim)">MA:</span> <strong style="color:${masAbove>=3?'var(--green-bull)':masAbove===0?'var(--red-bear)':'var(--yellow-neutral)'}">${maAlign}</strong></span>
-    <span><span style="color:var(--text-dim)">SMA9:</span> <strong style="color:${pA9?'var(--green-bull)':'var(--red-bear)'}">$${sma9.toFixed(2)}</strong></span>
-    <span><span style="color:var(--text-dim)">SMA20:</span> <strong style="color:${pA20?'var(--green-bull)':'var(--red-bear)'}">$${sma20.toFixed(2)}</strong></span>
-    <span><span style="color:var(--text-dim)">SMA50:</span> <strong style="color:${pA50?'var(--green-bull)':'var(--red-bear)'}">$${sma50.toFixed(2)}</strong></span>
-    <span><span style="color:var(--text-dim)">SMA200:</span> <strong style="color:${pA200?'var(--green-bull)':'var(--red-bear)'}">$${sma200.toFixed(2)}</strong></span>
+
+  // Pattern description from PATTERNS array
+  html += `<div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+    <div style="flex:1;min-width:200px">
+      <div style="font-size:11px;color:var(--text-secondary);line-height:1.6">${patDef.desc}</div>
+      <div style="font-size:10px;color:var(--accent-amber);margin-top:4px;font-family:var(--font-mono)">▶ ${patDef.play}</div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.2);border-radius:4px;padding:4px;min-width:200px;height:60px">
+      <svg viewBox="0 0 200 60" width="200" height="60" style="display:block">${patDef.svg}</svg>
+    </div>
   </div>`;
-  html += '<div class="chart-container" style="margin:0"><canvas id="simChart" style="height:400px"></canvas></div>';
-  html += `<div style="padding:10px 14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;font-size:10px;color:var(--text-dim);font-family:var(--font-mono)">
-    <span>${candles.length} days &bull; Pattern: ${patName}</span>
-  </div></div>`;
-  container.innerHTML = html;
-  
-  requestAnimationFrame(() => {
-    const cv = document.getElementById('simChart');
-    if (cv) {
-      const chartCandles = candles.slice(-55);
-      const bbFull = calcBB(candles,14,2);
+
+  if (!hasData) {
+    html += `<div style="padding:40px 20px;text-align:center">
+      <div style="font-size:32px;margin-bottom:12px">📡</div>
+      <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-dim)">${t('sim_scanFirst')}</div>
+    </div>`;
+  } else if (!match) {
+    html += `<div style="padding:40px 20px;text-align:center">
+      <div style="font-size:32px;margin-bottom:12px">🔍</div>
+      <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-dim)">${t('sim_noMatch')}</div>
+    </div>`;
+  } else {
+    const c = match.candles;
+    _simCandles = c;
+    const price = c[c.length-1].c;
+    const s9=calcSMA(c,9), s20=calcSMA(c,20), s50=calcSMA(c,50), s200=calcSMA(c,200);
+    const sma9=s9[s9.length-1]||price, sma20=s20[s20.length-1]||price, sma50=s50[s50.length-1]||price, sma200=s200[s200.length-1]||price;
+    const rsiA=calcRSI(c,14), rsi=parseFloat(rsiA[rsiA.length-1]?.toFixed(1))||50;
+    const macdA=calcMACD(c), macd=parseFloat(macdA[macdA.length-1]?.toFixed(2))||0;
+    const adxA=calcADX(c,14), adx=parseFloat(adxA[adxA.length-1]?.toFixed(1))||20;
+    const pA9=price>sma9, pA20=price>sma20, pA50=price>sma50, pA200=price>sma200;
+    const masAbove=[pA9,pA20,pA50,pA200].filter(Boolean).length;
+    const maAlign=masAbove>=3?'BULL ALIGNED':masAbove===0?'BEAR ALIGNED':masAbove>=2?'PARTIAL BULL':'PARTIAL BEAR';
+    const rsiD=rsi>55?'bull':rsi<40?'bear':'neutral', macdD=macd>0?'bull':'bear', adxD=adx>25?'bull':'neutral';
+    const signalColor = match.signal==='buy'?'var(--green-bull)':match.signal==='sell'?'var(--red-bear)':'var(--yellow-neutral)';
+    const signalLabel = match.signal==='buy'?t('buy'):match.signal==='sell'?t('sell'):t('hold');
+    const sym = getCurrencySymbol ? getCurrencySymbol(match.ticker) : '$';
+    const patternLines = buildPatternOverlay(c.slice(-60), _simPattern);
+
+    html += `<div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text-primary)">${match.ticker}</span>
+      <span style="font-size:10px;color:var(--text-secondary)">${match.name||''}</span>
+      <span style="font-size:10px;font-family:var(--font-mono);color:${signalColor};font-weight:700;background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:3px">${signalLabel}</span>
+      <span style="font-size:10px;color:var(--text-dim);font-family:var(--font-mono);margin-left:auto">${t('sim_bestMatch')} <strong style="color:var(--accent-amber)">${_simPattern}</strong></span>
+    </div>`;
+    html += `<div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;font-family:var(--font-mono);font-size:11px">
+      <span><span style="color:var(--text-dim)">Price:</span> <strong>${sym}${price.toFixed(2)}</strong></span>
+      <span><span style="color:var(--text-dim)">RSI:</span> <strong style="color:${rsiD==='bull'?'var(--green-bull)':rsiD==='bear'?'var(--red-bear)':'var(--yellow-neutral)'}">${rsi}</strong></span>
+      <span><span style="color:var(--text-dim)">MACD:</span> <strong style="color:${macdD==='bull'?'var(--green-bull)':'var(--red-bear)'}">${macd.toFixed(2)}</strong></span>
+      <span><span style="color:var(--text-dim)">ADX:</span> <strong style="color:${adxD==='bull'?'var(--green-bull)':'var(--yellow-neutral)'}">${adx.toFixed(1)}</strong></span>
+      <span><span style="color:var(--text-dim)">MA:</span> <strong style="color:${masAbove>=3?'var(--green-bull)':masAbove===0?'var(--red-bear)':'var(--yellow-neutral)'}">${maAlign}</strong></span>
+    </div>`;
+    html += '<div class="chart-container" style="margin:0"><canvas id="simChart" style="height:400px"></canvas></div>';
+    html += `<div style="padding:8px 14px;font-size:10px;color:var(--text-dim);font-family:var(--font-mono);border-top:1px solid var(--border)">${t('sim_disclaimer')}</div>`;
+    html += '</div>';
+    container.innerHTML = html;
+
+    requestAnimationFrame(() => {
+      const cv = document.getElementById('simChart');
+      if (!cv) return;
+      const chartCandles = c.slice(-60);
+      const bbFull = calcBB(c,14,2);
       drawChart(cv, chartCandles, {
-        sma9: candles.length>9 ? calcSMA(candles,9).slice(-55) : [],
-        sma20: candles.length>20 ? calcSMA(candles,20).slice(-55) : [],
-        sma50: candles.length>50 ? calcSMA(candles,50).slice(-55) : [],
-        sma200: candles.length>200 ? calcSMA(candles,200).slice(-55) : [],
-        bbU: bbFull.upper.slice(-55), bbL: bbFull.lower.slice(-55),
-        patternLines: patternLines,
+        sma9: c.length>9 ? calcSMA(c,9).slice(-60) : [],
+        sma20: c.length>20 ? calcSMA(c,20).slice(-60) : [],
+        sma50: c.length>50 ? calcSMA(c,50).slice(-60) : [],
+        sma200: c.length>200 ? calcSMA(c,200).slice(-60) : [],
+        bbU: bbFull.upper.slice(-60), bbL: bbFull.lower.slice(-60),
+        patternLines, ticker: match.ticker,
       });
       const parent = cv.parentElement;
       const btnBar = document.createElement('div');
       btnBar.style.cssText = 'display:flex;gap:4px;padding:4px 6px';
-      btnBar.innerHTML = '<button class="btn chart-period-btn" onclick="changeSimPeriod(1)" style="font-size:8px;padding:3px 6px">1D</button><button class="btn chart-period-btn" onclick="changeSimPeriod(22)" style="font-size:8px;padding:3px 6px">1M</button><button class="btn chart-period-btn active-period" onclick="changeSimPeriod(55)" style="font-size:8px;padding:3px 6px">3M</button><button class="btn chart-period-btn" onclick="changeSimPeriod(110)" style="font-size:8px;padding:3px 6px">6M</button><button class="btn chart-period-btn" onclick="changeSimPeriod(260)" style="font-size:8px;padding:3px 6px">ALL</button>';
+      btnBar.innerHTML = '<button class="btn chart-period-btn active-period" onclick="changeSimPeriod(60)" style="font-size:8px;padding:3px 6px">3M</button><button class="btn chart-period-btn" onclick="changeSimPeriod(110)" style="font-size:8px;padding:3px 6px">6M</button><button class="btn chart-period-btn" onclick="changeSimPeriod(260)" style="font-size:8px;padding:3px 6px">ALL</button>';
       parent.insertBefore(btnBar, parent.firstChild);
-    }
-  });
+    });
+    return;
+  }
+  container.innerHTML = html;
 }
 
-let _simCandles = [];
 function changeSimPeriod(period) {
   const cv = document.getElementById('simChart');
-  if (!cv) return;
-  const candles = _simCandles.length > 0 ? _simCandles : generateSimData(260);
-  const count = Math.min(period, candles.length);
-  const chartCandles = candles.slice(-count);
-  const bbFull = calcBB(candles,14,2);
+  if (!cv || !_simCandles.length) return;
+  const count = Math.min(period, _simCandles.length);
+  const chartCandles = _simCandles.slice(-count);
+  const bbFull = calcBB(_simCandles,14,2);
+  const patternLines = buildPatternOverlay(chartCandles, _simPattern);
   const parent = cv.parentElement;
   parent.querySelectorAll('.chart-period-btn').forEach(b => b.classList.remove('active-period'));
   parent.querySelectorAll('.chart-period-btn').forEach(b => { if(b.getAttribute('onclick')?.includes('changeSimPeriod('+period+')')) b.classList.add('active-period'); });
   drawChart(cv, chartCandles, {
-    sma9: candles.length>9 ? calcSMA(candles,9).slice(-count) : [],
-    sma20: candles.length>20 ? calcSMA(candles,20).slice(-count) : [],
-    sma50: candles.length>50 ? calcSMA(candles,50).slice(-count) : [],
-    sma200: candles.length>200 ? calcSMA(candles,200).slice(-count) : [],
-    bbU: bbFull.upper.slice(-count),
-    bbL: bbFull.lower.slice(-count),
+    sma9: _simCandles.length>9 ? calcSMA(_simCandles,9).slice(-count) : [],
+    sma20: _simCandles.length>20 ? calcSMA(_simCandles,20).slice(-count) : [],
+    sma50: _simCandles.length>50 ? calcSMA(_simCandles,50).slice(-count) : [],
+    sma200: _simCandles.length>200 ? calcSMA(_simCandles,200).slice(-count) : [],
+    bbU: bbFull.upper.slice(-count), bbL: bbFull.lower.slice(-count),
+    patternLines,
   });
 }
 
@@ -3503,7 +3551,7 @@ function renderEdu() {
     { id:'adx',      icon:'📊', name:'ADX',           color:'#e8a846', title:t('edu_adxTitle'),       subtitle:t('edu_adxSubtitle'),       body:t('edu_adxBody') },
     { id:'sma',      icon:'〰️', name:'SMA Crossovers',color:'#ff6a00', title:t('edu_smaTitle'),       subtitle:t('edu_smaSubtitle'),       body:t('edu_smaBody') },
     { id:'bb',       icon:'📉', name:'Bollinger',     color:'#c85a17', title:t('edu_bollingerTitle'), subtitle:t('edu_bollingerSubtitle'), body:t('edu_bollingerBody') },
-    { id:'patterns', icon:'📐', name:'Patterns',      color:'#4caf50', title:t('edu_patternsTitle'), subtitle:t('edu_patternsSubtitle'), body:t('edu_patternsBody') },
+    { id:'patterns', icon:'📐', name:t('edu_patternsTab'), color:'#4caf50', title:t('edu_patternsTitle'), subtitle:t('edu_patternsSubtitle'), body:t('edu_patternsBody') },
     { id:'darf',     icon:'🇧🇷', name:'DARF',         color:'#e8a846', title:t('edu_darfTitle'),      subtitle:t('edu_darfSubtitle'),      body:t('edu_darfBody') },
   ];
 
@@ -3538,6 +3586,8 @@ function renderEdu() {
       html += `<div style="padding:5px 14px;font-size:9px;color:var(--text-dim);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid var(--border)">${label}</div>`;
       html += '<div style="display:flex;flex-wrap:wrap">';
       items.forEach(p => {
+        const pDesc = (_lang === 'pt' && p.desc_pt) ? p.desc_pt : p.desc;
+        const pPlay = (_lang === 'pt' && p.play_pt) ? p.play_pt : p.play;
         html += `<div style="width:50%;padding:8px 12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);display:flex;gap:10px;align-items:center">
           <svg viewBox="0 0 200 62" style="width:50px;height:20px;flex-shrink:0;border-radius:2px;background:#0d0906">
             <line x1="0" y1="31" x2="200" y2="31" stroke="#1f1812" stroke-width="0.5"/>
@@ -3545,7 +3595,8 @@ function renderEdu() {
           </svg>
           <div>
             <div style="font-size:10px;font-weight:600;color:${color}">${p.name}</div>
-            <div style="font-size:8px;color:var(--text-dim)">${p.play.slice(0,40)}</div>
+            <div style="font-size:8px;color:var(--text-dim);margin-top:1px">${pDesc}</div>
+            <div style="font-size:8px;color:var(--accent-amber);margin-top:1px">▶ ${pPlay}</div>
           </div>
         </div>`;
       });
