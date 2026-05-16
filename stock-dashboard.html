@@ -1467,20 +1467,24 @@ function renderPortfolioView() {
   html += 'Positions: <strong style="color:var(--text-primary)">' + state.portfolio.length + '</strong> (' + state.portfolio.filter(p => p.status === 'holding').length + ' holding, ' + state.portfolio.filter(p => p.status === 'sold').length + ' sold)</div>';
   html += '</div>';
   
-  // Monthly profit breakdown — realized from sold dates, unrealized shown separately
+  // Monthly profit breakdown — grouped by currency then month
+  // realizedByMonth: { sym: { month: number } }
   const realizedByMonth = {};
   const unrealizedByMonth = {};
   const nowDate = new Date();
   state.portfolio.forEach(p => {
+    const sym = getCurrencySymbol(p.ticker);
     if (p.status === 'sold' && p.sellPrice) {
       const profit = (p.sellPrice - p.buyPrice) * p.quantity;
       const sellMonth = p.sellDate ? p.sellDate.slice(0,7) : (p.buyDate ? p.buyDate.slice(0,7) : 'unknown');
-      realizedByMonth[sellMonth] = (realizedByMonth[sellMonth] || 0) + profit;
+      if (!realizedByMonth[sym]) realizedByMonth[sym] = {};
+      realizedByMonth[sym][sellMonth] = (realizedByMonth[sym][sellMonth] || 0) + profit;
     } else if (p.status === 'holding') {
       const buyMonth = p.buyDate ? p.buyDate.slice(0,7) : 'unknown';
       const currPrice = getPortfolioPrice(p.ticker);
       const profit = currPrice ? ((currPrice - p.buyPrice) * p.quantity) : 0;
-      unrealizedByMonth[buyMonth] = (unrealizedByMonth[buyMonth] || 0) + profit;
+      if (!unrealizedByMonth[sym]) unrealizedByMonth[sym] = {};
+      unrealizedByMonth[sym][buyMonth] = (unrealizedByMonth[sym][buyMonth] || 0) + profit;
     }
   });
   
@@ -1499,12 +1503,12 @@ function renderPortfolioView() {
     });
   }
   
-  const allRealizedMonths = Object.keys(realizedByMonth).sort();
-  const allUnrealizedMonths = Object.keys(unrealizedByMonth).sort();
-  const filteredRealizedMonths = filterMonths(allRealizedMonths, _portfolioMonthFilter);
-  const filteredUnrealizedMonths = filterMonths(allUnrealizedMonths, _portfolioMonthFilter);
-  
-  const hasProfits = filteredRealizedMonths.length > 0 || filteredUnrealizedMonths.length > 0;
+  const realizedSymbols = Object.keys(realizedByMonth);
+  const unrealizedSymbols = Object.keys(unrealizedByMonth);
+  const hasFilteredRealized = realizedSymbols.some(sym => filterMonths(Object.keys(realizedByMonth[sym]), _portfolioMonthFilter).length > 0);
+  const hasFilteredUnrealized = unrealizedSymbols.some(sym => filterMonths(Object.keys(unrealizedByMonth[sym]), _portfolioMonthFilter).length > 0);
+
+  const hasProfits = hasFilteredRealized || hasFilteredUnrealized;
   if (hasProfits) {
     html += '<div class="card" style="padding:14px;margin-bottom:14px">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
@@ -1517,39 +1521,45 @@ function renderPortfolioView() {
     });
     html += '<button class="btn" onclick="generateTaxReport()" style="font-size:10px;color:var(--accent-amber);border-color:var(--accent-amber)">' + t('taxReport_title') + '</button>';
     html += '</div></div>';
-    
-    // Realized monthly — aggregate across mixed currencies — symbol intentionally left as $
-    if (filteredRealizedMonths.length > 0) {
+
+    // Realized — one table per currency
+    if (hasFilteredRealized) {
       html += '<div style="font-size:10px;color:var(--green-bull);margin-bottom:6px;font-family:var(--font-mono)">' + t('taxReport_realized') + '</div>';
-      html += '<table class="tracked-table"><thead><tr><th>MONTH</th><th>PROFIT / DEFICIT</th></tr></thead><tbody>';
-      let grandRealized = 0;
-      filteredRealizedMonths.forEach(month => {
-        const profit = realizedByMonth[month];
-        grandRealized += profit;
-        const profitClass = profit >= 0 ? 'pnl-up' : 'pnl-dn';
-        html += '<tr><td style="color:var(--text-dim)">' + month + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td></tr>';
+      realizedSymbols.forEach(sym => {
+        const months = filterMonths(Object.keys(realizedByMonth[sym]).sort(), _portfolioMonthFilter);
+        if (months.length === 0) return;
+        html += '<div style="font-size:9px;color:var(--accent-amber);font-family:var(--font-mono);margin-bottom:3px">' + sym + '</div>';
+        html += '<table class="tracked-table" style="margin-bottom:10px"><thead><tr><th>MONTH</th><th>PROFIT / DEFICIT</th></tr></thead><tbody>';
+        let grand = 0;
+        months.forEach(month => {
+          const profit = realizedByMonth[sym][month];
+          grand += profit;
+          html += '<tr><td style="color:var(--text-dim)">' + month + '</td><td class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + sym + profit.toFixed(2) + '</td></tr>';
+        });
+        html += '<tr><td style="font-weight:700;color:var(--text-primary)">' + t('portfolio_totalRealized') + '</td><td class="' + (grand >= 0 ? 'pnl-up' : 'pnl-dn') + '" style="font-weight:700">' + (grand >= 0 ? '+' : '') + sym + grand.toFixed(2) + '</td></tr>';
+        html += '</tbody></table>';
       });
-      const grClass = grandRealized >= 0 ? 'pnl-up' : 'pnl-dn';
-      html += '<tr><td style="font-weight:700;color:var(--text-primary)">' + t('portfolio_totalRealized') + '</td><td class="' + grClass + '" style="font-weight:700">' + (grandRealized >= 0 ? '+' : '') + '$' + grandRealized.toFixed(2) + '</td></tr>';
-      html += '</tbody></table>';
     }
 
-    // Unrealized monthly — aggregate across mixed currencies — symbol intentionally left as $
-    if (filteredUnrealizedMonths.length > 0) {
+    // Unrealized — one table per currency
+    if (hasFilteredUnrealized) {
       html += '<div style="font-size:10px;color:var(--yellow-neutral);margin:8px 0 6px;font-family:var(--font-mono)">' + t('taxReport_unrealized') + '</div>';
-      html += '<table class="tracked-table"><thead><tr><th>MONTH</th><th>EST. PROFIT / DEFICIT</th></tr></thead><tbody>';
-      let grandUnrealized = 0;
-      filteredUnrealizedMonths.forEach(month => {
-        const profit = unrealizedByMonth[month];
-        grandUnrealized += profit;
-        const profitClass = profit >= 0 ? 'pnl-up' : 'pnl-dn';
-        html += '<tr><td style="color:var(--text-dim)">' + month + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(2) + '</td></tr>';
+      unrealizedSymbols.forEach(sym => {
+        const months = filterMonths(Object.keys(unrealizedByMonth[sym]).sort(), _portfolioMonthFilter);
+        if (months.length === 0) return;
+        html += '<div style="font-size:9px;color:var(--accent-amber);font-family:var(--font-mono);margin-bottom:3px">' + sym + '</div>';
+        html += '<table class="tracked-table" style="margin-bottom:10px"><thead><tr><th>MONTH</th><th>EST. PROFIT / DEFICIT</th></tr></thead><tbody>';
+        let grand = 0;
+        months.forEach(month => {
+          const profit = unrealizedByMonth[sym][month];
+          grand += profit;
+          html += '<tr><td style="color:var(--text-dim)">' + month + '</td><td class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + sym + profit.toFixed(2) + '</td></tr>';
+        });
+        html += '<tr><td style="font-weight:700;color:var(--text-primary)">' + t('portfolio_totalUnrealized') + '</td><td class="' + (grand >= 0 ? 'pnl-up' : 'pnl-dn') + '" style="font-weight:700">' + (grand >= 0 ? '+' : '') + sym + grand.toFixed(2) + '</td></tr>';
+        html += '</tbody></table>';
       });
-      const gurClass = grandUnrealized >= 0 ? 'pnl-up' : 'pnl-dn';
-      html += '<tr><td style="font-weight:700;color:var(--text-primary)">' + t('portfolio_totalUnrealized') + '</td><td class="' + gurClass + '" style="font-weight:700">' + (grandUnrealized >= 0 ? '+' : '') + '$' + grandUnrealized.toFixed(2) + '</td></tr>';
-      html += '</tbody></table>';
     }
-    
+
     html += '</div>';
   }
   
@@ -1826,16 +1836,17 @@ function generateTaxReport() {
   if (soldItems.length === 0) {
     html += '<div style="color:var(--text-dim);font-size:11px">' + t('taxReport_noRealized') + '</div>';
   } else {
-    html += '<table class="tracked-table"><thead><tr><th>TICKER</th><th>QTY</th><th>BUY $</th><th>SELL $</th><th>GAIN/LOSS</th><th>BUY DATE</th><th>SELL DATE</th></tr></thead><tbody>';
-    let totalRealized = 0;
+    html += '<table class="tracked-table"><thead><tr><th>TICKER</th><th>QTY</th><th>' + t('portfolio_buyPrice') + '</th><th>' + t('portfolio_currentSell') + '</th><th>GAIN/LOSS</th><th>BUY DATE</th><th>SELL DATE</th></tr></thead><tbody>';
+    const realizedByCur = {};
     soldItems.forEach(p => {
+      const sym = getCurrencySymbol(p.ticker);
       const profit = (p.sellPrice - p.buyPrice) * p.quantity;
-      totalRealized += profit;
-      const profitClass = profit >= 0 ? 'pnl-up' : 'pnl-dn';
-      html += '<tr><td class="tkr">' + p.ticker + '</td><td>' + p.quantity + '</td><td>' + getCurrencySymbol(p.ticker) + p.buyPrice.toFixed(2) + '</td><td>' + getCurrencySymbol(p.ticker) + p.sellPrice.toFixed(2) + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + getCurrencySymbol(p.ticker) + profit.toFixed(2) + '</td><td style="color:var(--text-dim)">' + (p.buyDate || '—') + '</td><td style="color:var(--text-dim)">' + (p.sellDate || '—') + '</td></tr>';
+      realizedByCur[sym] = (realizedByCur[sym] || 0) + profit;
+      html += '<tr><td class="tkr">' + p.ticker + '</td><td>' + p.quantity + '</td><td>' + sym + p.buyPrice.toFixed(2) + '</td><td>' + sym + p.sellPrice.toFixed(2) + '</td><td class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + sym + profit.toFixed(2) + '</td><td style="color:var(--text-dim)">' + (p.buyDate || '—') + '</td><td style="color:var(--text-dim)">' + (p.sellDate || '—') + '</td></tr>';
     });
-    const trClass = totalRealized >= 0 ? 'pnl-up' : 'pnl-dn';
-    html += '<tr><td style="font-weight:700">' + t('portfolio_totalRealized') + '</td><td></td><td></td><td></td><td class="' + trClass + '" style="font-weight:700">' + (totalRealized >= 0 ? '+' : '') + '$' + totalRealized.toFixed(2) + '</td><td></td><td></td></tr>'; // aggregate across mixed currencies — symbol intentionally left as $
+    Object.entries(realizedByCur).forEach(([sym, total]) => {
+      html += '<tr><td style="font-weight:700">' + t('portfolio_totalRealized') + ' (' + sym + ')</td><td></td><td></td><td></td><td class="' + (total >= 0 ? 'pnl-up' : 'pnl-dn') + '" style="font-weight:700">' + (total >= 0 ? '+' : '') + sym + total.toFixed(2) + '</td><td></td><td></td></tr>';
+    });
     html += '</tbody></table></div>';
   }
   
@@ -1845,26 +1856,29 @@ function generateTaxReport() {
   if (holdingItems.length === 0) {
     html += '<div style="color:var(--text-dim);font-size:11px">' + t('taxReport_allClosed') + '</div>';
   } else {
-    html += '<table class="tracked-table"><thead><tr><th>TICKER</th><th>QTY</th><th>BUY $</th><th>CURRENT $</th><th>UNREALIZED P&amp;L</th><th>BUY DATE</th></tr></thead><tbody>';
-    let totalUnrealized = 0;
+    html += '<table class="tracked-table"><thead><tr><th>TICKER</th><th>QTY</th><th>' + t('portfolio_buyPrice') + '</th><th>' + t('portfolio_currentSell') + '</th><th>UNREALIZED P&amp;L</th><th>BUY DATE</th></tr></thead><tbody>';
+    const unrealizedByCur = {};
     holdingItems.forEach(p => {
+      const sym = getCurrencySymbol(p.ticker);
       const currPrice = getPortfolioPrice(p.ticker);
       const price = currPrice || p.buyPrice;
       const profit = (price - p.buyPrice) * p.quantity;
-      totalUnrealized += profit;
-      const profitClass = profit >= 0 ? 'pnl-up' : 'pnl-dn';
-      html += '<tr><td class="tkr">' + p.ticker + '</td><td>' + p.quantity + '</td><td>' + getCurrencySymbol(p.ticker) + p.buyPrice.toFixed(2) + '</td><td>' + (currPrice ? getCurrencySymbol(p.ticker) + currPrice.toFixed(2) : '<span style="color:var(--text-dim)">—</span>') + '</td><td class="' + profitClass + '">' + (profit >= 0 ? '+' : '') + getCurrencySymbol(p.ticker) + profit.toFixed(2) + '</td><td style="color:var(--text-dim)">' + (p.buyDate || '—') + '</td></tr>';
+      unrealizedByCur[sym] = (unrealizedByCur[sym] || 0) + profit;
+      html += '<tr><td class="tkr">' + p.ticker + '</td><td>' + p.quantity + '</td><td>' + sym + p.buyPrice.toFixed(2) + '</td><td>' + (currPrice ? sym + currPrice.toFixed(2) : '<span style="color:var(--text-dim)">—</span>') + '</td><td class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + sym + profit.toFixed(2) + '</td><td style="color:var(--text-dim)">' + (p.buyDate || '—') + '</td></tr>';
     });
-    const turClass = totalUnrealized >= 0 ? 'pnl-up' : 'pnl-dn';
-    html += '<tr><td style="font-weight:700">' + t('portfolio_totalUnrealized') + '</td><td></td><td></td><td></td><td class="' + turClass + '" style="font-weight:700">' + (totalUnrealized >= 0 ? '+' : '') + '$' + totalUnrealized.toFixed(2) + '</td><td></td></tr>'; // aggregate across mixed currencies — symbol intentionally left as $
+    Object.entries(unrealizedByCur).forEach(([sym, total]) => {
+      html += '<tr><td style="font-weight:700">' + t('portfolio_totalUnrealized') + ' (' + sym + ')</td><td></td><td></td><td></td><td class="' + (total >= 0 ? 'pnl-up' : 'pnl-dn') + '" style="font-weight:700">' + (total >= 0 ? '+' : '') + sym + total.toFixed(2) + '</td><td></td></tr>';
+    });
     html += '</tbody></table></div>';
   }
   
-  // Tax estimate
-  const totalRealizedGain = soldItems.reduce((sum, p) => sum + ((p.sellPrice - p.buyPrice) * p.quantity), 0);
+  // Tax estimate — one block per currency
   const taxRate = parseFloat(localStorage.getItem('jerry_tax_rate') || '30');
-  const taxAmount = totalRealizedGain > 0 ? totalRealizedGain * (taxRate / 100) : 0;
-  const netAfterTax = totalRealizedGain - taxAmount;
+  const realizedGainByCur = {};
+  soldItems.forEach(p => {
+    const sym = getCurrencySymbol(p.ticker);
+    realizedGainByCur[sym] = (realizedGainByCur[sym] || 0) + (p.sellPrice - p.buyPrice) * p.quantity;
+  });
   html += '<div style="padding:14px">';
   html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--accent-amber);margin-bottom:10px">' + t('taxReport_taxEstimate') + '</h3>';
   html += '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">';
@@ -1873,21 +1887,29 @@ function generateTaxReport() {
   html += '<span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">%</span>';
   html += '<button class="btn" onclick="saveTaxRate()" style="font-size:10px;padding:4px 10px">💾 SET</button>';
   html += '</div>';
-  // aggregate across mixed currencies — symbol intentionally left as $
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-  html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
-  html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">Realized Gain/Loss</div>';
-  html += '<div style="font-family:var(--font-mono);font-size:18px;font-weight:700;margin-top:4px;' + (totalRealizedGain >= 0 ? 'color:var(--green-bull)' : 'color:var(--red-bear)') + '">' + (totalRealizedGain >= 0 ? '+' : '') + '$' + totalRealizedGain.toFixed(2) + '</div>';
-  html += '</div>';
-  html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
-  html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">TAX (' + taxRate + '%)</div>';
-  html += '<div style="font-family:var(--font-mono);font-size:18px;font-weight:700;margin-top:4px;color:var(--red-bear)">$' + (totalRealizedGain > 0 ? taxAmount.toFixed(2) : '0.00') + '</div>';
-  html += '</div>';
-  html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
-  html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">' + t('taxReport_netAfterTax') + '</div>';
-  html += '<div style="font-family:var(--font-mono);font-size:18px;font-weight:700;margin-top:4px;' + (netAfterTax >= 0 ? 'color:var(--green-bull)' : 'color:var(--red-bear)') + '">' + (netAfterTax >= 0 ? '+' : '') + '$' + netAfterTax.toFixed(2) + '</div>';
-  html += '</div>';
-  html += '</div>';
+  if (Object.keys(realizedGainByCur).length === 0) {
+    html += '<div style="color:var(--text-dim);font-size:11px">' + t('taxReport_noRealized') + '</div>';
+  } else {
+    Object.entries(realizedGainByCur).forEach(([sym, gain]) => {
+      const tax = gain > 0 ? gain * (taxRate / 100) : 0;
+      const net = gain - tax;
+      html += '<div style="font-size:9px;color:var(--accent-amber);font-family:var(--font-mono);margin-bottom:6px">' + sym + '</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
+      html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
+      html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">Realized Gain/Loss</div>';
+      html += '<div style="font-family:var(--font-mono);font-size:18px;font-weight:700;margin-top:4px;' + (gain >= 0 ? 'color:var(--green-bull)' : 'color:var(--red-bear)') + '">' + (gain >= 0 ? '+' : '') + sym + gain.toFixed(2) + '</div>';
+      html += '</div>';
+      html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
+      html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">TAX (' + taxRate + '%)</div>';
+      html += '<div style="font-family:var(--font-mono);font-size:18px;font-weight:700;margin-top:4px;color:var(--red-bear)">' + sym + (gain > 0 ? tax.toFixed(2) : '0.00') + '</div>';
+      html += '</div>';
+      html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
+      html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">' + t('taxReport_netAfterTax') + '</div>';
+      html += '<div style="font-family:var(--font-mono);font-size:18px;font-weight:700;margin-top:4px;' + (net >= 0 ? 'color:var(--green-bull)' : 'color:var(--red-bear)') + '">' + (net >= 0 ? '+' : '') + sym + net.toFixed(2) + '</div>';
+      html += '</div>';
+      html += '</div>';
+    });
+  }
   html += '<div style="margin-top:10px;font-size:10px;color:var(--text-dim);padding:8px;background:rgba(255,193,7,0.08);border-radius:4px">';
   html += t('taxReport_disclaimer');
   html += '</div></div></div>';
