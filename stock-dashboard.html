@@ -267,6 +267,7 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
             <div style="font-size:12px;font-weight:600" id="dropdownEmail">user@email.com</div>
             <div style="font-size:10px;color:var(--text-dim);margin-top:2px" id="dropdownTier">Free tier</div>
           </div>
+          <div class="dropdown-item" onclick="showProfile()" style="padding:8px 14px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">👤 My Profile</div>
           <div class="dropdown-item" onclick="showChangePassword()" style="padding:8px 14px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">🔑 Change Password</div>
           <div class="dropdown-item" id="upgradeBtn2" onclick="upgradeToPro()" style="padding:8px 14px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">⭐ Go Pro</div>
           <div class="dropdown-item" id="adminBtn2" onclick="showAdminView()" style="display:none;padding:8px 14px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border);align-items:center;gap:8px">👑 Admin Panel</div>
@@ -410,9 +411,11 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
 <div class="modal-overlay" id="resetModal">
   <div class="modal" style="max-width:380px">
     <h2>🔑 Set New Password</h2>
-    <input class="search-input" id="resetPassword" type="password" placeholder="New password (min 6 chars)" autocomplete="new-password" style="width:100%;margin-bottom:8px;font-size:13px">
-    <input class="search-input" id="resetPassword2" type="password" placeholder="Confirm new password" autocomplete="new-password" style="width:100%;margin-bottom:12px;font-size:13px">
-    <button class="btn primary" onclick="submitResetPassword()" style="width:100%" id="resetSubmitBtn">UPDATE PASSWORD</button>
+    <form autocomplete="on" onsubmit="submitResetPassword();return false">
+      <input class="search-input" id="resetPassword" type="password" placeholder="New password (min 6 chars)" autocomplete="new-password" style="width:100%;margin-bottom:8px;font-size:13px">
+      <input class="search-input" id="resetPassword2" type="password" placeholder="Confirm new password" autocomplete="new-password" style="width:100%;margin-bottom:12px;font-size:13px">
+      <button class="btn primary" type="submit" style="width:100%" id="resetSubmitBtn">UPDATE PASSWORD</button>
+    </form>
     <div id="resetMsg" style="margin-top:8px;font-size:11px;text-align:center;color:var(--text-secondary)"></div>
   </div>
 </div>
@@ -564,6 +567,59 @@ async function updateAuthUI() {
     // Hide language selector when logged out
     const langSelOut = document.getElementById('langSelect');
     if (langSelOut) langSelOut.style.display = 'none';
+  }
+}
+
+function formatCPF(v) {
+  const d = v.replace(/\D/g,'').substring(0,11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return d.slice(0,3)+'.'+d.slice(3);
+  if (d.length <= 9) return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6);
+  return d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9);
+}
+
+function validateCPFClient(cpf) {
+  const d = cpf.replace(/\D/g,'');
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  let s=0; for(let i=0;i<9;i++) s+=+d[i]*(10-i);
+  let r=(s*10)%11; if(r>=10)r=0; if(r!==+d[9]) return false;
+  s=0; for(let i=0;i<10;i++) s+=+d[i]*(11-i);
+  r=(s*10)%11; if(r>=10)r=0; return r===+d[10];
+}
+
+async function showProfile() {
+  document.getElementById('userDropdown').style.display = 'none';
+  const container = document.getElementById('dashboard');
+  const cpfVal = (authUser && authUser.cpf) ? formatCPF(authUser.cpf) : '';
+  container.innerHTML = `
+    <div class="card" style="max-width:420px;margin:40px auto">
+      <h3 style="font-family:var(--font-mono);color:var(--accent-amber);margin-bottom:4px">👤 ${t('profile_title')}</h3>
+      <div style="font-size:10px;color:var(--text-dim);margin-bottom:16px">${authUser ? authUser.email : ''}</div>
+      <label style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px">${t('profile_cpf')}</label>
+      <input class="search-input" id="profileCpf" type="text" inputmode="numeric" placeholder="000.000.000-00" value="${cpfVal}" maxlength="14" oninput="this.value=formatCPF(this.value)" style="width:100%;margin-bottom:4px;font-size:13px;font-family:var(--font-mono)">
+      <div style="font-size:10px;color:var(--text-dim);margin-bottom:12px">${t('profile_cpfHint')}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn primary" onclick="submitProfile()" style="flex:1">${t('profile_save')}</button>
+        <button class="btn" onclick="renderDashboard()">${t('auth_cancel')}</button>
+      </div>
+      <div id="profileMsg" style="margin-top:8px;font-size:11px;display:none"></div>
+    </div>`;
+}
+
+async function submitProfile() {
+  const input = document.getElementById('profileCpf');
+  const msgEl = document.getElementById('profileMsg');
+  const cpf = input.value.trim();
+  if (cpf && !validateCPFClient(cpf)) {
+    msgEl.style.color = 'var(--red-bear)'; msgEl.textContent = t('profile_cpfInvalid'); msgEl.style.display = 'block'; return;
+  }
+  msgEl.style.display = 'none';
+  const data = await apiPost('/api/auth/profile', { cpf });
+  if (data.ok) {
+    if (authUser) authUser.cpf = data.cpf;
+    msgEl.style.color = 'var(--green-bull)'; msgEl.textContent = '✅ ' + t('profile_saved'); msgEl.style.display = 'block';
+  } else {
+    msgEl.style.color = 'var(--red-bear)'; msgEl.textContent = data.error || t('errors_fillFields'); msgEl.style.display = 'block';
   }
 }
 
@@ -2367,7 +2423,7 @@ function generateTaxReport() {
     html += '</div></div>';
 
     const darfBlock = function(label, items, rate, cfKey, isSwing) {
-      if (items.length === 0) return '';
+      if (items.length === 0) return { html: '', netDARF: 0 };
       const grossSales = items.reduce((s, p) => s + p.sellPrice * p.quantity, 0);
       const realized   = items.reduce((s, p) => s + (p.sellPrice - p.buyPrice) * p.quantity, 0);
       const accrued    = cf[cfKey] || 0;
@@ -2407,20 +2463,37 @@ function generateTaxReport() {
       b += '</div>';
       if (newLoss > 0) b += '<div style="margin-top:6px;font-size:9px;color:var(--yellow-neutral)">⚠ ' + (isSwing ? t('darf_lossSwing') : t('darf_lossDaytrade')).replace(':','') + ': adicione R$' + newLoss.toFixed(2) + ' ao campo acima após encerrar o mês.</div>';
       b += '</div>';
-      return b;
+      return { html: b, netDARF };
     };
 
-    html += darfBlock('📈 ' + t('darf_swingTitle'), swingItems, 0.15, 'swing_BRL', true);
-    html += darfBlock('⚡ ' + t('darf_daytradeTitle'), dtItems, 0.20, 'daytrade_BRL', false);
+    const swingBlock = darfBlock('📈 ' + t('darf_swingTitle'), swingItems, 0.15, 'swing_BRL', true);
+    const dtBlock    = darfBlock('⚡ ' + t('darf_daytradeTitle'), dtItems, 0.20, 'daytrade_BRL', false);
+    html += swingBlock.html + dtBlock.html;
 
     if (swingItems.length === 0 && dtItems.length === 0) {
       html += '<div style="color:var(--text-dim);font-size:11px">' + t('darf_noBrlTrades') + '</div>';
     }
 
-    // DARF code + Sicalc link
-    html += '<div style="display:flex;align-items:center;gap:12px;margin:12px 0 10px">';
+    // DARF code + SicalcWeb link (US-70)
+    const userCpf = authUser && authUser.cpf ? formatCPF(authUser.cpf) : null;
+    const totalDARF = swingBlock.netDARF + dtBlock.netDARF;
+    html += '<div style="margin:14px 0 10px;padding:10px 12px;background:rgba(200,90,23,0.07);border:1px solid rgba(200,90,23,0.3);border-radius:6px">';
+    html += '<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">' + t('darf_sicalcTitle') + '</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px">';
     html += '<span style="font-family:var(--font-mono);font-size:11px;background:rgba(200,90,23,0.12);border:1px solid rgba(200,90,23,0.35);padding:4px 10px;border-radius:4px">' + t('darf_code') + '</span>';
-    html += '<a href="https://sicalc.receita.fazenda.gov.br/sicalc/principal" target="_blank" rel="noopener noreferrer" style="font-family:var(--font-mono);font-size:11px;color:var(--accent-amber);text-decoration:underline">' + t('darf_siCalcLink') + '</a>';
+    if (totalDARF > 0) {
+      html += '<span style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--red-bear)">R$' + totalDARF.toFixed(2) + ' ' + t('darf_due') + '</span>';
+    }
+    html += '</div>';
+    if (userCpf) {
+      html += '<div style="font-family:var(--font-mono);font-size:10px;margin-bottom:8px;display:flex;align-items:center;gap:8px">';
+      html += '<span style="color:var(--text-dim)">CPF:</span><span id="darfCpfDisplay" style="color:var(--text-primary);letter-spacing:1px">' + userCpf + '</span>';
+      html += '<button class="btn" onclick="navigator.clipboard.writeText(\'' + (authUser.cpf) + '\');showToast(\'CPF copiado\',true,2000)" style="font-size:9px;padding:2px 6px">' + t('darf_copy') + '</button>';
+      html += '</div>';
+    } else {
+      html += '<div style="font-size:10px;color:var(--text-dim);margin-bottom:8px">⚠ ' + t('darf_noCpf') + ' <a href="#" onclick="showProfile();return false" style="color:var(--accent-amber);text-decoration:underline">' + t('darf_addCpf') + '</a></div>';
+    }
+    html += '<a href="https://sicalc.receita.fazenda.gov.br/" target="_blank" rel="noopener noreferrer" class="btn primary" style="font-family:var(--font-mono);font-size:11px;display:inline-flex;align-items:center;gap:6px;text-decoration:none">' + t('darf_siCalcLink') + ' ↗</a>';
     html += '</div>';
 
     html += '<div style="font-size:9px;color:var(--text-dim);padding:6px 8px;background:rgba(255,193,7,0.06);border-radius:4px">' + t('darf_disclaimer') + '</div>';
@@ -2990,7 +3063,7 @@ const LANGS = {
     darf_dedoDuro: 'Withholding (dedo-duro, deducted)',
     darf_netDARF: 'Net DARF Due',
     darf_code: 'DARF Code: 6015',
-    darf_siCalcLink: 'Issue DARF at Sicalc ↗',
+    darf_siCalcLink: 'Open SicalcWeb',
     darf_updateLoss: '💾 SAVE LOSSES',
     darf_lossSwing: 'Accrued Loss Swing:',
     darf_lossDaytrade: 'Accrued Loss Day Trade:',
@@ -3000,6 +3073,19 @@ const LANGS = {
     darf_swing: 'Swing',
     darf_daytrade: 'Day Trade',
     darf_newLoss: 'New loss to carry forward',
+    darf_sicalcTitle: 'GERAR DARF NO SICALCWEB',
+    darf_due: 'due',
+    darf_copy: 'COPY',
+    darf_noCpf: 'CPF not set.',
+    darf_addCpf: 'Add CPF in your profile',
+
+    // Profile
+    profile_title: 'My Profile',
+    profile_cpf: 'CPF',
+    profile_cpfHint: 'Used to pre-fill SicalcWeb. Stored securely on the server.',
+    profile_cpfInvalid: 'Invalid CPF. Check the number and try again.',
+    profile_save: '💾 Save',
+    profile_saved: 'Profile saved.',
 
     // Education
     edu_title: '📘 EDUCATION',
@@ -3233,7 +3319,7 @@ const LANGS = {
     darf_dedoDuro: 'Dedo-Duro (já retido na fonte)',
     darf_netDARF: 'DARF Líquido a Pagar',
     darf_code: 'Código DARF: 6015',
-    darf_siCalcLink: 'Emitir DARF no Sicalc ↗',
+    darf_siCalcLink: 'Abrir SicalcWeb',
     darf_updateLoss: '💾 SALVAR PREJUÍZOS',
     darf_lossSwing: 'Prejuízo Acumulado Swing:',
     darf_lossDaytrade: 'Prejuízo Acumulado Day Trade:',
@@ -3243,6 +3329,19 @@ const LANGS = {
     darf_swing: 'Swing',
     darf_daytrade: 'Day Trade',
     darf_newLoss: 'Novo prejuízo a acumular',
+    darf_sicalcTitle: 'GERAR DARF NO SICALCWEB',
+    darf_due: 'a pagar',
+    darf_copy: 'COPIAR',
+    darf_noCpf: 'CPF não cadastrado.',
+    darf_addCpf: 'Adicionar CPF no perfil',
+
+    // Perfil
+    profile_title: 'Meu Perfil',
+    profile_cpf: 'CPF',
+    profile_cpfHint: 'Usado para preencher o SicalcWeb. Armazenado com segurança no servidor.',
+    profile_cpfInvalid: 'CPF inválido. Verifique o número e tente novamente.',
+    profile_save: '💾 Salvar',
+    profile_saved: 'Perfil salvo.',
 
     // Education
     edu_title: '📘 EDUCAÇÃO',

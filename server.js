@@ -61,6 +61,14 @@ const _verifyTokens = new Map();  // token → { email, expiresAt }
 const _verifyCooldown = new Map();// email → lastSentAt (ms)
 
 function makeToken() { return crypto.randomBytes(32).toString('hex'); }
+function validateCPF(cpf) {
+  const d = cpf.replace(/\D/g, '');
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  let s = 0; for (let i = 0; i < 9; i++) s += +d[i] * (10 - i);
+  let r = (s * 10) % 11; if (r >= 10) r = 0; if (r !== +d[9]) return false;
+  s = 0; for (let i = 0; i < 10; i++) s += +d[i] * (11 - i);
+  r = (s * 10) % 11; if (r >= 10) r = 0; return r === +d[10];
+}
 
 setInterval(() => {
   const now = Date.now();
@@ -658,7 +666,20 @@ async function handleRequest(req, res) {
       if (!authUser) return sendError(res, 401, 'Not authenticated');
       const user = findUser(authUser.email);
       if (!user) return sendError(res, 401, 'User not found');
-      return sendJSON(res, 200, { id: user.id, email: user.email, tier: user.tier, subscriptionEnd: user.subscriptionEnd, emailVerified: user.emailVerified !== false });
+      return sendJSON(res, 200, { id: user.id, email: user.email, tier: user.tier, subscriptionEnd: user.subscriptionEnd, emailVerified: user.emailVerified !== false, cpf: user.cpf || null });
+    }
+
+    if (pathname === '/api/auth/profile' && req.method === 'POST') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      const body = await readBody(req);
+      const user = findUser(authUser.email);
+      if (!user) return sendError(res, 404, 'User not found');
+      const cpf = (body.cpf || '').replace(/\D/g, '');
+      if (cpf && !validateCPF(cpf)) return sendError(res, 400, 'CPF inválido');
+      user.cpf = cpf || null;
+      saveUsers(users);
+      return sendJSON(res, 200, { ok: true, cpf: user.cpf });
     }
 
     if (pathname === '/api/auth/change-password' && req.method === 'POST') {
@@ -751,6 +772,7 @@ async function handleRequest(req, res) {
       if (!user) return sendError(res, 404, 'User not found');
       return sendJSON(res, 200, {
         id: user.id, email: user.email, tier: user.tier,
+        cpf: user.cpf || null,
         createdAt: user.createdAt, subscriptionEnd: user.subscriptionEnd,
         exportedAt: new Date().toISOString(),
         note: 'Portfolio and tracking data is stored locally in your browser (localStorage). This export covers only your account record on our server.',
