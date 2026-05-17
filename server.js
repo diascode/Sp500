@@ -14,7 +14,7 @@ function loadEnv() {
       if (m && !m[1].startsWith('#')) env[m[1]] = m[2].replace(/^["']|["']$/g, '');
     }
   } catch {}
-  for (const k of Object.keys(env)) { if (process.env[k]) env[k] = process.env[k]; }
+  for (const k of Object.keys(process.env)) { env[k] = process.env[k]; }
   return env;
 }
 const ENV = loadEnv();
@@ -49,7 +49,18 @@ function sendEmail(to, subject, html) {
     const req = https.request({
       hostname: 'api.resend.com', path: '/emails', method: 'POST',
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-    }, res => { res.resume(); resolve(res.statusCode); });
+    }, res => {
+      let raw = '';
+      res.on('data', d => raw += d);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          console.log(`[email] sent to ${to} — status ${res.statusCode}`);
+        } else {
+          console.error(`[email] failed to ${to} — status ${res.statusCode}: ${raw}`);
+        }
+        resolve(res.statusCode);
+      });
+    });
     req.on('error', e => { console.error('[email] send error:', e.message); resolve(null); });
     req.write(body); req.end();
   });
