@@ -634,8 +634,11 @@ async function handleRequest(req, res) {
       const body = await readBody(req);
       const { email, password } = body;
       if (!email || !password || password.length < 6) return sendError(res, 400, 'Email and password (min 6 chars) required');
+      const cpfDigits = (body.cpf || '').replace(/\D/g, '');
+      if (!cpfDigits) return sendError(res, 400, 'CPF é obrigatório para cadastro');
+      if (!validateCPF(cpfDigits)) return sendError(res, 400, 'CPF inválido');
       if (findUser(email)) return sendError(res, 409, 'Email already registered');
-      const user = { id: nextId(), email: email.toLowerCase(), password: hashPassword(password), tier: 'free', createdAt: new Date().toISOString(), subscriptionId: null, subscriptionEnd: null, emailVerified: false };
+      const user = { id: nextId(), email: email.toLowerCase(), password: hashPassword(password), cpf: cpfDigits, tier: 'free', createdAt: new Date().toISOString(), subscriptionId: null, subscriptionEnd: null, emailVerified: false };
       users.push(user); saveUsers(users);
       // Send verification email (non-blocking)
       const vToken = makeToken();

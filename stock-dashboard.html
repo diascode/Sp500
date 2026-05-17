@@ -380,6 +380,9 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
     <form id="authForm" autocomplete="on" onsubmit="submitAuth(); return false;">
       <div style="margin-bottom:12px">
         <input class="search-input" id="authEmail" placeholder="Email" type="email" autocomplete="email" style="width:100%;margin-bottom:8px;font-size:13px">
+        <div id="authCpfRow" style="display:none;margin-bottom:8px">
+          <input class="search-input" id="authCpf" type="text" inputmode="numeric" placeholder="CPF (000.000.000-00)" maxlength="14" oninput="this.value=formatCPF(this.value)" autocomplete="off" style="width:100%;font-size:13px">
+        </div>
         <input class="search-input" id="authPassword" placeholder="Password (min 6 chars)" type="password" autocomplete="current-password" style="width:100%;margin-bottom:8px;font-size:13px">
       </div>
       <div style="display:flex;gap:8px">
@@ -666,6 +669,9 @@ function showAuthModal() {
   document.getElementById('authError').style.display = 'none';
   document.getElementById('authEmail').value = '';
   document.getElementById('authPassword').value = '';
+  document.getElementById('authCpf').value = '';
+  document.getElementById('authCpfRow').style.display = 'none';
+  document.getElementById('forgotLinkSection').style.display = 'block';
   showForgotPanel(false);
   document.getElementById('authModal').classList.add('show');
 }
@@ -726,11 +732,14 @@ function submitResetPassword() {
 
 function toggleAuthMode() {
   authMode = authMode === 'login' ? 'signup' : 'login';
-  document.getElementById('authModalTitle').textContent = authMode === 'login' ? '🔑 ' + t('signIn') : '📝 ' + t('auth_signUp');
-  document.getElementById('authSubmitBtn').textContent = authMode === 'login' ? t('signIn') : t('auth_createAccount');
-  document.getElementById('authToggleText').textContent = authMode === 'login' ? t('auth_noAccount') : t('auth_haveAccount');
-  document.getElementById('authToggleBtn').textContent = authMode === 'login' ? t('auth_signUp') : t('signIn');
-  document.getElementById('authPassword').autocomplete = authMode === 'login' ? 'current-password' : 'new-password';
+  const isSignup = authMode === 'signup';
+  document.getElementById('authModalTitle').textContent = isSignup ? '📝 ' + t('auth_signUp') : '🔑 ' + t('signIn');
+  document.getElementById('authSubmitBtn').textContent = isSignup ? t('auth_createAccount') : t('signIn');
+  document.getElementById('authToggleText').textContent = isSignup ? t('auth_haveAccount') : t('auth_noAccount');
+  document.getElementById('authToggleBtn').textContent = isSignup ? t('signIn') : t('auth_signUp');
+  document.getElementById('authPassword').autocomplete = isSignup ? 'new-password' : 'current-password';
+  document.getElementById('authCpfRow').style.display = isSignup ? 'block' : 'none';
+  document.getElementById('forgotLinkSection').style.display = isSignup ? 'none' : 'block';
   document.getElementById('authError').style.display = 'none';
 }
 
@@ -740,12 +749,18 @@ async function submitAuth() {
   const errEl = document.getElementById('authError');
   if (!email || !password) { errEl.textContent = t('auth_fillFields'); errEl.style.display = 'block'; return; }
   if (password.length < 6) { errEl.textContent = t('auth_fillFields'); errEl.style.display = 'block'; return; }
+  if (authMode === 'signup') {
+    const cpfVal = document.getElementById('authCpf').value.trim();
+    if (!cpfVal) { errEl.textContent = t('auth_cpfRequired'); errEl.style.display = 'block'; return; }
+    if (!validateCPFClient(cpfVal)) { errEl.textContent = t('profile_cpfInvalid'); errEl.style.display = 'block'; return; }
+  }
   errEl.style.display = 'none';
   const btn = document.getElementById('authSubmitBtn');
   btn.textContent = authMode === 'login' ? t('auth_signingIn') : t('auth_creating');
   btn.disabled = true;
+  const cpf = authMode === 'signup' ? document.getElementById('authCpf').value.trim() : undefined;
   try {
-    const data = await apiAuth('/api/auth/' + authMode, { email, password });
+    const data = await apiAuth('/api/auth/' + authMode, { email, password, ...(cpf ? { cpf } : {}) });
     if (data.token) {
       setToken(data.token);
       await checkAuth();
@@ -2947,6 +2962,7 @@ const LANGS = {
     auth_noAccount: "Don't have an account?",
     auth_haveAccount: 'Already have an account?',
     auth_changePassword: 'Change Password',
+    auth_cpfRequired: 'CPF is required to create an account.',
     auth_currentPassword: 'Current password',
     auth_newPassword: 'New password (min 6 chars)',
     auth_confirmPassword: 'Confirm new password',
@@ -3203,6 +3219,7 @@ const LANGS = {
     auth_noAccount: 'Não tem uma conta?',
     auth_haveAccount: 'Já tem uma conta?',
     auth_changePassword: 'Alterar Senha',
+    auth_cpfRequired: 'CPF é obrigatório para criar uma conta.',
     auth_currentPassword: 'Senha atual',
     auth_newPassword: 'Nova senha (mín. 6 caracteres)',
     auth_confirmPassword: 'Confirmar nova senha',

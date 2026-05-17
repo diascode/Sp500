@@ -1043,6 +1043,32 @@ Yahoo Finance's chart API is undocumented and explicitly prohibited by their Ter
 
 ---
 
-*End of User Stories — v1.2*
-*160 stocks · 4 markets · 2 languages · 75 stories across 21 epics*
-*Sprint 1 complete · Sprint 2 stories: US-53–US-74 (Epics 14–20) · Sprint 3 stories: US-75 (Epic 21)*
+## Epic 22 — Compliance & Identity (Sprint 3)
+
+### US-76 — CPF Required at Signup
+
+**As a** new user registering for a Momentum account,
+**I want** to provide my CPF during signup,
+**so that** the app can pre-fill SicalcWeb automatically and ensure LGPD compliance from the start.
+
+**Background:**
+Brazil's LGPD requires collecting only data with a stated purpose. CPF is needed for the DARF/SicalcWeb flow (US-70) and for future tax report export. Collecting it at signup avoids a secondary prompt later and ensures every account has a valid CPF on record.
+
+**Acceptance criteria:**
+- The signup form includes a CPF field with auto-mask (000.000.000-00) between the email and password fields.
+- The CPF field is only visible when the form is in signup mode; it is hidden in login mode.
+- Client-side validation rejects the submission if CPF is empty or fails the check-digit algorithm.
+- Server-side: `POST /api/auth/signup` requires a valid CPF; returns `400` with a descriptive error if missing or invalid.
+- CPF is stored on the user record at creation (same as US-63 profile update).
+- The "Forgot password?" link is hidden while in signup mode.
+- Existing users without a CPF are unaffected and can add it via My Profile (US-63).
+
+**Sprint:** 3
+**Estimated effort:** 2 hours (server.js + stock-dashboard.html)
+**Dependencies:** US-63 (CPF validation helpers already implemented)
+
+---
+
+*End of User Stories — v1.3*
+*160 stocks · 4 markets · 2 languages · 76 stories across 22 epics*
+*Sprint 1 complete · Sprint 2 stories: US-53–US-74 (Epics 14–20) · Sprint 3 stories: US-75–US-76 (Epics 21–22)*
