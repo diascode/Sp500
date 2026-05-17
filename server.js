@@ -637,6 +637,7 @@ async function handleRequest(req, res) {
       const cpfDigits = (body.cpf || '').replace(/\D/g, '');
       if (!cpfDigits) return sendError(res, 400, 'CPF é obrigatório para cadastro');
       if (!validateCPF(cpfDigits)) return sendError(res, 400, 'CPF inválido');
+      if (users.some(u => u.cpf === cpfDigits)) return sendError(res, 409, 'CPF já cadastrado');
       if (findUser(email)) return sendError(res, 409, 'Email already registered');
       const user = { id: nextId(), email: email.toLowerCase(), password: hashPassword(password), cpf: cpfDigits, tier: 'free', createdAt: new Date().toISOString(), subscriptionId: null, subscriptionEnd: null, emailVerified: false };
       users.push(user); saveUsers(users);
@@ -680,6 +681,7 @@ async function handleRequest(req, res) {
       if (!user) return sendError(res, 404, 'User not found');
       const cpf = (body.cpf || '').replace(/\D/g, '');
       if (cpf && !validateCPF(cpf)) return sendError(res, 400, 'CPF inválido');
+      if (cpf && users.some(u => u.cpf === cpf && u.email !== user.email)) return sendError(res, 409, 'CPF já cadastrado');
       user.cpf = cpf || null;
       saveUsers(users);
       return sendJSON(res, 200, { ok: true, cpf: user.cpf });

@@ -1069,6 +1069,25 @@ Brazil's LGPD requires collecting only data with a stated purpose. CPF is needed
 
 ---
 
+### US-77 — One Account per CPF
+
+**As a** platform operator,
+**I want** each CPF to be linked to at most one account,
+**so that** users cannot create multiple accounts to bypass free-tier limits or abuse the system.
+
+**Acceptance criteria:**
+- `POST /api/auth/signup` checks whether any existing user already has the same CPF (digit-only comparison).
+- If the CPF is already registered, the server returns `409` with the message `"CPF já cadastrado"`.
+- The error is surfaced in the auth modal error area (same as duplicate email).
+- `POST /api/auth/profile` (US-63 CPF update) also enforces uniqueness: if another account already holds that CPF, it returns `409`.
+- Existing users who update their CPF via My Profile cannot steal a CPF that is already assigned to another account.
+
+**Sprint:** 3
+**Estimated effort:** 30 minutes (server.js only)
+**Dependencies:** US-76
+
+---
+
 *End of User Stories — v1.3*
-*160 stocks · 4 markets · 2 languages · 76 stories across 22 epics*
-*Sprint 1 complete · Sprint 2 stories: US-53–US-74 (Epics 14–20) · Sprint 3 stories: US-75–US-76 (Epics 21–22)*
+*160 stocks · 4 markets · 2 languages · 77 stories across 22 epics*
+*Sprint 1 complete · Sprint 2 stories: US-53–US-74 (Epics 14–20) · Sprint 3 stories: US-75–US-77 (Epics 21–22)*
