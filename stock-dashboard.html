@@ -386,11 +386,34 @@ body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font-
         <button class="btn" type="button" onclick="closeAuthModal()">CANCEL</button>
       </div>
     </form>
-    <div style="margin-top:10px;text-align:center">
+    <div id="forgotPanel" style="display:none">
+      <p style="font-size:12px;color:var(--text-secondary);margin:0 0 8px">Enter your email and we'll send a reset link.</p>
+      <input class="search-input" id="forgotEmail" type="email" placeholder="Email" style="width:100%;margin-bottom:8px;font-size:13px">
+      <div style="display:flex;gap:8px">
+        <button class="btn primary" onclick="submitForgotPassword()" style="flex:1" id="forgotSubmitBtn">SEND LINK</button>
+        <button class="btn" type="button" onclick="showForgotPanel(false)">BACK</button>
+      </div>
+      <div id="forgotMsg" style="margin-top:8px;font-size:11px;text-align:center;display:none"></div>
+    </div>
+    <div id="authToggleSection" style="margin-top:10px;text-align:center">
       <span style="font-size:12px;color:var(--text-dim)" id="authToggleText">Don't have an account?</span>
       <button class="btn" id="authToggleBtn" onclick="toggleAuthMode()" style="font-size:11px;padding:4px 10px">SIGN UP</button>
     </div>
+    <div id="forgotLinkSection" style="margin-top:6px;text-align:center">
+      <button class="btn" onclick="showForgotPanel(true)" style="font-size:10px;padding:2px 8px;opacity:0.7" id="forgotLinkBtn">Forgot password?</button>
+    </div>
     <div id="authError" style="margin-top:8px;font-size:11px;color:var(--red-bear);text-align:center;display:none"></div>
+  </div>
+</div>
+
+<!-- RESET PASSWORD MODAL -->
+<div class="modal-overlay" id="resetModal">
+  <div class="modal" style="max-width:380px">
+    <h2>🔑 Set New Password</h2>
+    <input class="search-input" id="resetPassword" type="password" placeholder="New password (min 6 chars)" autocomplete="new-password" style="width:100%;margin-bottom:8px;font-size:13px">
+    <input class="search-input" id="resetPassword2" type="password" placeholder="Confirm new password" autocomplete="new-password" style="width:100%;margin-bottom:12px;font-size:13px">
+    <button class="btn primary" onclick="submitResetPassword()" style="width:100%" id="resetSubmitBtn">UPDATE PASSWORD</button>
+    <div id="resetMsg" style="margin-top:8px;font-size:11px;text-align:center;color:var(--text-secondary)"></div>
   </div>
 </div>
 
@@ -587,10 +610,63 @@ function showAuthModal() {
   document.getElementById('authError').style.display = 'none';
   document.getElementById('authEmail').value = '';
   document.getElementById('authPassword').value = '';
+  showForgotPanel(false);
   document.getElementById('authModal').classList.add('show');
 }
 
 function closeAuthModal() { document.getElementById('authModal').classList.remove('show'); }
+
+function showForgotPanel(show) {
+  document.getElementById('authForm').style.display = show ? 'none' : '';
+  document.getElementById('forgotPanel').style.display = show ? '' : 'none';
+  const tog = document.getElementById('authToggleSection');
+  if (tog) tog.style.display = show ? 'none' : '';
+  const fl = document.getElementById('forgotLinkSection');
+  if (fl) fl.style.display = show ? 'none' : '';
+  if (show) { document.getElementById('forgotEmail').value = ''; document.getElementById('forgotMsg').style.display = 'none'; }
+}
+
+async function submitForgotPassword() {
+  const email = document.getElementById('forgotEmail').value.trim();
+  if (!email) return;
+  const btn = document.getElementById('forgotSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Sending...';
+  try {
+    await fetch('/api/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+    const msg = document.getElementById('forgotMsg');
+    msg.style.display = ''; msg.style.color = 'var(--green-bull)';
+    msg.textContent = 'If that email is registered, a reset link has been sent. Check your inbox.';
+  } catch(e) {
+    const msg = document.getElementById('forgotMsg');
+    msg.style.display = ''; msg.style.color = 'var(--red-bear)';
+    msg.textContent = 'Something went wrong. Please try again.';
+  }
+  btn.disabled = false; btn.textContent = 'SEND LINK';
+}
+
+let _resetToken = null;
+
+function submitResetPassword() {
+  const p1 = document.getElementById('resetPassword').value;
+  const p2 = document.getElementById('resetPassword2').value;
+  const msg = document.getElementById('resetMsg');
+  if (!p1 || p1.length < 6) { msg.style.color = 'var(--red-bear)'; msg.textContent = 'Password must be at least 6 characters.'; return; }
+  if (p1 !== p2) { msg.style.color = 'var(--red-bear)'; msg.textContent = 'Passwords do not match.'; return; }
+  const btn = document.getElementById('resetSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Updating...';
+  fetch('/api/auth/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: _resetToken, password: p1 }) })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        msg.style.color = 'var(--green-bull)'; msg.textContent = 'Password updated! You can now sign in.';
+        setTimeout(() => { document.getElementById('resetModal').classList.remove('show'); showAuthModal(); }, 2000);
+      } else {
+        msg.style.color = 'var(--red-bear)'; msg.textContent = data.error || 'Link expired. Please request a new reset link.';
+      }
+    })
+    .catch(() => { msg.style.color = 'var(--red-bear)'; msg.textContent = 'Something went wrong.'; })
+    .finally(() => { btn.disabled = false; btn.textContent = 'UPDATE PASSWORD'; });
+}
 
 function toggleAuthMode() {
   authMode = authMode === 'login' ? 'signup' : 'login';
@@ -618,6 +694,9 @@ async function submitAuth() {
       setToken(data.token);
       await checkAuth();
       closeAuthModal();
+      if (authMode === 'signup') {
+        showToast('📧 Check your email for a verification link.', true, 5000);
+      }
     } else {
       errEl.textContent = data.error || t('auth_wrongCredentials');
       errEl.style.display = 'block';
@@ -1415,19 +1494,60 @@ function calcCorrelation() {
 }
 
 // ─── TRACKED PICKS ──────────────────────────────────────────────────────
-function showToast(msg, isGood) {
+function showToast(msg, isGood, duration) {
   const toast = document.createElement('div');
   toast.textContent = msg;
+  const ms = (typeof duration === 'number') ? duration : 2000;
+  const good = isGood && typeof isGood !== 'number';
   Object.assign(toast.style, {
     position:'fixed', bottom:'24px', right:'24px', zIndex:'9999',
     padding:'12px 20px', borderRadius:'8px', fontFamily:'var(--font-mono)', fontSize:'13px', fontWeight:'700',
-    background: isGood ? 'rgba(76,175,80,0.9)' : 'rgba(229,57,53,0.9)',
+    background: good ? 'rgba(76,175,80,0.9)' : 'rgba(229,57,53,0.9)',
     color:'#fff', boxShadow:'0 4px 16px rgba(0,0,0,0.4)',
     transition:'opacity 0.3s', opacity:'1'
   });
   document.body.appendChild(toast);
-  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2000);
+  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, ms);
 }
+
+// ─── B3 TICKER AUTOCOMPLETE ─────────────────────────────────────────────
+let _b3SuggestTimer = null;
+function b3Suggest(input) {
+  clearTimeout(_b3SuggestTimer);
+  const q = input.value.trim();
+  const box = document.getElementById('b3SuggestBox');
+  if (!box) return;
+  if (!q) { box.style.display = 'none'; return; }
+  _b3SuggestTimer = setTimeout(async () => {
+    try {
+      const res = await fetch('/api/tickers/b3?q=' + encodeURIComponent(q));
+      const data = await res.json();
+      if (!data.length) { box.style.display = 'none'; return; }
+      box.innerHTML = data.map(d =>
+        '<div style="padding:6px 10px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border)" '
+        + 'onmousedown="selectB3Ticker(\'' + d.ticker + '\',\'' + d.name.replace(/'/g,'&#39;') + '\')" '
+        + 'onmouseover="this.style.background=\'rgba(200,90,23,0.15)\'" '
+        + 'onmouseout="this.style.background=\'\'">'
+        + '<strong style="color:var(--accent-amber)">' + d.ticker.replace('.SA','') + '</strong>'
+        + '<span style="color:var(--text-secondary);margin-left:6px">' + d.name + '</span>'
+        + '</div>'
+      ).join('');
+      box.style.display = 'block';
+    } catch {}
+  }, 200);
+}
+
+function selectB3Ticker(ticker, name) {
+  const input = document.getElementById('pfTicker');
+  if (input) { input.value = ticker.replace('.SA',''); }
+  const box = document.getElementById('b3SuggestBox');
+  if (box) box.style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+  const box = document.getElementById('b3SuggestBox');
+  if (box && !box.contains(e.target) && e.target.id !== 'pfTicker') box.style.display = 'none';
+});
 
 function trackPick(ticker, market, entryPrice, tp, sl) {
   if (state.trackedPicks.find(p => p.ticker === ticker && p.status === 'active')) return;
@@ -1650,7 +1770,7 @@ function renderPortfolioView() {
   // Add new position form — buy only (sell added later per row)
   html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px;background:rgba(0,0,0,0.15);border-radius:6px;border:1px solid var(--border)">';
   html += '<span style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-right:4px">' + t('portfolio_addPosition') + '</span>';
-  html += '<input class="search-input" id="pfTicker" placeholder="' + t('portfolio_tickerPlaceholder') + '" style="width:80px;font-size:11px">';
+  html += '<div style="position:relative;display:inline-block"><input class="search-input" id="pfTicker" placeholder="' + t('portfolio_tickerPlaceholder') + '" style="width:80px;font-size:11px" oninput="b3Suggest(this)" autocomplete="off"><div id="b3SuggestBox" style="position:absolute;z-index:200;background:var(--card,var(--bg-card));border:1px solid var(--border);border-radius:4px;width:220px;display:none;box-shadow:0 4px 12px rgba(0,0,0,0.4);max-height:200px;overflow-y:auto"></div></div>';
   html += '<input class="search-input" id="pfQty" placeholder="' + t('portfolio_qtyPlaceholder') + '" type="number" step="1" style="width:60px;font-size:11px">';
   html += '<input class="search-input" id="pfBuyPrice" placeholder="' + t('portfolio_buyPricePlaceholder') + '" type="number" step="0.01" style="width:80px;font-size:11px">';
   html += '<select id="pfTradeType" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:6px 8px;border-radius:4px;font-family:var(--font-mono);font-size:10px">';
@@ -4022,6 +4142,27 @@ function toggleTheme() {
 
 // ─── INIT ───────────────────────────────────────────────────────────────
 async function init() {
+  // Handle ?reset=<token> from password reset emails
+  const urlParams = new URLSearchParams(window.location.search);
+  const resetToken = urlParams.get('reset');
+  if (resetToken) {
+    _resetToken = resetToken;
+    history.replaceState({}, '', window.location.pathname); // clean URL
+    document.getElementById('resetModal').classList.add('show');
+  }
+  // Handle ?verify=<token> from email verification emails
+  const verifyToken = urlParams.get('verify');
+  if (verifyToken) {
+    history.replaceState({}, '', window.location.pathname);
+    fetch('/api/auth/verify-email?token=' + encodeURIComponent(verifyToken))
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) showToast('Email verified! You can now sign in.', true, 4000);
+        else showToast('Verification link expired. Sign in and request a new one.', false, 5000);
+      })
+      .catch(() => showToast('Could not verify email. Please try again.', false, 4000));
+  }
+
   // UI first — everything async happens in background
   const savedTheme = localStorage.getItem('jerry_theme') || 'dark';
   const idx = THEMES.indexOf(savedTheme === 'dark' ? null : savedTheme);
@@ -4154,6 +4295,7 @@ async function init() {
   });
   document.getElementById('authModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeAuthModal(); });
   document.getElementById('portfolioModal').addEventListener('click', e => { if (e.target === e.currentTarget) closePortfolioModal(); });
+  document.getElementById('resetModal').addEventListener('click', e => { if (e.target === e.currentTarget) document.getElementById('resetModal').classList.remove('show'); });
   // Show cookie/LGPD consent banner if not yet accepted
   if (!localStorage.getItem('momentum_consent')) {
     const banner = document.getElementById('cookieBanner');

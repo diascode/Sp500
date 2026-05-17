@@ -36,6 +36,38 @@ if (ENV.NODE_ENV === 'production' && (!ENV.JWT_SECRET || JWT_SECRET === 'dev-sec
 function signToken(user) { return jwt.sign({ id: user.id, email: user.email, tier: user.tier }, JWT_SECRET, { expiresIn: '30d' }); }
 function verifyToken(token) { try { return jwt.verify(token, JWT_SECRET); } catch { return null; } }
 
+// ─── EMAIL ──────────────────────────────────────────────────────────────
+const RESEND_API_KEY = ENV.RESEND_API_KEY || '';
+const RESEND_FROM = ENV.RESEND_FROM_EMAIL || 'Momentum <noreply@momentum.app>';
+const APP_URL_BASE = ENV.APP_URL || 'http://localhost:8080';
+
+function sendEmail(to, subject, html) {
+  if (!RESEND_API_KEY) { console.warn('[email] RESEND_API_KEY not set — skipping'); return Promise.resolve(); }
+  return new Promise((resolve) => {
+    const body = JSON.stringify({ from: RESEND_FROM, to: [to], subject, html });
+    const https = require('https');
+    const req = https.request({
+      hostname: 'api.resend.com', path: '/emails', method: 'POST',
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, res => { res.resume(); resolve(res.statusCode); });
+    req.on('error', e => { console.error('[email] send error:', e.message); resolve(null); });
+    req.write(body); req.end();
+  });
+}
+
+// ─── TOKEN STORES ───────────────────────────────────────────────────────
+const _resetTokens = new Map();   // token → { email, expiresAt }
+const _verifyTokens = new Map();  // token → { email, expiresAt }
+const _verifyCooldown = new Map();// email → lastSentAt (ms)
+
+function makeToken() { return crypto.randomBytes(32).toString('hex'); }
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of _resetTokens) if (v.expiresAt < now) _resetTokens.delete(k);
+  for (const [k, v] of _verifyTokens) if (v.expiresAt < now) _verifyTokens.delete(k);
+}, 60_000);
+
 // ─── USER DB ────────────────────────────────────────────────────────────
 const DB_PATH = path.join(DIR, 'data', 'users.json');
 
@@ -584,7 +616,7 @@ async function handleRequest(req, res) {
 
   // Auth rate limiting (IP-based)
   const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-  if ((pathname === '/api/auth/login' || pathname === '/api/auth/signup') && req.method === 'POST') {
+  if ((pathname === '/api/auth/login' || pathname === '/api/auth/signup' || pathname === '/api/auth/forgot-password') && req.method === 'POST') {
     if (!checkAuthRateLimit(clientIp)) return sendError(res, 429, 'Too many attempts. Please wait 15 minutes before trying again.');
   }
 
@@ -595,9 +627,21 @@ async function handleRequest(req, res) {
       const { email, password } = body;
       if (!email || !password || password.length < 6) return sendError(res, 400, 'Email and password (min 6 chars) required');
       if (findUser(email)) return sendError(res, 409, 'Email already registered');
-      const user = { id: nextId(), email: email.toLowerCase(), password: hashPassword(password), tier: 'free', createdAt: new Date().toISOString(), subscriptionId: null, subscriptionEnd: null };
+      const user = { id: nextId(), email: email.toLowerCase(), password: hashPassword(password), tier: 'free', createdAt: new Date().toISOString(), subscriptionId: null, subscriptionEnd: null, emailVerified: false };
       users.push(user); saveUsers(users);
-      return sendJSON(res, 201, { token: signToken(user), user: { id: user.id, email: user.email, tier: user.tier } });
+      // Send verification email (non-blocking)
+      const vToken = makeToken();
+      _verifyTokens.set(vToken, { email: user.email, expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
+      _verifyCooldown.set(user.email, Date.now());
+      const vLink = `${APP_URL_BASE}/?verify=${vToken}`;
+      sendEmail(user.email, 'Verify your Momentum email', `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+          <h2 style="color:#c85a17">Momentum — Verify your email</h2>
+          <p>Thanks for signing up! Click the button below to verify your email address.</p>
+          <a href="${vLink}" style="display:inline-block;background:#c85a17;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;margin:16px 0">Verify Email</a>
+          <p style="color:#888;font-size:12px">Link: <a href="${vLink}">${vLink}</a></p>
+        </div>`);
+      return sendJSON(res, 201, { token: signToken(user), user: { id: user.id, email: user.email, tier: user.tier }, emailVerified: false });
     }
 
     if (pathname === '/api/auth/login' && req.method === 'POST') {
@@ -614,7 +658,7 @@ async function handleRequest(req, res) {
       if (!authUser) return sendError(res, 401, 'Not authenticated');
       const user = findUser(authUser.email);
       if (!user) return sendError(res, 401, 'User not found');
-      return sendJSON(res, 200, { id: user.id, email: user.email, tier: user.tier, subscriptionEnd: user.subscriptionEnd });
+      return sendJSON(res, 200, { id: user.id, email: user.email, tier: user.tier, subscriptionEnd: user.subscriptionEnd, emailVerified: user.emailVerified !== false });
     }
 
     if (pathname === '/api/auth/change-password' && req.method === 'POST') {
@@ -628,6 +672,74 @@ async function handleRequest(req, res) {
       if (!body.newPassword || body.newPassword.length < 6) return sendError(res, 400, 'New password must be at least 6 characters');
       user.password = hashPassword(body.newPassword);
       saveUsers(users);
+      return sendJSON(res, 200, { ok: true });
+    }
+
+    if (pathname === '/api/auth/forgot-password' && req.method === 'POST') {
+      const body = await readBody(req);
+      const email = (body.email || '').toLowerCase().trim();
+      const user = findUser(email);
+      // Always respond OK — never reveal whether email exists
+      if (user) {
+        const token = makeToken();
+        _resetTokens.set(token, { email, expiresAt: Date.now() + 60 * 60 * 1000 }); // 1 hour
+        const link = `${APP_URL_BASE}/?reset=${token}`;
+        await sendEmail(email, 'Reset your Momentum password', `
+          <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+            <h2 style="color:#c85a17">Momentum — Password Reset</h2>
+            <p>You requested a password reset. Click the button below to set a new password. This link expires in <strong>1 hour</strong>.</p>
+            <a href="${link}" style="display:inline-block;background:#c85a17;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;margin:16px 0">Reset Password</a>
+            <p style="color:#888;font-size:12px">If you didn't request this, you can safely ignore this email. Your password has not changed.</p>
+            <p style="color:#888;font-size:12px">Link: <a href="${link}">${link}</a></p>
+          </div>`);
+      }
+      return sendJSON(res, 200, { ok: true, message: 'If that email is registered, a reset link has been sent.' });
+    }
+
+    if (pathname === '/api/auth/reset-password' && req.method === 'POST') {
+      const body = await readBody(req);
+      const { token, password } = body;
+      if (!token || !password || password.length < 6) return sendError(res, 400, 'Token and password (min 6 chars) required');
+      const entry = _resetTokens.get(token);
+      if (!entry || entry.expiresAt < Date.now()) return sendError(res, 400, 'Reset link has expired or is invalid. Please request a new one.');
+      const user = findUser(entry.email);
+      if (!user) return sendError(res, 404, 'User not found');
+      user.password = hashPassword(password);
+      saveUsers(users);
+      _resetTokens.delete(token);
+      return sendJSON(res, 200, { ok: true });
+    }
+
+    if (pathname === '/api/auth/verify-email' && req.method === 'GET') {
+      const token = url.searchParams.get('token') || '';
+      const entry = _verifyTokens.get(token);
+      if (!entry || entry.expiresAt < Date.now()) return sendError(res, 400, 'Verification link has expired or is invalid.');
+      const user = findUser(entry.email);
+      if (!user) return sendError(res, 404, 'User not found');
+      user.emailVerified = true;
+      saveUsers(users);
+      _verifyTokens.delete(token);
+      return sendJSON(res, 200, { ok: true });
+    }
+
+    if (pathname === '/api/auth/resend-verification' && req.method === 'POST') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      const user = findUser(authUser.email);
+      if (!user) return sendError(res, 404, 'User not found');
+      if (user.emailVerified) return sendJSON(res, 200, { ok: true, alreadyVerified: true });
+      const lastSent = _verifyCooldown.get(user.email) || 0;
+      if (Date.now() - lastSent < 60_000) return sendError(res, 429, 'Please wait before requesting another verification email.');
+      const vToken = makeToken();
+      _verifyTokens.set(vToken, { email: user.email, expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
+      _verifyCooldown.set(user.email, Date.now());
+      const vLink = `${APP_URL_BASE}/?verify=${vToken}`;
+      await sendEmail(user.email, 'Verify your Momentum email', `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+          <h2 style="color:#c85a17">Momentum — Verify your email</h2>
+          <p>Click the button below to verify your email address.</p>
+          <a href="${vLink}" style="display:inline-block;background:#c85a17;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;margin:16px 0">Verify Email</a>
+        </div>`);
       return sendJSON(res, 200, { ok: true });
     }
 
@@ -654,6 +766,17 @@ async function handleRequest(req, res) {
       users.splice(idx, 1);
       saveUsers(users);
       return sendJSON(res, 200, { ok: true, message: 'Account deleted. All server-side personal data has been removed.' });
+    }
+
+    // ─── B3 TICKER AUTOCOMPLETE ──────────────────────────────────
+    if (pathname === '/api/tickers/b3' && req.method === 'GET') {
+      const q = (url.searchParams.get('q') || '').toUpperCase().trim();
+      if (!q || q.length < 1) return sendJSON(res, 200, []);
+      const results = UNIVERSES.brasil
+        .filter(s => s.t.replace('.SA','').startsWith(q) || s.n.toUpperCase().includes(q))
+        .slice(0, 8)
+        .map(s => ({ ticker: s.t, name: s.n }));
+      return sendJSON(res, 200, results);
     }
 
     // ─── ADMIN ───────────────────────────────────────────────────
