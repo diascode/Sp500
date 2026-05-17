@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOMENTUM — Docs</title>
+<style>
+:root {
+  --bg: #0d0906; --bg-card: #140e09; --bg-hover: #1e1510; --bg-code: #0a0703;
+  --border: #2a1c12; --accent: #c85a17; --amber: #e8a846; --text: #e8d5c0;
+  --dim: #7a6555; --secondary: #9e7f66; --green: #4caf50; --red: #ef5350;
+  --blue: #22d3ee; --mono: 'JetBrains Mono','Fira Code',monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; font-size:13px; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+a { color:var(--amber); text-decoration:none; }
+a:hover { text-decoration:underline; }
+
+/* Header */
+.hdr { background:var(--bg-card); border-bottom:1px solid var(--border); padding:10px 16px; display:flex; align-items:center; gap:12px; flex-shrink:0; }
+.logo { font-family:var(--mono); font-size:15px; color:var(--amber); font-weight:700; letter-spacing:1px; }
+.logo-sub { font-size:10px; color:var(--dim); font-weight:400; margin-left:6px; }
+.hdr-tabs { display:flex; gap:4px; }
+.hdr-tab { background:transparent; border:1px solid var(--border); color:var(--secondary); padding:5px 12px; border-radius:4px; cursor:pointer; font-size:11px; font-family:var(--mono); letter-spacing:.5px; }
+.hdr-tab:hover { border-color:var(--accent); color:var(--text); }
+.hdr-tab.active { background:rgba(200,90,23,.15); border-color:var(--accent); color:var(--amber); }
+.search-wrap { flex:1; max-width:280px; }
+.search-wrap input { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:6px 10px; color:var(--text); font-size:12px; outline:none; }
+.search-wrap input:focus { border-color:var(--accent); }
+.back-link { font-size:11px; color:var(--dim); margin-left:auto; }
+.back-link:hover { color:var(--amber); }
+
+/* Layout */
+.app { flex:1; display:flex; overflow:hidden; }
+.sidebar { width:230px; background:var(--bg-card); border-right:1px solid var(--border); overflow-y:auto; flex-shrink:0; }
+.main { flex:1; overflow-y:auto; padding:24px 32px; }
+
+/* Sidebar */
+.sb-section { border-bottom:1px solid var(--border); }
+.sb-head { padding:9px 12px; font-family:var(--mono); font-size:9px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; }
+.sb-head:hover { color:var(--amber); }
+.sb-head .toggle { font-size:10px; }
+.sb-item { padding:5px 14px 5px 22px; font-size:11px; color:var(--secondary); cursor:pointer; display:flex; align-items:center; gap:6px; border-left:2px solid transparent; }
+.sb-item:hover { background:var(--bg-hover); color:var(--text); }
+.sb-item.active { color:var(--amber); border-left-color:var(--accent); background:rgba(200,90,23,.08); }
+.sprint-chip { font-size:8px; padding:1px 5px; border-radius:2px; font-family:var(--mono); margin-left:auto; }
+.s1 { background:rgba(76,175,80,.15); color:#4caf50; }
+.s2 { background:rgba(232,168,70,.15); color:var(--amber); }
+.s3 { background:rgba(34,211,238,.15); color:#22d3ee; }
+
+/* Badges */
+.badge { font-size:9px; padding:2px 6px; border-radius:3px; font-family:var(--mono); letter-spacing:.3px; display:inline-flex; align-items:center; gap:3px; }
+.b-done { background:rgba(76,175,80,.2); color:#4caf50; }
+.b-todo { background:rgba(122,101,85,.2); color:var(--dim); }
+.b-progress { background:rgba(232,168,70,.2); color:var(--amber); }
+
+/* Content */
+.section-title { font-family:var(--mono); font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.page-title { font-family:var(--mono); font-size:20px; color:var(--amber); margin-bottom:4px; }
+.page-sub { font-size:12px; color:var(--secondary); margin-bottom:24px; }
+
+/* Story card */
+.story-card { background:var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:16px; margin-bottom:12px; }
+.story-card:hover { border-color:rgba(200,90,23,.4); }
+.story-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.story-id { font-family:var(--mono); font-size:10px; color:var(--accent); font-weight:700; }
+.story-title { font-size:13px; font-weight:600; color:var(--text); flex:1; }
+.story-body { font-size:12px; color:var(--secondary); line-height:1.6; }
+.story-role { color:var(--blue); }
+.story-want { color:var(--text); }
+.story-goal { color:var(--dim); }
+.ac-list { margin-top:10px; }
+.ac-item { font-size:11px; color:var(--secondary); padding:2px 0 2px 12px; border-left:2px solid var(--border); margin:3px 0; line-height:1.5; }
+.ac-item strong { color:var(--text); }
+
+/* Epic header */
+.epic-header { background:var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:12px 16px; margin-bottom:16px; display:flex; align-items:center; gap:12px; }
+.epic-icon { font-size:22px; }
+.epic-title { font-family:var(--mono); font-size:14px; color:var(--amber); }
+.epic-count { font-size:11px; color:var(--dim); margin-top:2px; }
+
+/* Tech docs */
+.doc-section { margin-bottom:32px; }
+.doc-h2 { font-family:var(--mono); font-size:14px; color:var(--amber); margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+.doc-h3 { font-family:var(--mono); font-size:12px; color:var(--accent); margin:16px 0 8px; }
+.doc-p { font-size:12px; color:var(--secondary); line-height:1.7; margin-bottom:10px; }
+pre { background:var(--bg-code); border:1px solid var(--border); border-radius:4px; padding:12px 14px; font-family:var(--mono); font-size:11px; color:var(--text); overflow-x:auto; margin:10px 0; line-height:1.7; }
+code { font-family:var(--mono); font-size:11px; background:var(--bg-code); border:1px solid var(--border); padding:1px 5px; border-radius:3px; color:var(--amber); }
+table { width:100%; border-collapse:collapse; font-size:12px; margin:12px 0; }
+th { background:var(--bg-hover); padding:8px 10px; text-align:left; font-family:var(--mono); font-size:10px; color:var(--dim); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); }
+td { padding:8px 10px; border-bottom:1px solid var(--border); color:var(--secondary); line-height:1.5; vertical-align:top; }
+td:first-child { color:var(--text); font-family:var(--mono); font-size:11px; }
+tr:last-child td { border-bottom:none; }
+.kv { display:inline; background:rgba(200,90,23,.1); color:var(--accent); font-family:var(--mono); font-size:10px; padding:1px 5px; border-radius:3px; margin:1px; }
+
+/* Sprint filter */
+.filter-bar { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; align-items:center; }
+.filter-btn { background:transparent; border:1px solid var(--border); color:var(--dim); padding:4px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-family:var(--mono); }
+.filter-btn:hover { border-color:var(--amber); color:var(--amber); }
+.filter-btn.active { background:rgba(232,168,70,.15); border-color:var(--amber); color:var(--amber); }
+.filter-label { font-size:11px; color:var(--dim); }
+
+/* Stats row */
+.stats-row { display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
+.stat-box { background:var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:10px 16px; text-align:center; flex:1; min-width:100px; }
+.stat-num { font-family:var(--mono); font-size:20px; color:var(--amber); }
+.stat-lbl { font-size:10px; color:var(--dim); margin-top:2px; text-transform:uppercase; letter-spacing:.5px; }
+
+.hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">MOMENTUM <span class="logo-sub">DOCS v5.2 · May 2026</span></div>
+  <div class="hdr-tabs">
+    <button class="hdr-tab active" onclick="setView('stories')">📋 User Stories</button>
+    <button class="hdr-tab" onclick="setView('docs')">📖 Technical Docs</button>
+  </div>
+  <div class="search-wrap">
+    <input id="searchBox" placeholder="Search..." oninput="applySearch(this.value)">
+  </div>
+  <a class="back-link" href="/">← Back to App</a>
+</div>
+
+<div class="app">
+  <nav class="sidebar" id="sidebar"></nav>
+  <main class="main" id="main"></main>
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+
+const EPICS = [
+  { id:'e1',  num:1,  sprint:1, icon:'🔐', title:'Authentication & Account',      stories:['01','02','03','04','05','06'] },
+  { id:'e2',  num:2,  sprint:1, icon:'📡', title:'Market Scanning',               stories:['07','08','09','10','11'] },
+  { id:'e3',  num:3,  sprint:1, icon:'📊', title:'Stock Cards & Analysis',        stories:['12','13','14','15'] },
+  { id:'e4',  num:4,  sprint:1, icon:'📌', title:'Tracked Picks',                 stories:['16','17','18','19','20'] },
+  { id:'e5',  num:5,  sprint:1, icon:'📋', title:'All Stocks Browser',            stories:['21','22'] },
+  { id:'e6',  num:6,  sprint:1, icon:'💼', title:'Portfolio & Trading Journal',   stories:['23','24','25','26','27','28','29','30','31','32','33','34'] },
+  { id:'e7',  num:7,  sprint:1, icon:'📘', title:'Education Module',              stories:['35','36'] },
+  { id:'e8',  num:8,  sprint:1, icon:'📅', title:'Economic Calendar',             stories:['37'] },
+  { id:'e9',  num:9,  sprint:1, icon:'🔗', title:'Correlation Matrix',            stories:['38','39'] },
+  { id:'e10', num:10, sprint:1, icon:'⚙️', title:'Admin Panel',                   stories:['40','41','42','43'] },
+  { id:'e11', num:11, sprint:1, icon:'♿', title:'Accessibility & Personalisation',stories:['44','45'] },
+  { id:'e12', num:12, sprint:1, icon:'🛡️', title:'GDPR / LGPD Compliance',        stories:['46','47','48'] },
+  { id:'e13', num:13, sprint:1, icon:'💳', title:'Subscriptions & Billing',       stories:['49','50','51','52'] },
+  { id:'e14', num:14, sprint:2, icon:'🌐', title:'Internationalisation',           stories:['53','54','55'] },
+  { id:'e15', num:15, sprint:2, icon:'💱', title:'Currency Display',              stories:['56','57','58'] },
+  { id:'e16', num:16, sprint:2, icon:'📧', title:'Email & Auth Recovery',         stories:['59','60','61'] },
+  { id:'e17', num:17, sprint:2, icon:'🇧🇷', title:'Brazilian Onboarding',          stories:['62','63','64'] },
+  { id:'e18', num:18, sprint:2, icon:'🧾', title:'DARF Tax Calculator',           stories:['65','66','67','68','69','70'] },
+  { id:'e19', num:19, sprint:2, icon:'📱', title:'Mobile Responsiveness',         stories:['71','72'] },
+  { id:'e20', num:20, sprint:2, icon:'🚀', title:'Closed Beta',                   stories:['73','74'] },
+  { id:'e21', num:21, sprint:3, icon:'🔄', title:'Data Source Migration',         stories:['75'] },
+];
+
+// status: 'done' | 'planned'
+const STORIES = {
+  '01': { status:'done', title:'Sign Up', role:'visitor', want:'create an account with my email and password', goal:'save tracked picks and access personalised features',
+    ac:['Email must be unique; duplicate registration returns a clear error.','Password must be at least 6 characters.','On success user is signed in and sees account badge.','Passwords stored as scrypt hash — never plain text.'] },
+  '02': { status:'done', title:'Sign In', role:'registered user', want:'sign in with my email and password', goal:'access saved picks, portfolio, and subscription features',
+    ac:['Invalid credentials return neutral "Invalid email or password" — no user enumeration.','After 10 failed attempts per IP/15 min → HTTP 429.','Valid login issues 30-day JWT in localStorage.','Header reflects email, tier badge, and avatar.'] },
+  '03': { status:'done', title:'Sign Out', role:'signed-in user', want:'sign out', goal:'clear my session from this device',
+    ac:['Clicking Sign Out clears JWT from localStorage.','UI reverts to logged-out state without page reload error.','Portfolio and tracked picks remain in localStorage.'] },
+  '04': { status:'done', title:'Change Password', role:'signed-in user', want:'change my password', goal:'update credentials if I suspect a compromise',
+    ac:['Current password is required and validated.','New password must be at least 6 characters.','On success modal closes and toast confirms.','Existing JWT remains valid (no forced re-login).'] },
+  '05': { status:'done', title:'Auth Form Autofill', role:'returning user', want:'browser to autofill my email and password', goal:"sign in faster without typing credentials every time",
+    ac:['Auth form wrapped in <form id="authForm">.','Email input has autocomplete="email".','Password has autocomplete="current-password" (sign-in) or "new-password" (sign-up).','No "password field not in form" console warning.'] },
+  '06': { status:'done', title:'Session Persistence', role:'returning user', want:'session remembered across browser refreshes', goal:"not sign in on every visit",
+    ac:['Valid JWT in localStorage auto-authenticates on page load via /api/auth/me.','Expired/tampered token silently clears session.','Session lasts 30 days from last sign-in.'] },
+  '07': { status:'done', title:'Scan a Market', role:'signed-in user', want:'click SCAN to fetch live technical data', goal:'see current BUY/HOLD/SELL signals for each stock',
+    ac:['SCAN triggers real-time fetch from Yahoo Finance via server-side proxy.','Loading indicator shown during scan.','Each card appears as data resolves — no waiting for all 50.','Header updates with "LAST SCAN — HH:MM:SS UTC".'] },
+  '08': { status:'done', title:'Switch Market', role:'user', want:'switch between US, Europe, Brasil, and Emerging Markets tabs', goal:'compare opportunities across geographies',
+    ac:['Switching clears results and shows "HIT SCAN TO BEGIN".','Active market tab is highlighted.','Signal filter resets to BUY on market switch.','Universe count in tab label reflects user tier.'] },
+  '09': { status:'done', title:'Free Tier Universe Limit', role:'free user', want:'scan a sample of each market', goal:'evaluate the product before subscribing',
+    ac:['Free users see exactly 5 stocks per market.','Pro upsell banner visible below sample results.','Upsell shows what additional stocks and features are unlocked on Pro.'] },
+  '10': { status:'done', title:'Pro Signal Filter', role:'Pro/Admin user', want:'filter scan results by BUY, HOLD, SELL, or ALL', goal:'focus on the signal type relevant to my strategy',
+    ac:['Filter bar appears for Pro/Admin only.','Selecting filter re-renders without re-fetching.','Defaults to BUY; resets on market switch.','Free users do not see the filter bar.'] },
+  '11': { status:'done', title:'Scan Results Summary', role:'user', want:'see BUY/HOLD/SELL count summary after scan', goal:'quickly gauge overall market sentiment',
+    ac:['Stats bar shows: N stocks, BUY SIGNALS: N, HOLD: N, SELL: N.','Counts update immediately after scan completes.'] },
+  '12': { status:'done', title:'View Stock Card', role:'user', want:'see a detailed card for each scanned stock', goal:'understand technical condition at a glance',
+    ac:['Each card shows: ticker, company, sector, price, 1-day change (%), signal badge.','Technical pills: RSI, MACD, ADX, SMA status.','Entry zone, TP, SL displayed.','Verdict bar summarises composite signal.'] },
+  '13': { status:'done', title:'Interactive Price Chart', role:'user', want:'view chart with SMA overlays and Bollinger Bands', goal:'visually confirm the technical setup',
+    ac:['Chart renders using Canvas (no external library).','Period buttons: 1D, 1M, 3M, 6M, 1Y, 5Y.','SMA 20, 50, 200 and Bollinger Bands toggled via buttons.','Updates instantly on change without re-fetching.'] },
+  '14': { status:'done', title:'News Sentiment', role:'user', want:'see recent news headlines for each stock', goal:'factor in qualitative events when assessing signals',
+    ac:['Up to 5 headlines per card from Yahoo Finance news.','Each headline links to original article.','Publisher and time-ago labels displayed.','News section is collapsible.'] },
+  '15': { status:'done', title:'Support & Resistance Levels', role:'user', want:'see computed support and resistance levels', goal:'identify key price zones for entry and exit',
+    ac:['Support 1, Resistance 1, Resistance 2 displayed on each card.','Values computed from OHLCV history.','Entry zone derived from Support 1 and ATR.'] },
+  '16': { status:'done', title:'Track a Pick', role:'signed-in user', want:'add a stock to Tracked Picks from a scan card', goal:'monitor it over time with TP/SL levels',
+    ac:['TRACK PICK adds stock with current TP and SL.','Duplicate tracking prevented with "already tracked" message.','Free users limited to 5 tracked picks.'] },
+  '17': { status:'done', title:'View Tracked Picks', role:'user', want:'see all tracked picks in a dedicated tab', goal:'monitor status at a glance',
+    ac:['Table shows: ticker, entry price, current price, TP, SL, % P&L, status badge.','Empty state with helpful prompt when no picks.','Count shown in tab label.'] },
+  '18': { status:'done', title:'Refresh Tracked Prices', role:'user', want:'refresh prices of all tracked picks', goal:'see up-to-date P&L without a full scan',
+    ac:['REFRESH PRICES re-fetches only tracked tickers.','TP/SL hit status updates on refresh.','Loading state shown during refresh.'] },
+  '19': { status:'done', title:'Clear All Tracked Picks', role:'user', want:'clear all tracked picks at once', goal:'start fresh after strategy change',
+    ac:['Confirmation prompt appears before clearing.','After confirmation tracked list is empty and count resets.','Clearing does not affect portfolio positions.'] },
+  '20': { status:'done', title:'Navigate Back from Tracked View', role:'user', want:'return to scan from Tracked Picks view', goal:'quickly switch between monitoring and scanning',
+    ac:['"BACK TO SCAN" button visible in Tracked tab.','Returns to last active scan without re-fetching.'] },
+  '21': { status:'done', title:'Browse Full Universe', role:'user', want:'see a table of all available stocks in the selected market', goal:'find a specific company without running a scan',
+    ac:['ALL STOCKS tab shows table with: ticker, company, sector, action buttons.','Each row has TRACK and "+ MY STOCKS" buttons.','Already-tracked stocks show "✓ TRACKED".','Portfolio stocks show "✅" badge.'] },
+  '22': { status:'done', title:'Quick-Add to Portfolio from Browser', role:'Pro user', want:'add a stock directly to portfolio from All Stocks browser', goal:'log a position without running a scan first',
+    ac:['Clicking "+ MY STOCKS" adds stock at last known scanned price.','If no scan price, user is prompted to scan first.','Free users are redirected to upgrade flow on click.'] },
+  '23': { status:'done', title:'Add Portfolio Position', role:'Pro user', want:'manually log a stock position', goal:'track performance of positions in my real broker',
+    ac:['Add Position modal: ticker, quantity, buy price, buy date.','Unknown tickers accepted with warning.','Free users limited to 3 positions.','Duplicate holding positions prevented.'] },
+  '24': { status:'done', title:'View Portfolio Summary', role:'Pro user', want:'see summary with total cost, current value, and overall P&L', goal:'track performance at a glance',
+    ac:['Summary cards: total cost basis, current value, unrealized P&L, realized P&L.','Table: ticker, qty, buy price, current price, P&L.','HOLDING highlighted; SOLD greyed out.','Last updated timestamp shown.'] },
+  '25': { status:'done', title:'Full Sell a Position', role:'Pro user', want:'record a full sale of a holding position', goal:'move position to SOLD with realised P&L',
+    ac:['SELL on holding row opens modal pre-filled with full quantity.','Preview shows: "Selling: N of N shares", P&L.','On confirm position changes to SOLD with sell price and date.'] },
+  '26': { status:'done', title:'Partial Sell a Position', role:'Pro user', want:'sell only part of my holding', goal:'realise some profit while keeping a remaining position',
+    ac:['Quantity < full holding shows preview with remaining position.','On confirm: original row updated to remaining qty; new SOLD row appended.','Both rows independently visible in portfolio table.'] },
+  '27': { status:'done', title:'Sell Validation', role:'Pro user', want:'be prevented from entering an invalid sell', goal:'maintain data integrity',
+    ac:['Qty > current holding → error.','Qty = 0 or negative → error.','Sell price = 0 or negative → error.','No validation errors crash the app.'] },
+  '28': { status:'done', title:'Edit a Portfolio Position', role:'Pro user', want:'edit details of an existing position', goal:'correct entry mistakes',
+    ac:['EDIT opens modal pre-filled with current values.','Saving updates position in place.','Editing does not create a duplicate row.'] },
+  '29': { status:'done', title:'Remove a Portfolio Position', role:'Pro user', want:'delete a position from portfolio', goal:'remove erroneous entries',
+    ac:['REMOVE shows confirmation prompt.','After confirmation row removed and P&L summaries recalculate.'] },
+  '30': { status:'done', title:'Monthly P&L Breakdown', role:'Pro user', want:'see realised and unrealised P&L grouped by month', goal:'understand performance over time',
+    ac:['Monthly P&L table shown below position list.','Realised gains bucketed by sell date; unrealised by buy date.','Month dropdown filter + range presets (3M/6M/12M/ALL).'] },
+  '31': { status:'done', title:'Tax Estimate', role:'Pro user', want:'see estimated tax liability based on realised gains and configurable tax rate', goal:'plan cash reserves for tax season',
+    ac:['Tax rate input defaults to 30%. Changing rate recalculates immediately.','Shows: realised gain, tax rate, tax due, net after tax.','Prominent disclaimer: NOT a tax filing document.'] },
+  '32': { status:'done', title:'Export Portfolio as CSV', role:'Pro user', want:'download portfolio data as CSV', goal:'import into spreadsheet for analysis',
+    ac:['Clicking CSV downloads file with: Ticker, Qty, Buy Price, Sell Price, Cost Basis, Value, P&L, Buy Date, Sell Date, Status.','File named with current date.'] },
+  '33': { status:'done', title:'Export Portfolio as Markdown', role:'Pro user', want:'download portfolio as Markdown file', goal:'embed in notes or personal blog',
+    ac:['Clicking MD downloads properly formatted Markdown table.','File includes header with export date and total P&L summary.'] },
+  '34': { status:'done', title:'Print / Save Portfolio as PDF', role:'Pro user', want:'print or save Trading Journal as PDF', goal:'keep a physical or archived record',
+    ac:['Clicking "PRINT / SAVE PDF" triggers browser print dialog.','Printed view is clean — no header controls or scan UI.','Disclaimer is clearly visible on printed page.'] },
+  '35': { status:'done', title:'Access Education Content', role:'any signed-in user', want:'read explanations of technical indicators', goal:'understand why a BUY or SELL signal is generated',
+    ac:['EDUCATION tab accessible for Pro/Admin users.','Topics: RSI, MACD, ADX, SMA, Bollinger, Patterns, DARF — plus 5 new beginner tabs.','Content available in EN and PT.'] },
+  '36': { status:'done', title:'Understand Scoring Logic', role:'user reading education content', want:'see exactly how MOMENTUM scores each indicator', goal:'trust and interpret the composite verdict',
+    ac:['Each indicator section describes its scoring contribution.','How MOMENTUM scores it sub-section present for every indicator.'] },
+  '37': { status:'done', title:'View Upcoming Macro Events', role:'user', want:'see a calendar of upcoming economic events', goal:'avoid holding volatile positions into major releases',
+    ac:['Calendar shows next ~8 events with date, title, and impact badge.','Events sorted ascending by date.','Covers US and Brazilian macro events.','Calendar generated server-side — no API key needed.'] },
+  '38': { status:'done', title:'View Correlation Between Tracked Stocks', role:'Pro user', want:'see correlation matrix for tracked picks', goal:'understand diversification and avoid over-concentration',
+    ac:['Correlation section visible only to Pro/Admin.','Appears after scanning at least 2 tickers in the same market.','Positive correlations colour-coded green; negative red.','Legend explains Move Together / Move Opposite.'] },
+  '39': { status:'done', title:'Correlation Requires Scan', role:'free user', want:'see a clear locked/upgrade state when accessing correlation', goal:'understand this is a Pro feature',
+    ac:['Free users see locked placeholder with Pro Feature label and upgrade CTA.','Section does not crash or show partial data for free users.'] },
+  '40': { status:'done', title:'View All Registered Users', role:'admin', want:'see table of all registered users with tier and subscription status', goal:'monitor growth and manage accounts',
+    ac:['Admin Panel tab visible only when logged in as admin.','Table shows: ID, email, tier badge, subscription expiry, creation date.','Summary stats: total, free, pro, active subscriptions.'] },
+  '41': { status:'done', title:'Upgrade a User to Pro', role:'admin', want:'manually upgrade a free user to Pro tier', goal:'reward beta testers, influencers, and partners',
+    ac:['Each free user row has "⭐ Make Pro" button.','Confirmation dialog shown before upgrade.','Sets user tier to pro with 1-year subscriptionEnd.','Table refreshes immediately.'] },
+  '42': { status:'done', title:'Revoke Pro from a User', role:'admin', want:'downgrade a Pro user back to Free', goal:'revoke access when a partner agreement ends',
+    ac:['Each Pro user row has "↓ Revoke Pro" button.','Confirmation dialog shown.','Admin account cannot be downgraded.'] },
+  '43': { status:'done', title:'Language Selector', role:'all users', want:'switch app language between EN and PT', goal:'use the app in my preferred language',
+    ac:['Language selector (EN/PT dropdown) visible to all users.','Switching language applies immediately to all visible UI strings.','Preference persisted in localStorage.'] },
+  '44': { status:'done', title:'Increase Font Size', role:'user', want:'increase font size of the entire app', goal:'read content comfortably',
+    ac:['Clicking A+ increases page zoom by a fixed step.','Clicking A− decreases it.','Zoom level persists via localStorage.','Default zoom is 1.0.'] },
+  '45': { status:'done', title:'Switch Theme', role:'user', want:'switch between visual themes', goal:'personalise the appearance of the app',
+    ac:['Theme toggle button cycles through: Dark, Light, Dracula, Monokai, Nord, Solarized, One Dark.','Theme label updates to reflect active theme.','Selected theme persisted and restored on next visit.'] },
+  '46': { status:'done', title:'Cookie & Storage Consent Banner', role:'first-time visitor', want:'see consent notice about how MOMENTUM uses cookies', goal:'understand data handling before using the app',
+    ac:['Banner appears at bottom on first visit.','Explains localStorage use for session and preferences.','Accept & Continue dismisses and records consent in localStorage.','Not shown on subsequent visits.'] },
+  '47': { status:'done', title:'Export My Account Data', role:'signed-in user', want:'download a copy of all data MOMENTUM holds about my account', goal:'exercise rights under GDPR and LGPD',
+    ac:['Export My Data in user dropdown.','Downloads JSON: user ID, email, tier, subscription dates, export timestamp.','Includes note that portfolio data is stored locally.','Requires valid JWT.'] },
+  '48': { status:'done', title:'Delete My Account', role:'signed-in user', want:'permanently delete my account', goal:'erase all server-side personal data',
+    ac:['Delete Account in user dropdown, styled in red.','Two confirmation dialogs before deletion.','Server removes user record from database.','User immediately signed out.','Admin account cannot be deleted.'] },
+  '49': { status:'done', title:'Upgrade to Pro via Stripe', role:'free user', want:'subscribe to Pro tier using my card', goal:'unlock unlimited scanning and full trading journal',
+    ac:['Clicking Go Pro redirects to Stripe Checkout session.','On successful payment, user redirected to /?subscription=success.','Tier updated via Stripe webhook within seconds.','Pro upsell banner hidden after upgrade.'] },
+  '50': { status:'done', title:'Manage Subscription', role:'Pro user', want:'manage or cancel my subscription', goal:'have full control over my billing',
+    ac:['"Go Pro" button changes to "⚙ Manage Subscription" for Pro users.','Clicking opens Stripe Customer Portal.','Cancellation triggers webhook which downgrades user to Free at period end.'] },
+  '51': { status:'done', title:'Subscription Expiry Enforcement', role:'Pro user whose subscription lapsed', want:'app to gracefully downgrade my access', goal:'understand my tier has changed and can renew',
+    ac:['On every authenticated request server checks whether subscriptionEnd is in the past.','If expired, tier set back to free automatically.','Pro-only features show upgrade prompt rather than broken states.'] },
+  '52': { status:'done', title:'Stripe Not Configured State', role:'user on self-hosted instance without Stripe keys', want:'app to behave gracefully without payment functionality', goal:'non-commercial deployments are fully usable',
+    ac:['If STRIPE_SECRET_KEY not set, checkout and portal endpoints return 503.','Rest of the app functions normally.','No uncaught Stripe errors in server logs.'] },
+  '53': { status:'done', title:'Browser Language Auto-Detection', role:'Brazilian user', want:'app to detect my browser language and load in PT automatically', goal:"not have to manually switch",
+    ac:['init() reads navigator.language on first load.','If starts with "pt", _lang set to "pt" before any UI renders.','Stored preference always takes precedence over auto-detection.','Auto-detected language saved to localStorage.'] },
+  '54': { status:'done', title:'Full UI Translation Coverage', role:'any user', want:'all UI text in chosen language', goal:'experience feels native',
+    ac:['LANGS object contains ~180 keys per language.','No English string visible in PT mode; no PT string in EN mode.','All render functions call t() for every user-facing string.','Switching language re-renders all visible views without page reload.'] },
+  '55': { status:'done', title:'Auth Form Browser Autofill (PT)', role:'PT user', want:'auth form to support browser autofill', goal:'sign in faster',
+    ac:['Auth modal wraps inputs inside <form id="authForm">.','Email input has autocomplete="email".','Password input switches autocomplete on sign-in vs sign-up mode.','No console warnings about password fields.'] },
+  '56': { status:'done', title:'R$ Symbol for B3 Stocks', role:'Brazilian user', want:'prices displayed as R$ (not $)', goal:'read B3 values at a glance without confusion',
+    ac:['getCurrencySymbol(ticker) returns R$ for tickers ending in .SA.','All price strings on B3 cards display R$.','Portfolio .SA positions display R$ in table, summaries, and exports.'] },
+  '57': { status:'done', title:'€ and £ for European Stocks', role:'European user', want:'prices in € for Eurozone stocks and £ for UK stocks', goal:'see values in the correct currency',
+    ac:['getCurrencySymbol() returns € for .DE .PA .AS .MC .MI .BR tickers.','Returns £ for .L tickers.','All ~25 price strings use getCurrencySymbol() not hardcoded symbol.'] },
+  '58': { status:'done', title:'Per-Position Currency Symbol in Mixed Portfolio', role:'user with mixed portfolio', want:'each position to show the correct currency symbol', goal:'values are unambiguous across a multi-market portfolio',
+    ac:['getCurrencySymbol() returns $ for tickers with no recognised suffix.','Portfolio table renders correct symbol per row regardless of market.','Tax report rows show per-ticker symbol.','CSV and Markdown exports include correct symbol.'] },
+  '59': { status:'planned', title:'Email Verification on Signup', role:'new user', want:'verify my email address after signup', goal:'platform knows I own the account',
+    ac:['On signup, server sends verification email via Resend with time-limited link.','Link calls GET /api/auth/verify-email?token=<token>.','Unverified users see banner; core features remain accessible.','Re-send is rate-limited to once per 60 seconds.'] },
+  '60': { status:'planned', title:'Forgot Password Flow', role:'user who forgot password', want:'receive a reset link by email', goal:'recover access without contacting support',
+    ac:['"Forgot password?" link visible on sign-in form.','Submitting calls POST /api/auth/forgot-password.','Always responds with neutral message — no user enumeration.','Reset email dispatched via Resend.'] },
+  '61': { status:'planned', title:'Password Reset Link Expiry', role:'user receiving a reset link', want:'link to expire after 1 hour', goal:'stale links cannot be exploited',
+    ac:['Reset tokens stored server-side with 1-hour expiry timestamp.','POST /api/auth/reset-password rejects tokens older than 1 hour.','Used token immediately invalidated.','After successful reset, user redirected to sign-in with toast.'] },
+  '62': { status:'planned', title:'B3 Ticker Auto-Suggest', role:'Brazilian user', want:'see B3 tickers suggested when I search for stocks', goal:"not have to remember exact .SA suffixes",
+    ac:['Typing shows dropdown of matching B3 tickers.','Filtered from existing .SA universe; shows full company name.','Selecting auto-fills input with correct Yahoo Finance ticker (e.g. PETR4.SA).','Works without additional API call — filters client-side universe list.'] },
+  '63': { status:'planned', title:'CPF Field in User Profile', role:'Brazilian Pro user', want:'enter my CPF in my profile', goal:'app can pre-fill tax documents',
+    ac:['CPF field available in account section for Pro users.','Validated against Brazilian 11-digit format with check-digit verification.','Stored server-side on user record.','Included in GDPR/LGPD data export.'] },
+  '64': { status:'done', title:'BRL Display Throughout App', role:'Brazilian user', want:'B3 stock prices displayed in R$ throughout the app', goal:'see prices in my native currency',
+    ac:['All views displaying .SA ticker prices show R$.','No $ symbol appears next to a B3 price anywhere in the UI.','Currency symbol updates immediately when new scan result renders.','Exported files use R$ for B3 positions.'] },
+  '65': { status:'done', title:'Trade Type Classification', role:'Brazilian swing trader', want:'app to classify trades as swing or day-trade so tax rates are applied correctly', goal:'DARF calculation is accurate',
+    ac:['Each portfolio position has a tradeType field accepting "swing" or "daytrade".','Add/edit position modal includes Trade Type selector defaulting to "swing".','Tax rates: 17.5% swing, 20% day-trade.','Existing positions without tradeType default to "swing" without errors.'] },
+  '66': { status:'done', title:'Monthly DARF Liability Panel', role:'Brazilian trader', want:'see monthly DARF liability (codes 6015 and 6010) calculated automatically', goal:'know what I owe each month',
+    ac:['DARF Summary panel visible in Tax Report for users with .SA sold positions.','computeDARF(month, year) calculates net gain per trade type and applies correct tax rate.','Loss carryforward deducted before applying tax rate.','Panel states "No DARF due for this period" when zero or negative.'] },
+  '67': { status:'done', title:'Loss Carryforward by Trade Type', role:'Brazilian trader', want:'loss carryforward tracked separately for swing and day-trade buckets', goal:'future profits are offset correctly',
+    ac:['darf_carry_swing and darf_carry_daytrade keys persisted in localStorage.','Net loss increases carry; net gain reduces it (never below zero).','Same logic applied independently to each bucket.','Carryforward balances displayed in DARF summary panel.'] },
+  '68': { status:'done', title:'Dedo-Duro (Withholding) Display', role:'Brazilian trader', want:'DARF summary to show my dedo-duro so I can deduct it', goal:"don't overpay",
+    ac:['DARF panel shows "Dedo-duro retido" per trade type per month.','Entered manually by user at position sell time.','DARF due = (rate × net_gain) − dedo_duro, not below zero.','Panel shows both gross and net DARF.'] },
+  '69': { status:'done', title:'R$20k Swing Exemption Flag', role:'Brazilian trader with monthly swing sales under R$20k', want:'app to flag that I am exempt from swing DARF', goal:"don't file unnecessarily",
+    ac:['computeDARF() sums total .SA swing sale proceeds for selected month.','If total swing sales < R$20.000, green "Isento" badge shown.','Exemption applies only to swing trades.','Threshold defined as BR_TAX.SWING_EXEMPT_THRESHOLD constant.'] },
+  '70': { status:'planned', title:'SicalcWeb Link', role:'Brazilian trader', want:'a direct link to SicalcWeb pre-filled with my DARF data', goal:'generate official payment slip without leaving the workflow',
+    ac:['"Gerar DARF no SicalcWeb" button per DARF code when an amount is due.','Opens SicalcWeb in a new tab.','CPF (if stored) and calculated DARF values displayed adjacent to link.','Button still visible if CPF not set, with tooltip to add CPF.'] },
+  '71': { status:'done', title:'Usable Scan & Portfolio on 375px Viewport', role:'mobile user', want:'scan and portfolio views to be usable on small screen without horizontal scrolling', goal:'use the app on my phone',
+    ac:['No horizontal overflow on 375px viewport in any view.','Stock cards stack vertically and fill viewport width.','Portfolio table scrolls horizontally within constrained container.','All changes are CSS-only.'] },
+  '72': { status:'done', title:'Touch-Friendly Tap Targets', role:'mobile user', want:'touch-friendly tap targets (min 44px) on all primary actions', goal:'interact accurately on a touchscreen',
+    ac:['SCAN, TRACK PICK, and ADD TO PORTFOLIO buttons have minimum 44px height on mobile.','Tab navigation buttons meet 44px minimum touch target.','No two primary tap targets closer than 8px apart.'] },
+  '73': { status:'done', title:'Public EN/PT Language Toggle', role:'visitor', want:'switch between EN and PT without needing an admin account', goal:'language toggle is publicly accessible',
+    ac:['langSelect visible to all users regardless of tier or auth state.','Admin gate on langSelect visibility removed from updateAuthUI().','Toggle visible in header on mobile and desktop.'] },
+  '74': { status:'done', title:'Language Preference Persisted Across Sessions', role:'beta user', want:'app to remember my language preference across sessions', goal:"don't re-select language on every visit",
+    ac:['Selecting language writes jerry_lang to localStorage immediately.','init() reads jerry_lang and applies before any UI renders.','If no preference stored, navigator.language auto-detection applies.','Clearing localStorage resets to auto-detection.'] },
+  '75': { status:'planned', title:'B3 Data via brapi.dev (Hybrid Data Source)', role:'Brazilian Pro user scanning B3 stocks', want:'B3 stock data to come from an official SLA-backed API (brapi.dev)', goal:'app remains stable and compliant even if Yahoo blocks the proxy',
+    ac:['server.js routes .SA ticker requests to brapi.dev instead of Yahoo Finance.','US, Europe, Emerging tickers continue using Yahoo Finance unchanged.','brapi.dev response normalized to same candle format — zero frontend changes.','BRAPI_TOKEN added to .env.example and docker-compose.yml.','If BRAPI_TOKEN absent: startup warning + graceful fallback to Yahoo Finance for B3.','Existing 60s cache layer wraps brapi.dev calls identically.','Monthly cost: R$49.99 (Startup plan, 150k req/mo — current usage ~8% of quota).'] },
+};
+
+const DOC_SECTIONS = [
+  {
+    id:'arch', title:'Architecture Overview',
+    content:`<div class="doc-h2">Architecture Overview</div>
+<div class="doc-p">MOMENTUM is a <strong>monolithic, server-rendered single-page application</strong> deliberately built with minimal dependencies to keep operational complexity near zero.</div>
+<pre>Browser (stock-dashboard.html — Vanilla JS SPA ~3,900 lines)
+  ↕ HTTP (port 8081 → 8080)
+Docker Container (server.js — Node.js, no framework)
+  ↕ HTTPS
+  ├── Yahoo Finance (unofficial proxy — US, Europe, Emerging)
+  ├── brapi.dev (Sprint 3 — B3 / Brasil tickers)
+  └── Stripe API (payments)</pre>
+<table>
+<tr><th>Decision</th><th>Rationale</th></tr>
+<tr><td>No framework (raw Node.js http)</td><td>Zero dependency surface; trivial Docker image</td></tr>
+<tr><td>Single HTML file frontend</td><td>No build step; deploy by copying one file</td></tr>
+<tr><td>localStorage for portfolio</td><td>No server storage cost; data owned by user</td></tr>
+<tr><td>JSON file for users</td><td>Zero-ops until ~5k users; atomic writes prevent corruption</td></tr>
+<tr><td>Server-side Yahoo proxy</td><td>Avoids CORS; allows caching; hides user IPs from third party</td></tr>
+</table>`
+  },
+  {
+    id:'env', title:'Environment Variables',
+    content:`<div class="doc-h2">Environment Variables</div>
+<table>
+<tr><th>Variable</th><th>Required</th><th>Description</th></tr>
+<tr><td>JWT_SECRET</td><td>Yes</td><td>Secret for signing JWTs. Min 32 chars. Generate: <code>openssl rand -hex 64</code></td></tr>
+<tr><td>APP_URL</td><td>Yes</td><td>Public URL — used for CORS origin and Stripe redirect URLs</td></tr>
+<tr><td>NODE_ENV</td><td>No</td><td>Set to <code>production</code> to enable JWT_SECRET safety guard</td></tr>
+<tr><td>STRIPE_SECRET_KEY</td><td>No</td><td>Stripe secret key. Leave blank to disable payments.</td></tr>
+<tr><td>STRIPE_PRICE_PRO_MONTHLY</td><td>No</td><td>Stripe Price ID for the €9/month Pro plan</td></tr>
+<tr><td>STRIPE_WEBHOOK_SECRET</td><td>No</td><td>Stripe webhook signing secret</td></tr>
+<tr><td>RESEND_API_KEY</td><td>No</td><td>Resend API key for email verification and password reset (Sprint 2)</td></tr>
+<tr><td>BRAPI_TOKEN</td><td>No</td><td>brapi.dev API token for B3 data (Sprint 3). Fallback to Yahoo Finance if absent.</td></tr>
+</table>
+<div class="doc-p" style="margin-top:12px"><strong style="color:var(--red)">Production safety guard:</strong> If <code>NODE_ENV=production</code> and <code>JWT_SECRET</code> is missing or equals the default dev value, the server calls <code>process.exit(1)</code> at boot.</div>`
+  },
+  {
+    id:'api', title:'API Reference',
+    content:`<div class="doc-h2">API Reference</div>
+<div class="doc-h3">Auth Endpoints</div>
+<table>
+<tr><th>Endpoint</th><th>Method</th><th>Auth</th><th>Description</th></tr>
+<tr><td>/api/auth/signup</td><td>POST</td><td>None</td><td>Create account. Body: {email, password}</td></tr>
+<tr><td>/api/auth/login</td><td>POST</td><td>None</td><td>Sign in. Returns {token, user}</td></tr>
+<tr><td>/api/auth/me</td><td>GET</td><td>JWT</td><td>Return current user {id, email, tier, subscriptionEnd}</td></tr>
+<tr><td>/api/auth/change-password</td><td>POST</td><td>JWT</td><td>Change password. Body: {oldPassword, newPassword}</td></tr>
+<tr><td>/api/auth/data-export</td><td>GET</td><td>JWT</td><td>GDPR data export</td></tr>
+<tr><td>/api/auth/account</td><td>DELETE</td><td>JWT</td><td>Delete account permanently</td></tr>
+</table>
+<div class="doc-h3">Stock Data Endpoints</div>
+<table>
+<tr><th>Endpoint</th><th>Auth</th><th>Cache</th><th>Description</th></tr>
+<tr><td>/api/history/:ticker</td><td>JWT required</td><td>60s</td><td>Yahoo Finance OHLCV proxy (5-year daily data)</td></tr>
+<tr><td>/api/news/:ticker</td><td>None</td><td>60s</td><td>Yahoo Finance news proxy (5 headlines)</td></tr>
+<tr><td>/api/universes</td><td>Optional</td><td>None</td><td>Market metadata with tier-aware visibleCount</td></tr>
+<tr><td>/api/universe/:market</td><td>Optional</td><td>None</td><td>Tier-limited stock list for a market</td></tr>
+<tr><td>/api/limit</td><td>JWT</td><td>None</td><td>Current scan limit state</td></tr>
+<tr><td>/api/calendar</td><td>None</td><td>None</td><td>Upcoming economic events (server-generated, no API key)</td></tr>
+</table>
+<div class="doc-h3">Admin Endpoints</div>
+<table>
+<tr><th>Endpoint</th><th>Method</th><th>Description</th></tr>
+<tr><td>/api/admin/users</td><td>GET</td><td>List all users with stats</td></tr>
+<tr><td>/api/admin/set-tier</td><td>POST</td><td>Set user tier to free or pro</td></tr>
+<tr><td>/api/admin/set-admin</td><td>POST</td><td>Grant or revoke admin tier</td></tr>
+</table>`
+  },
+  {
+    id:'tiers', title:'Subscription Tiers',
+    content:`<div class="doc-h2">Subscription Tiers</div>
+<table>
+<tr><th>Tier</th><th>Max Tracked Picks</th><th>Max Stocks/Market</th><th>Signal Filter</th><th>Portfolio</th><th>Education</th></tr>
+<tr><td>Free</td><td>5</td><td>5</td><td>BUY only</td><td>3 positions</td><td>No</td></tr>
+<tr><td>Pro</td><td>Unlimited</td><td>All</td><td>BUY/HOLD/SELL/ALL</td><td>Unlimited</td><td>Yes</td></tr>
+<tr><td>Admin</td><td>Unlimited</td><td>All</td><td>All</td><td>Unlimited</td><td>Yes + Admin Panel</td></tr>
+</table>
+<div class="doc-h3">Subscription Expiry</div>
+<div class="doc-p"><code>getTier(email)</code> checks <code>subscriptionEnd</code> on every authenticated request. If a Pro user's subscription has lapsed, their tier is automatically downgraded to <code>free</code> and saved.</div>`
+  },
+  {
+    id:'universes', title:'Stock Universes',
+    content:`<div class="doc-h2">Stock Universes</div>
+<table>
+<tr><th>Market</th><th>Count</th><th>Coverage</th><th>Data Source (Sprint 3)</th></tr>
+<tr><td>🇺🇸 us</td><td>51</td><td>S&P 500 blue-chips across 12 sectors</td><td>Yahoo Finance</td></tr>
+<tr><td>🇧🇷 brasil</td><td>40</td><td>B3 blue-chips — PETR4, VALE3, ITUB4, WEGE3 and 36 others</td><td>brapi.dev (Sprint 3)</td></tr>
+<tr><td>🇪🇺 europe</td><td>29</td><td>STOXX 600 blue-chips (Germany, France, UK, Netherlands, Spain, Italy, Belgium)</td><td>Yahoo Finance</td></tr>
+<tr><td>🌍 emerging</td><td>20</td><td>Mexico (6), India (5), China ADRs (5), South Africa (2), Chile (1), Poland (1)</td><td>Yahoo Finance</td></tr>
+</table>
+<div class="doc-h3">Ticker Format Convention</div>
+<table>
+<tr><th>Suffix</th><th>Exchange</th><th>Currency</th></tr>
+<tr><td>(none)</td><td>US — NYSE, NASDAQ</td><td>$</td></tr>
+<tr><td>.SA</td><td>Brazil B3</td><td>R$</td></tr>
+<tr><td>.L</td><td>UK — London Stock Exchange</td><td>£</td></tr>
+<tr><td>.DE / .PA / .AS / .MC / .MI</td><td>Germany / France / Netherlands / Spain / Italy</td><td>€</td></tr>
+<tr><td>.NS</td><td>India NSE</td><td>₹</td></tr>
+<tr><td>.MX</td><td>Mexico BMV</td><td>MX$</td></tr>
+</table>`
+  },
+  {
+    id:'security', title:'Security Model',
+    content:`<div class="doc-h2">Security Model</div>
+<table>
+<tr><th>Threat</th><th>Mitigated by</th></tr>
+<tr><td>Credential stuffing</td><td>Auth rate limit: 10 attempts / 15 min / IP</td></tr>
+<tr><td>Password cracking (if DB leaked)</td><td>scrypt with random 16-byte salt per user</td></tr>
+<tr><td>JWT tampering</td><td>HS256 signature; verified on every authenticated request</td></tr>
+<tr><td>Default secret in production</td><td>Boot-time guard; process.exit(1)</td></tr>
+<tr><td>XSS</td><td>Server never injects user-controlled HTML; portfolio stored client-side only</td></tr>
+<tr><td>Clickjacking</td><td>X-Frame-Options: DENY</td></tr>
+<tr><td>CORS misconfiguration</td><td>Origin locked to APP_URL — no wildcard</td></tr>
+<tr><td>Path traversal</td><td>fpath.startsWith(DIR) check before readFileSync</td></tr>
+<tr><td>Oversized request body DoS</td><td>1 MB hard cap in readBody()</td></tr>
+<tr><td>Admin impersonation</td><td>Admin email hardcoded in server.js; JWT tier field not trusted for admin check</td></tr>
+</table>
+<div class="doc-h3">Planned (Sprint 2–3)</div>
+<table>
+<tr><th>Gap</th><th>Planned Fix</th></tr>
+<tr><td>No email verification</td><td>Sprint 2: Resend integration</td></tr>
+<tr><td>No password reset</td><td>Sprint 2: Time-limited reset tokens</td></tr>
+<tr><td>Portfolio data in localStorage</td><td>Sprint 3: Server-side encrypted storage</td></tr>
+<tr><td>No CSP header</td><td>Add Content-Security-Policy before public launch</td></tr>
+</table>`
+  },
+  {
+    id:'datasources', title:'Data Sources & Migration',
+    content:`<div class="doc-h2">Data Sources & Migration Plan</div>
+<div class="doc-h3">Current State</div>
+<div class="doc-p">All market data proxied from Yahoo Finance's <strong>undocumented, unofficial</strong> API endpoint (<code>query1.finance.yahoo.com/v8/finance/chart/:ticker</code>). The server impersonates a browser User-Agent. Yahoo prohibits automated access in their ToS and can block the server IP at any time — instantly breaking all scans.</div>
+<div class="doc-h3">Sprint 3 — Hybrid Data Source (US-75)</div>
+<table>
+<tr><th>Market</th><th>Sprint 3 Target</th><th>Cost</th><th>Rationale</th></tr>
+<tr><td>🇧🇷 Brasil (.SA tickers)</td><td>brapi.dev</td><td>R$49.99/mo</td><td>Official B3 API, SLA-backed, 150k req/mo</td></tr>
+<tr><td>🇺🇸 US</td><td>Yahoo Finance (keep)</td><td>Free</td><td>No affordable mass-coverage alternative yet</td></tr>
+<tr><td>🇪🇺 Europe</td><td>Yahoo Finance (keep)</td><td>Free</td><td>Polygon.io covers some but not all local exchanges</td></tr>
+<tr><td>🌍 Emerging</td><td>Yahoo Finance (keep)</td><td>Free</td><td>Mixed exchanges — Yahoo is best single source</td></tr>
+</table>
+<div class="doc-h3">brapi.dev Key Facts</div>
+<div class="doc-p">• Ticker format: <code>PETR4</code> (no .SA suffix) — strip on call, re-add on response<br>• Historical OHLCV: <code>GET /api/quote/{ticker}?range=5y&interval=1d</code><br>• Response normalized to same candle format — zero frontend changes required<br>• Fallback behavior: if <code>BRAPI_TOKEN</code> absent → startup warning + Yahoo Finance used for B3<br>• Monthly usage estimate: 40 tickers × 10 scans/day × 30 days = 12,000 req (8% of 150k quota)</div>
+<div class="doc-h3">User Database Migration</div>
+<table>
+<tr><th>Trigger</th><th>Target</th><th>Effort</th></tr>
+<tr><td>1,000 users</td><td>SQLite via better-sqlite3</td><td>~1 day</td></tr>
+<tr><td>10,000 users</td><td>PostgreSQL (e.g. Supabase)</td><td>~3 days</td></tr>
+</table>`
+  },
+  {
+    id:'tech-analysis', title:'Technical Analysis Engine',
+    content:`<div class="doc-h2">Technical Analysis Engine</div>
+<div class="doc-p">All indicator computation runs <strong>client-side</strong> in the browser from raw OHLCV arrays returned by the server. No server-side computation required for signals.</div>
+<table>
+<tr><th>Indicator</th><th>Period</th><th>Signal Scoring</th></tr>
+<tr><td>RSI</td><td>14</td><td>45–65 = +1pt; &lt;35 = +0.5pt (oversold); &gt;70 or &lt;25 = −0.5pt</td></tr>
+<tr><td>MACD</td><td>12/26/9</td><td>MACD &gt; 0 = +1pt (positive momentum)</td></tr>
+<tr><td>ADX</td><td>14</td><td>ADX &gt; 25 = +0.5pt (confirms trend strength)</td></tr>
+<tr><td>SMA alignment</td><td>9, 20, 50, 200</td><td>Price above SMA50 = +1pt; 3+ above = strong bull</td></tr>
+<tr><td>Bollinger Bands</td><td>20, 2σ</td><td>Squeeze/breakout detection — secondary confirmation only</td></tr>
+<tr><td>ATR</td><td>14</td><td>Used for TP/SL band sizing: TP = price + ATR×2, SL = price − ATR×1.5</td></tr>
+</table>
+<div class="doc-h3">Composite Signal Thresholds</div>
+<pre>Score ≥ 2.5  →  BUY
+Score ≤ -1.0 →  SELL
+Otherwise    →  HOLD</pre>
+<div class="doc-h3">Pattern Finder (20 patterns)</div>
+<div class="doc-p">Each pattern scored 0–9 points: 0–4 from direction alignment (RSI, MACD, ADX, SMA), 0–5 from candle shape heuristics (last 30–90 candles). Results sorted by score descending, filterable by direction and pattern name.</div>`
+  },
+  {
+    id:'docker', title:'Docker & Deployment',
+    content:`<div class="doc-h2">Docker & Deployment</div>
+<pre># Build and start
+docker compose up -d --build
+
+# View logs
+docker compose logs -f
+
+# Stop
+docker compose down</pre>
+<div class="doc-h3">Port Mapping</div>
+<div class="doc-p">Host port <strong>8081</strong> → Container port <strong>8080</strong><br>App accessible at <a href="http://localhost:8081">http://localhost:8081</a></div>
+<div class="doc-h3">Data Persistence</div>
+<div class="doc-p"><code>./data:/app/data</code> volume mount ensures <code>users.json</code> persists across container rebuilds.<br>Stock-dashboard.html and other static files are baked into the image — frontend changes require a rebuild.</div>
+<div class="doc-h3">Making Frontend Changes</div>
+<div class="doc-p">1. Edit <code>stock-dashboard.html</code><br>2. The server serves it with <code>Cache-Control: no-cache</code> — hard refresh picks up changes in dev mode.<br>3. For production (Docker): <code>docker compose up -d --build</code></div>
+<div class="doc-h3">Healthcheck</div>
+<pre>test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/',r=>{...})"]
+interval: 30s  timeout: 5s  retries: 3</pre>`
+  },
+];
+
+// ─── STATE ──────────────────────────────────────────────────────────────────
+let currentView = 'stories';
+let currentSection = null;
+let sprintFilter = 0;
+let searchQuery = '';
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('.hdr-tab').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.hdr-tab[onclick="setView('${v}')"]`).classList.add('active');
+  currentSection = null;
+  renderSidebar();
+  renderMain();
+}
+
+function renderSidebar() {
+  const sb = document.getElementById('sidebar');
+  if (currentView === 'stories') {
+    let html = '';
+    // Sprint filter
+    html += '<div class="sb-section"><div class="sb-head" style="cursor:default">Sprint Filter</div>';
+    [{v:0,l:'All Sprints'},{v:1,l:'Sprint 1'},{v:2,l:'Sprint 2'},{v:3,l:'Sprint 3'}].forEach(f => {
+      const active = sprintFilter === f.v ? 'active' : '';
+      html += `<div class="sb-item ${active}" onclick="setSprint(${f.v})">${f.l}</div>`;
+    });
+    html += '</div>';
+    EPICS.forEach(e => {
+      if (sprintFilter && e.sprint !== sprintFilter) return;
+      const active = currentSection === e.id ? 'active' : '';
+      const cls = e.sprint === 1 ? 's1' : e.sprint === 2 ? 's2' : 's3';
+      html += `<div class="sb-section">
+        <div class="sb-item ${active}" onclick="showEpic('${e.id}')">
+          <span>${e.icon} ${e.title}</span>
+          <span class="sprint-chip ${cls}">S${e.sprint}</span>
+        </div>
+      </div>`;
+    });
+    sb.innerHTML = html;
+  } else {
+    let html = '';
+    DOC_SECTIONS.forEach(s => {
+      const active = currentSection === s.id ? 'active' : '';
+      html += `<div class="sb-section"><div class="sb-item ${active}" onclick="showDocSection('${s.id}')">${s.title}</div></div>`;
+    });
+    sb.innerHTML = html;
+  }
+}
+
+function renderMain() {
+  const main = document.getElementById('main');
+  if (currentView === 'stories') {
+    if (!currentSection) {
+      renderStoriesOverview(main);
+    } else {
+      const epic = EPICS.find(e => e.id === currentSection);
+      if (epic) renderEpic(main, epic);
+    }
+  } else {
+    if (!currentSection) {
+      renderDocsOverview(main);
+    } else {
+      const sec = DOC_SECTIONS.find(s => s.id === currentSection);
+      if (sec) main.innerHTML = `<div class="doc-section">${sec.content}</div>`;
+    }
+  }
+}
+
+function renderStoriesOverview(main) {
+  const allStories = Object.values(STORIES);
+  const done = allStories.filter(s => s.status === 'done').length;
+  const planned = allStories.filter(s => s.status === 'planned').length;
+  const filteredEpics = sprintFilter ? EPICS.filter(e => e.sprint === sprintFilter) : EPICS;
+
+  let html = `<div class="page-title">User Stories</div>
+<div class="page-sub">Product requirements organized by epic — 75 stories across 21 epics</div>
+<div class="stats-row">
+  <div class="stat-box"><div class="stat-num">${allStories.length}</div><div class="stat-lbl">Total Stories</div></div>
+  <div class="stat-box"><div class="stat-num" style="color:var(--green)">${done}</div><div class="stat-lbl">Done</div></div>
+  <div class="stat-box"><div class="stat-num" style="color:var(--dim)">${planned}</div><div class="stat-lbl">Planned</div></div>
+  <div class="stat-box"><div class="stat-num">3</div><div class="stat-lbl">Sprints</div></div>
+</div>
+<div class="filter-bar">
+  <span class="filter-label">Sprint:</span>
+  ${[{v:0,l:'All'},{v:1,l:'Sprint 1'},{v:2,l:'Sprint 2'},{v:3,l:'Sprint 3'}].map(f =>
+    `<button class="filter-btn ${sprintFilter===f.v?'active':''}" onclick="setSprint(${f.v})">${f.l}</button>`
+  ).join('')}
+</div>`;
+
+  filteredEpics.forEach(e => {
+    const cls = e.sprint === 1 ? 's1' : e.sprint === 2 ? 's2' : 's3';
+    const epicDone = e.stories.filter(id => STORIES[id]?.status === 'done').length;
+    html += `<div class="epic-header" onclick="showEpic('${e.id}')" style="cursor:pointer">
+      <span class="epic-icon">${e.icon}</span>
+      <div>
+        <div class="epic-title">Epic ${e.num} — ${e.title}</div>
+        <div class="epic-count">${epicDone}/${e.stories.length} stories done</div>
+      </div>
+      <span class="sprint-chip ${cls}" style="margin-left:auto">Sprint ${e.sprint}</span>
+    </div>`;
+  });
+
+  main.innerHTML = html;
+}
+
+function renderEpic(main, epic) {
+  const cls = epic.sprint === 1 ? 's1' : epic.sprint === 2 ? 's2' : 's3';
+  let html = `<div class="epic-header">
+    <span class="epic-icon">${epic.icon}</span>
+    <div>
+      <div class="epic-title">Epic ${epic.num} — ${epic.title}</div>
+      <div class="epic-count">${epic.stories.length} user stories · <span class="sprint-chip ${cls}">Sprint ${epic.sprint}</span></div>
+    </div>
+  </div>`;
+
+  epic.stories.forEach(id => {
+    const s = STORIES[id];
+    if (!s) return;
+    if (searchQuery && !matchesSearch(s, id)) return;
+    const bClass = s.status === 'done' ? 'b-done' : s.status === 'progress' ? 'b-progress' : 'b-todo';
+    const bLabel = s.status === 'done' ? '✓ Done' : s.status === 'progress' ? '⟳ In Progress' : '○ Planned';
+    html += `<div class="story-card">
+      <div class="story-header">
+        <span class="story-id">US-${id}</span>
+        <span class="story-title">${s.title}</span>
+        <span class="badge ${bClass}">${bLabel}</span>
+      </div>
+      <div class="story-body">
+        <span class="story-role">As a ${s.role}</span>,
+        <span class="story-want"> I want to ${s.want}</span>,
+        <span class="story-goal"> so that ${s.goal}.</span>
+      </div>
+      ${s.ac && s.ac.length ? `<div class="ac-list">${s.ac.map(a => `<div class="ac-item">→ ${a}</div>`).join('')}</div>` : ''}
+    </div>`;
+  });
+
+  main.innerHTML = html;
+}
+
+function renderDocsOverview(main) {
+  let html = `<div class="page-title">Technical Documentation</div>
+<div class="page-sub">Architecture, APIs, data model, and deployment — MOMENTUM v5.2</div>
+<div class="stats-row">
+  <div class="stat-box"><div class="stat-num">1</div><div class="stat-lbl">HTML file (SPA)</div></div>
+  <div class="stat-box"><div class="stat-num">~3,900</div><div class="stat-lbl">Frontend lines</div></div>
+  <div class="stat-box"><div class="stat-num">~900</div><div class="stat-lbl">Server lines</div></div>
+  <div class="stat-box"><div class="stat-num">160</div><div class="stat-lbl">Stocks across 4 markets</div></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:8px">`;
+  DOC_SECTIONS.forEach(s => {
+    html += `<div class="story-card" onclick="showDocSection('${s.id}')" style="cursor:pointer">
+      <div class="story-title" style="margin-bottom:6px">${s.title}</div>
+    </div>`;
+  });
+  html += '</div>';
+  main.innerHTML = html;
+}
+
+function showEpic(id) {
+  currentSection = id;
+  renderSidebar();
+  renderMain();
+  document.getElementById('main').scrollTop = 0;
+}
+
+function showDocSection(id) {
+  currentSection = id;
+  renderSidebar();
+  renderMain();
+  document.getElementById('main').scrollTop = 0;
+}
+
+function setSprint(v) {
+  sprintFilter = v;
+  currentSection = null;
+  renderSidebar();
+  renderMain();
+}
+
+function matchesSearch(story, id) {
+  if (!searchQuery) return true;
+  const q = searchQuery.toLowerCase();
+  return (
+    ('us-' + id).includes(q) ||
+    story.title.toLowerCase().includes(q) ||
+    story.role.toLowerCase().includes(q) ||
+    story.want.toLowerCase().includes(q) ||
+    (story.ac || []).some(a => a.toLowerCase().includes(q))
+  );
+}
+
+function applySearch(q) {
+  searchQuery = q.trim().toLowerCase();
+  if (currentView === 'stories' && currentSection) {
+    renderMain();
+  } else if (currentView === 'stories') {
+    renderMain();
+  }
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+renderSidebar();
+renderMain();
+</script>
+</body>
+</html>

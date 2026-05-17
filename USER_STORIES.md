@@ -1014,6 +1014,35 @@
 
 ---
 
-*End of User Stories — v1.1*
-*124 stocks · 3 markets · 2 languages · 74 stories across 20 epics*
-*Sprint 1 complete. Sprint 2 stories: US-53 through US-74 (Epics 14–20).*
+## Epic 21 — Data Source Migration (Sprint 3)
+
+### US-75 — B3 Data via brapi.dev (Hybrid Data Source)
+
+**As a** Brazilian Pro user scanning B3 stocks,
+**I want** B3 stock data to come from an official, SLA-backed API (brapi.dev) instead of Yahoo Finance's unofficial endpoint,
+**so that** the app remains stable and compliant even if Yahoo blocks the proxy.
+
+**Background:**
+Yahoo Finance's chart API is undocumented and explicitly prohibited by their Terms of Service. The server impersonates a browser User-Agent to access it, which Yahoo can block at any time — instantly breaking all B3 scans. brapi.dev provides an official REST API for all B3 tickers at approximately R$49.99/month (Startup plan). The hybrid approach keeps Yahoo Finance for US/Europe/Emerging (where no affordable alternative covers all tickers) while migrating only B3 to a compliant, reliable source.
+
+**Acceptance criteria:**
+- `server.js` routes requests for `.SA` tickers to brapi.dev (`GET /api/quote/{ticker}?range=5y&interval=1d`).
+- `server.js` routes US, Europe, and Emerging tickers to Yahoo Finance (no change to those paths).
+- The `.SA` suffix is stripped before calling brapi.dev (brapi uses `PETR4`, not `PETR4.SA`); the suffix is re-appended on the normalized response.
+- brapi.dev `historicalDataPrice[]` is normalized to the same candle format used internally so the entire frontend is unchanged.
+- `BRAPI_TOKEN` is added to `.env.example` and `docker-compose.yml` as an optional variable.
+- News for B3 tickers routes to brapi.dev if `BRAPI_TOKEN` is set; falls back to Yahoo Finance search otherwise.
+- The existing 60-second in-memory cache layer wraps brapi.dev calls identically to Yahoo Finance calls.
+- If `BRAPI_TOKEN` is absent, the server logs a startup warning and continues using Yahoo Finance for B3 (graceful degradation).
+- No frontend (stock-dashboard.html) changes are required.
+
+**Sprint:** 3
+**Estimated effort:** 1 day (server.js only)
+**Monthly cost:** R$49.99 (brapi.dev Startup plan — 150,000 requests/month; current usage ~12,000/month at 10 scans/day)
+**Dependencies:** brapi.dev account + `BRAPI_TOKEN`
+
+---
+
+*End of User Stories — v1.2*
+*160 stocks · 4 markets · 2 languages · 75 stories across 21 epics*
+*Sprint 1 complete · Sprint 2 stories: US-53–US-74 (Epics 14–20) · Sprint 3 stories: US-75 (Epic 21)*

@@ -1320,16 +1320,50 @@ The Docker healthcheck polls `http://localhost:8080/` every 30 seconds. The cont
 
 **Status:** Currently used. **Risk: High (Existential).**
 
-Yahoo Finance does not offer a public API and explicitly prohibits scraping in their Terms of Service. The server-side proxy pattern reduces the risk profile (user IPs are never sent to Yahoo; the server's IP makes the request), but Yahoo can block the server's IP at any time.
+Yahoo Finance does not offer a public API and explicitly prohibits scraping in their Terms of Service. The server-side proxy pattern reduces the risk profile (user IPs are never sent to Yahoo; the server's IP makes the request), but Yahoo can block the server's IP at any time — instantly breaking all market scans.
 
-**Migration path:**
+**Planned migration — Hybrid data source (Sprint 3, US-75):**
 
-| Phase | Action | Cost | Timeline |
-|---|---|---|---|
-| Immediate | Keep 60s cache to minimize Yahoo calls | Free | Done |
-| Sprint 3 (Q4 2026) | Integrate **Polygon.io** for US + EU data | ~$199/mo | Q4 2026 |
-| Sprint 3 | Integrate **brapi.dev** for B3 (Brazilian) data | Free tier available | Q4 2026 |
-| Sprint 3 | Alpaca Markets as US fallback (free tier) | Free | Q4 2026 |
+Route each market to the best available official source rather than a monolithic replacement:
+
+| Market | Current | Sprint 3 Target | Cost | Notes |
+|---|---|---|---|---|
+| 🇧🇷 Brasil (40 `.SA` tickers) | Yahoo Finance | **brapi.dev** | R$49.99/mo | Official B3 API, SLA-backed, 150k req/mo |
+| 🇺🇸 US (51 tickers) | Yahoo Finance | Yahoo Finance (keep) | Free | No affordable mass-coverage alternative yet |
+| 🇪🇺 Europe (29 tickers) | Yahoo Finance | Yahoo Finance (keep) | Free | Polygon.io covers some; not all local exchanges |
+| 🌍 Emerging (20 tickers) | Yahoo Finance | Yahoo Finance (keep) | Free | Mixed exchanges — Yahoo is best single source |
+
+**Why brapi.dev for Brasil only:**
+
+| | Yahoo Finance | brapi.dev |
+|---|---|---|
+| B3 coverage | All (unofficial) | All (official) |
+| ToS compliance | Prohibited | Fully compliant |
+| SLA | None | 99.9% |
+| Cost | Free | R$49.99/mo |
+| Data delay | Near real-time | 15 min (Startup plan) |
+| Ticker format | `PETR4.SA` | `PETR4` (strip `.SA`) |
+
+**Key implementation detail:** The ticker format differs — brapi uses `PETR4`, Yahoo uses `PETR4.SA`. The `yahooFetch()` function splits into `yahooFetch()` (unchanged) and `brapiFetch(ticker)`. The B3 route strips `.SA` before calling brapi, re-attaches it in the normalized response. All downstream code (frontend, cache keys, portfolio, DARF) continues using `.SA` format — zero frontend changes required.
+
+**brapi.dev request volume estimate at current scale:**
+
+```
+40 tickers × 10 scans/day × 30 days = 12,000 requests/month
+Startup plan limit: 150,000 requests/month
+Usage: ~8% of quota — no risk of hitting limits
+```
+
+**Fallback behavior:** If `BRAPI_TOKEN` is not set in the environment, the server logs a warning at startup and continues using Yahoo Finance for B3. This allows self-hosted deployments to function without a brapi.dev account.
+
+**Full Polygon.io migration (if Yahoo blocks US/EU):**
+
+| Plan | Price | Calls/min | B3 support | Notes |
+|---|---|---|---|---|
+| Free | $0 | 5/min | None | Too slow for 51-stock scan |
+| Developer | $79/mo | 100/min | None | Viable for US; Europa partial |
+
+Polygon.io is the Sprint 3 contingency plan for US/EU if Yahoo blocks server IPs. It is not in the current Sprint 3 scope because Yahoo Finance has been stable and Polygon does not cover B3.
 
 ### JSON File User Database
 
