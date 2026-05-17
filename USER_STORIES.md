@@ -1,6 +1,23 @@
 # MOMENTUM — User Stories
 
-*Version 1.0 — May 2026*
+*Version 1.6 — May 2026*
+
+---
+
+## ⚡ Priority: Sprint D — Design Foundation
+
+**Sprint D (Design) runs before all remaining sprints and defines the standard UI going forward.**
+All future feature work must be implemented within the new design system established here.
+
+See [Epic 30 — Design Foundation](#epic-30--design-foundation-sprint-d) for the full story list.
+
+**Conflicts with existing stories:**
+| Affected Story | Conflict | Resolution |
+|---|---|---|
+| US-45 (Epic 11 — Theme Switcher) | Lists 7 dev-aesthetic themes (Dracula, Monokai, Nord, Solarized, One Dark, Dark, Light) | **Superseded by US-128.** Replace with 4 Brazilian fintech themes: `brasil` (default), `day`, `pop`, `calmo`. |
+| US-71 (Epic 19 — Mobile scroll) | Described piecemeal fixes to old layout | **Subsumed by US-126.** New mobile design covers all mobile ACs from scratch. |
+| US-72 (Epic 19 — Touch targets) | Targeted 44px on existing buttons | **Subsumed by US-126.** New design's bottom nav + cards meet this by construction. |
+| US-89 (Sprint 6 — Extract CSS) | Extracts the existing `<style>` block | **Ordering dependency.** Sprint D must be fully merged before US-89 runs — the extracted file must be the new design CSS. |
 
 ---
 
@@ -27,6 +44,7 @@
 19. [Epic 18 — DARF Tax Calculator (Sprint 2 Phase 1)](#epic-18--darf-tax-calculator-sprint-2-phase-1)
 20. [Epic 19 — Mobile Responsiveness (Sprint 2)](#epic-19--mobile-responsiveness-sprint-2)
 21. [Epic 20 — Closed Beta (Sprint 2)](#epic-20--closed-beta-sprint-2)
+22. [Epic 30 — Design Foundation (Sprint D)](#epic-30--design-foundation-sprint-d)
 
 ---
 
@@ -1368,17 +1386,340 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ---
 
-*End of User Stories — v1.5*
-*160 stocks · 4 markets · 2 languages · 111 stories across 29 epics*
+---
+
+## Epic 30 — Design Foundation (Sprint D)
+
+**Context:** `design_handoff_momentum_br/README.md` defines a complete mobile-first, Brazilian fintech redesign targeting 25–40-year-old Brazilians (classe C, mobile-primary, learning trading for the first time). The bundled React prototype (`design_handoff_momentum_br/`) is the pixel-close reference — port it back into the existing single-file vanilla-JS SPA (`stock-dashboard.html`) without introducing React or a build pipeline. This sprint establishes the standard design system for all future work.
+
+**Implementation order:** tokens → AppBar → Home/Scanner → Detail → Tracked/Learn/Portfolio → Correlation/DARF → Simulator → Admin → Auth modal → Cookie banner → Mobile → generateWhy().
+
+**Reference files:**
+- `design_handoff_momentum_br/styles.css` — lift CSS nearly wholesale (strip `.phone-mock` rules)
+- `design_handoff_momentum_br/components.jsx` — `FeedCard`, `StoryCard`, `ScanRing`, `Sparkline`, `SignalPill`, `Chip`
+- `design_handoff_momentum_br/screens.jsx` — all screen layouts
+- `design_handoff_momentum_br/data.js` — stock object shape (especially `why`, `emoji`, `flag` fields)
+
+---
+
+### US-112 — Design Tokens & Typography
+
+**As a** developer,
+**I want** the CSS custom properties and font stack replaced with the new design system,
+**so that** all subsequent component work inherits the correct tokens automatically.
+
+**Acceptance criteria:**
+- Google Fonts link loads Sora (400/500/600/700/800), Inter (400/500/600/700), JetBrains Mono (400/500/600).
+- `:root` defines all spacing (`--s-1`–`--s-8`), radius (`--r-xs`–`--r-pill`), shadow (`--shadow-1`, `--shadow-2`), and semantic color tokens.
+- `[data-theme="brasil"]` block is the default warm dark theme (money green primary, `#0c0e10` bg).
+- `[data-theme="day"]` block is the light theme.
+- `[data-theme="pop"]` block is the high-contrast magenta theme.
+- `[data-theme="calmo"]` block is the cool dark blue theme.
+- All four themes are switchable via `document.documentElement.setAttribute('data-theme', name)` and persist in localStorage.
+- Type utility classes exist: `.hed1`, `.hed2`, `.hed3`, `.dek`, `.eyebrow`, `.kicker`.
+- No visual reference to old dev-aesthetic token names (`dracula`, `monokai`, etc.).
+
+**Sprint:** D · **Effort:** 3h · **Implements:** Section 1 of design_handoff_momentum_br/README.md
+
+---
+
+### US-113 — AppBar Redesign
+
+**As a** user,
+**I want** the top navigation bar to reflect the new Momentum brand with the correct layout and user controls,
+**so that** the app feels like a modern Brazilian fintech product from the first pixel.
+
+**Acceptance criteria:**
+- Left zone: 32×32px primary square logo ("M") + "Momentum" wordmark (Sora 700 19px).
+- Center zone (desktop ≥900px only): segmented pill nav — Início / Scanner / Acompanhados / Aprender / Carteira.
+- Right zone: FX mini-ticker (USD, IBOV, SELIC, desktop only) · PT/EN language toggle pill · ⚡ Varrer primary pill · "Entrar" pill (signed out) or 30px magenta avatar + tier chip (signed in).
+- Signed-in user avatar click opens dropdown: email + tier · 🔑 Alterar senha · ⭐ Virar Pro (free only) · ⚙️ Painel admin (admin only) · 📥 Exportar meus dados · 🚪 Sair (red) · 🗑️ Excluir conta (red).
+- AppBar is sticky, has blurred backdrop, 14px vertical padding.
+- Existing `updateAuthUI()` auth-state wiring is reused — only markup and styles change.
+- Existing `setLang()` is wired to the PT/EN toggle (replaces admin-only lang selector from US-43).
+
+**Sprint:** D · **Effort:** 4h · **Implements:** Section 4 of design handoff · **Supersedes:** US-43 visibility restriction
+
+---
+
+### US-114 — Home Screen
+
+**As a** user,
+**I want** the Home screen to show a personalised greeting, portfolio summary, and featured stock picks,
+**so that** I can immediately see what matters on my first screen.
+
+**Acceptance criteria:**
+- Greeting row: 44px circular magenta avatar (white initial) + eyebrow date (e.g. "17 de maio · 14h32") + "Oi [Name] 👋".
+- Hed1 with inline primary-colored count: "Hoje tem **5 oportunidades** de compra na sua lista."
+- Dek with inline buy-colored portfolio change: "Sua carteira está **+12,4% no mês**. Bora ver o que tá rolando?"
+- Balance card (`.bal-card`): primary→bg gradient, label/value/change, two CTAs ("⚡ Varrer mercado" primary + "Ver carteira" default).
+- Hero StoryCard: 2-col grid — left: ticker + name + price + change + why + indicators + 2 CTAs; right: large sparkline (200px, primary stroke).
+- 3-col grid of FeedCards (secondary buy signals).
+- 2-col row: news column (`.news-row`) + lesson card stack (`.lesson-card`).
+- Layout is max-width 1320px, padded 32px.
+- FeedCard structure matches Section 3.1 of design handoff exactly (emoji logo, ticker, flag, signal pill, price, sparkline strip, "Por quê:", indicator chips, action row).
+
+**Sprint:** D · **Effort:** 6h · **Implements:** Section 3.1 of design handoff
+
+---
+
+### US-115 — Scanner Screen
+
+**As a** user,
+**I want** the Scanner screen to use the new segmented region control, filter chips, and ScanRing animation,
+**so that** scanning feels fast and visually distinct from the old terminal aesthetic.
+
+**Acceptance criteria:**
+- Hed1 with green-highlighted count: "5 ações com sinal de **compra**."
+- Region segmented control (`.seg`): pill-shaped, primary fill on active — Todos · 🇧🇷 BR · 🇺🇸 US · 🇪🇺 EU · 🌍 EM.
+- Filter chips (Todos / Compra / Aguardar / Venda) + "⚡ Varrer agora" primary button right-aligned.
+- Scan-in-progress state: 160×160 SVG ScanRing (circle animating via stroke-dashoffset, center shows % + "VARRENDO") + headline "Lendo a série de 90 dias de [TICKER]…" + progress bar. Tick 5% every 110ms (~2.2s total).
+- Results: 3-col FeedCard grid.
+- Existing `scanMarket()` fetch logic is unchanged — only UI shell changes.
+
+**Sprint:** D · **Effort:** 5h · **Implements:** Section 3.2 of design handoff
+
+---
+
+### US-116 — Stock Detail Screen
+
+**As a** user,
+**I want** the Stock Detail screen to clearly show the signal rationale, chart, levels, and indicators in the new layout,
+**so that** I can make an informed decision quickly.
+
+**Acceptance criteria:**
+- Back link → Scanner.
+- Two-row header: 56px emoji logo + ticker (44px display) + name + sector eyebrow + price (44px mono) + change pill + signal pill + "⭐ Acompanhar" + "💰 Adicionar à carteira" (primary).
+- "Por que esse sinal?" card (`.card-glow`, magenta gradient border) with explanation paragraph + 3 indicator chips.
+- Chart frame: range pills (1D/1S/1M/3M/6M/1A/5A) + legend chips (MM 20, MM 50, Bollinger) + existing canvas chart (styled to fill frame).
+- Levels row (3 cols): `.level-tp` (buy-soft bg) · `.level-now` (bg-3) · `.level-sl` (sell-soft bg) — TP price / current price / SL price.
+- Indicator grid (4 cols): RSI · MACD · ADX · Pattern — each in `.metric` card with label/value/hint.
+- Learn hint card: "O que significa RSI [N]?" contextual answer + "Ler aula" CTA.
+
+**Sprint:** D · **Effort:** 5h · **Implements:** Section 3.3 of design handoff
+
+---
+
+### US-117 — Tracked / Watchlist Screen
+
+**As a** user,
+**I want** the Tracked screen to display my picks as the new FeedCard grid,
+**so that** monitoring my watchlist feels consistent with the rest of the app.
+
+**Acceptance criteria:**
+- Hed1: "Sua **watchlist**."
+- Empty state: 48px "📋" emoji + h3 "Nada por aqui ainda" + helper text + CTA to Scanner.
+- Populated state: 2-col grid of FeedCards (same component as Home/Scanner).
+- Existing tracked picks data (localStorage + server) is unchanged — only presentation changes.
+- Count badge on nav item updates correctly.
+
+**Sprint:** D · **Effort:** 2h · **Implements:** Section 3.4 of design handoff
+
+---
+
+### US-118 — Learn / Education Screen
+
+**As a** user,
+**I want** the Learn screen to use the new lesson card layout with the onboarding hero,
+**so that** the education section invites beginners rather than overwhelming them.
+
+**Acceptance criteria:**
+- Hed1: "Trade não é sorte — é **leitura**."
+- Onboarding hero card (`.onboard-hero`, primary→magenta gradient): "Comece com R$ 100 simulados." + dek + "Fazer tour guiado →" CTA. White text on gradient bg.
+- 2-col grid of `.lesson-card` covering 6 lessons: 📊 RSI · 🔀 MACD · 💪 ADX · 🎯 Take Profit/SL · 📉 Bollinger · 💸 Quanto investir. Each: 44px rounded emoji icon (primary-tinted bg) + title (Sora 700 17px) + body excerpt + meta row (lesson #, read time, level chip).
+- Existing education content rendered by existing `renderEducation()` is retained; only the shell and card markup change.
+
+**Sprint:** D · **Effort:** 3h · **Implements:** Section 3.5 of design handoff
+
+---
+
+### US-119 — Portfolio Screen
+
+**As a** Pro user,
+**I want** the Portfolio screen to lead with big stat cards and a clean table layout,
+**so that** my position summary is scannable at a glance.
+
+**Acceptance criteria:**
+- Hed1 with sign-colored %: "Você tá **+24,8%** em 3 posições." (color = buy/sell depending on sign).
+- Three `.big-stat` cards: Valor total · Custo de entrada · Lucro/prejuízo.
+- Positions table as a flush card (no per-row cards): cols — emoji logo · ticker + entry price · Preço atual · Valor · Dias · P&L %.
+- Tax tip card with magenta "Pro · R$ 9/mês" CTA → DARF screen.
+- R$ currency symbol used for all BRL positions (per US-56).
+- All existing sell, edit, remove flows are preserved — only markup/styles change.
+
+**Sprint:** D · **Effort:** 4h · **Implements:** Section 3.6 of design handoff
+
+---
+
+### US-120 — Correlation Screen (Pro Paywall + Matrix)
+
+**As a** Pro user,
+**I want** the Correlation screen to show the paywall for free users and the full heatmap for Pro/Admin,
+**so that** the feature gate is clear and the Pro experience is visually compelling.
+
+**Acceptance criteria:**
+- Free users: `.pro-lock` card — 64px circular star icon (magenta bg) + h2 "Matriz de correlação é Pro" + body + feature list (✓ items with primary check) + "⭐ Virar Pro — R$ 9/mês" magenta CTA.
+- Pro/Admin users: 6×6 correlation heatmap. Cells colored by value using `color-mix` from sell-red → bg-3 → buy-green. Below: insight card explaining one strong correlation pair in plain language.
+- Existing correlation calculation logic is unchanged.
+
+**Sprint:** D · **Effort:** 3h · **Implements:** Section 3.7 of design handoff
+
+---
+
+### US-121 — DARF / IR Screen (Pro Paywall + Table)
+
+**As a** Brazilian Pro user,
+**I want** the DARF screen to present the paywall clearly and, when unlocked, show my tax liability with all required context,
+**so that** filing DARF is straightforward.
+
+**Acceptance criteria:**
+- Free users: same `.pro-lock` pattern as US-120 with DARF-specific copy.
+- Pro/Admin users: Hed1 with magenta-colored R$ value: "Você tem **R$ 47,80** de imposto a pagar."
+- Three stat cards + table of taxable operations.
+- Yellow warning card explaining the R$20k isenção rule (US-69).
+- CSV / PDF / "Gerar DARF →" buttons (existing logic retained).
+- Existing `computeDARF()` output is wired to the new screen shell.
+
+**Sprint:** D · **Effort:** 4h · **Implements:** Section 3.8 of design handoff
+
+---
+
+### US-122 — Simulator Screen
+
+**As a** any user,
+**I want** a Simulator screen where I can pick an amount and a stock to see best/expected/worst-case scenarios,
+**so that** I can understand potential outcomes before investing real money.
+
+**Acceptance criteria:**
+- New nav item "Simulador" accessible from the user menu or a CTA on the Home screen.
+- Left card: amount pills (R$ 100 / 250 / 500 / 1000 / 2500, `.amount-pill`, primary fill on active, mono font) + ticker pills from the current scan results.
+- Three scenario boxes (`.level-tp` / `.level-now` / `.level-sl`): each shows qty purchased, gain/no-change/loss in R$.
+- Plain-language summary paragraph below the scenarios.
+- Right aside (`.card-glow`): a trading tip + CTA linking to the selected stock's detail view.
+- Calculation is purely client-side from current price + TP + SL values.
+
+**Sprint:** D · **Effort:** 4h · **Implements:** Section 3.9 of design handoff · **New screen (no prior story)**
+
+---
+
+### US-123 — Admin Panel Restyle
+
+**As an** admin,
+**I want** the Admin panel to use the new design language,
+**so that** the management interface matches the rest of the app.
+
+**Acceptance criteria:**
+- Hed1 with user count + "ativos hoje" subtitle.
+- Four `.big-stat` cards: total users · Pro conversion % · MRR (R$) · trades this week.
+- Flush card with grid header + user rows: email · plan chip · joined · trades · edit link.
+- All existing admin actions (make Pro, revoke Pro) remain wired — only layout and styles change.
+
+**Sprint:** D · **Effort:** 2h · **Implements:** Section 3.10 of design handoff
+
+---
+
+### US-124 — Auth Modal Redesign
+
+**As a** visitor or returning user,
+**I want** the sign-in / sign-up modal to use the new friendly layout,
+**so that** first impressions match the Brazilian fintech target aesthetic.
+
+**Acceptance criteria:**
+- Modal: 440px max-width, 32px padding, radius 28px, backdrop blur.
+- Brand mark (32×32 "M" square) + "Momentum" wordmark at top.
+- Hed2: "Bem-vindo de volta 👋" (sign-in) or "Cria sua conta grátis" (sign-up).
+- Two inputs (`.input`): email + password, with correct `autocomplete` attributes (US-55).
+- Primary CTA full-width.
+- Toggle link to switch between sign-in / sign-up.
+- Footer in mono: "Simulador educacional · Não é recomendação de investimento."
+- Existing auth endpoints, JWT storage, and error display are unchanged.
+
+**Sprint:** D · **Effort:** 2h · **Implements:** Section 3.11 of design handoff
+
+---
+
+### US-125 — LGPD Cookie Banner
+
+**As a** first-time visitor,
+**I want** to see a LGPD-compliant cookie consent banner,
+**so that** I understand how the app uses browser storage before proceeding.
+
+**Acceptance criteria:**
+- Fixed-bottom glass banner on first visit: 🍪 icon + LGPD text + "Aceitar e continuar" primary button.
+- Dismissing the banner writes `momentum_consent=1` to localStorage; banner does not appear on subsequent visits.
+- Banner is accessible via keyboard (focusable button, dismiss on Enter/Space).
+- Updates the consent dialog text per US-106 conflict note (storage is localStorage for portfolio; server for account).
+
+**Sprint:** D · **Effort:** 1h · **Implements:** Section 3.12 of design handoff · **Updates:** US-106 consent copy
+
+---
+
+### US-126 — Mobile Bottom Nav & Responsive Breakpoints
+
+**As a** mobile user,
+**I want** a bottom navigation bar and correctly stacked layouts under 720px,
+**so that** the app is fully usable on any phone without horizontal scrolling or tiny tap targets.
+
+**Acceptance criteria:**
+- Under 720px: AppBar collapses (segmented nav hides, FX ticker hides, user button shows avatar only).
+- Sticky bottom nav appears (`.bn`, fixed bottom, 5 items: Início / Scanner / Watch / Aulas / Carteira); body gets `padding-bottom: 70px`.
+- Cards and grids collapse to single column under 600px.
+- hed1 scales to 38px, hed2 to 28px, dek to 15px on mobile.
+- All primary tap targets (scan, track, add to portfolio, bottom nav items) meet 44px minimum height.
+- No horizontal overflow at 375px viewport in any screen.
+- Implementation is CSS-only (no JS responsive logic).
+
+**Sprint:** D · **Effort:** 4h · **Implements:** Section 5 of design handoff · **Supersedes:** US-71 + US-72
+
+---
+
+### US-127 — generateWhy() Server Function
+
+**As a** beginner user,
+**I want** each stock card to explain its signal in plain Portuguese,
+**so that** I understand *why* MOMENTUM recommends buying, holding, or selling.
+
+**Acceptance criteria:**
+- `server.js` exports a `generateWhy(stock)` function that templates the most salient indicator into PT-BR prose.
+- Logic: if RSI < 35 → "RSI em [N], indicando ativo sobrevendido e possível reversão."; if RSI > 70 → "RSI em [N], ativo sobrecomprado — sinal de cautela."; if MACD positive + ADX > 25 → "MACD positivo com tendência forte (ADX [N])."; if named pattern → "Padrão [pattern] identificado nos últimos 90 dias." Combine salient indicators into one or two sentences.
+- `why` string is attached to each stock object returned by `/api/scan` and `/api/history`.
+- `why` field is shown in FeedCard's "Por quê:" paragraph and in the Detail screen's signal rationale card.
+- English fallback: if `lang=en`, template uses English prose (same logic, different strings).
+
+**Sprint:** D · **Effort:** 3h · **Implements:** Section 7 + 8 of design handoff · **New feature (no prior story)**
+
+---
+
+### US-128 — Replace Legacy Themes with Four New Themes
+
+**As a** user,
+**I want** the theme switcher to offer the four new Brazilian fintech themes,
+**so that** the visual options match the audience and product direction.
+
+**Acceptance criteria:**
+- `brasil` (warm dark, money green) is the default theme on first visit.
+- `day` (light), `pop` (magenta high-contrast), `calmo` (cool dark blue) are the three alternatives.
+- Theme toggle cycles `brasil → day → pop → calmo → brasil` and displays the current theme name.
+- Selected theme is persisted in localStorage and restored on next visit.
+- Old themes (`dracula`, `monokai`, `nord`, `solarized`, `onedark`, and generic `dark`/`light`) are removed from the CSS and the toggle loop.
+- No visual regression on any of the four new themes for all screens implemented in Sprint D.
+
+**Sprint:** D · **Effort:** 1h · **Implements:** Section 1 (colors) of design handoff · **Supersedes:** US-45
+
+---
+
+*End of User Stories — v1.6*
+*160 stocks · 4 markets · 2 languages · 128 stories across 30 epics*
 
 | Sprint | Epics | Stories | Theme |
 |--------|-------|---------|-------|
+| **D** | **30** | **US-112–128** | **Design Foundation: Mobile-First Redesign (PRIORITY — run first)** |
 | 1 | 1–13 | US-1–52 | MVP |
 | 2 | 14–20 | US-53–74 | Brazilian Market & UX |
 | 3 | 21–22 | US-75–77 | Compliance & Stability |
 | 4 | 23 | US-78–79 | Monetisation (blocked on keys) |
 | 5 | 24 | US-80–87 | Primeiros Passos Course |
-| 6 | 25 | US-88–93 | Code Structure: File Split |
+| 6 | 25 | US-88–93 | Code Structure: File Split (run after Sprint D) |
 | 7 | 26 | US-94–98 | Security Hardening |
 | 8 | 27 | US-99–103 | Server Reliability |
 | 9 | 28 | US-104–107 | Server-Side Portfolio Storage |
