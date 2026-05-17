@@ -1130,6 +1130,256 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ---
 
-*End of User Stories — v1.4*
-*160 stocks · 4 markets · 2 languages · 79 stories across 23 epics*
-*Sprint 1 complete · Sprint 2: US-53–US-74 · Sprint 3: US-75–US-78 · Sprint 4: US-79 (Epics 21–23)*
+## Epic 24 — Primeiros Passos: Interactive Course (Sprint 5)
+
+### US-80 — Rename & Reposition Education Tab
+**As a** new Pro user, **I want** "Primeiros Passos" to be the first tab I see and the default landing on first login, **so that** I start learning immediately instead of facing an empty scanner.
+- Button renamed to "📘 PRIMEIROS PASSOS" / "📘 FIRST STEPS" (EN/PT).
+- Moved to first position in secondary nav (before TRACKED).
+- First-time Pro login auto-lands on the course; `jerry_course_started` flag prevents repeat redirect on subsequent logins.
+**Sprint:** 5 · **Effort:** 1h
+
+### US-81 — Module Structure & Course Sidebar
+**As a** Pro user in Primeiros Passos, **I want** topics grouped into logical modules with a visible sidebar, **so that** I can see my learning path at a glance.
+- Constant `COURSE_MODULES`: 🌱 Fundamentos (strategy, why, diversify) · 🌎 O Mercado (brazilstats, sectors, realcases) · 📊 Análise Técnica (rsi, macd, adx, sma, bb, patterns) · 🇧🇷 Impostos (darf).
+- Two-column layout desktop (200px sidebar + content); mobile collapses to horizontal pill row.
+- Sidebar shows module headers and topic items (○ incomplete · ✅ complete).
+**Sprint:** 5 · **Effort:** 3h
+
+### US-82 — Mark Topic as Complete / Undo
+**As a** Pro user, **I want** to mark each topic as complete, **so that** my progress is tracked and I feel a sense of accomplishment.
+- "Marcar como concluído" button at bottom of each topic content panel.
+- Toggle: marked → button reads "✅ Concluído — Desfazer"; click again → unmarked.
+- Progress persisted in `jerry_course_progress` localStorage (JSON array of completed IDs).
+**Sprint:** 5 · **Effort:** 2h
+
+### US-83 — Progress Bar in Course Header
+**As a** Pro user, **I want** to see a progress bar showing how much of the course I've completed, **so that** I'm motivated to finish.
+- Header shows `████████░░ 62% · 8/13 tópicos concluídos`.
+- Updates immediately on each toggle (re-render); 0% state shows empty bar cleanly.
+**Sprint:** 5 · **Effort:** 1h
+
+### US-84 — Progress Pill on Nav Button
+**As a** Pro user, **I want** the nav button to show my progress count, **so that** I can see how far I am without opening the course.
+- After first completion: button shows `📘 PRIMEIROS PASSOS 1/13` green pill.
+- Pill hidden at 0 (clean first impression); `updateCourseNavBtn()` called on every toggle.
+**Sprint:** 5 · **Effort:** 1h
+
+### US-85 — "Próximo Tópico" Button
+**As a** Pro user, **I want** a "next topic" button at the bottom of each topic, **so that** I can flow through the course without clicking the sidebar.
+- Shows next incomplete topic: `→ Próximo: 🌱 Estratégia`.
+- Calls `switchEduTopic(nextId)` and scrolls content to top.
+- Hides when all 13 topics are complete.
+**Sprint:** 5 · **Effort:** 1h
+
+### US-86 — 100% Completion Celebration
+**As a** Pro user who finishes all 13 topics, **I want** a celebration moment, **so that** the completion feels meaningful.
+- `showToast(t('course_complete'), true, 6000)` when progress reaches 13.
+- Progress bar replaced by `🎉 Curso concluído!` banner.
+- "Recomeçar curso" link appears in header.
+**Sprint:** 5 · **Effort:** 1h
+
+### US-87 — Reset Course Progress
+**As a** Pro user, **I want** to reset my course progress, **so that** I can go through the material again.
+- "Recomeçar curso" small link in header (visible only when progress > 0).
+- `confirm()` dialog → clears `jerry_course_progress` and `jerry_course_started`.
+**Sprint:** 5 · **Effort:** 30min
+
+---
+
+## Epic 25 — Code Structure: File Decomposition (Sprint 6)
+
+**Context:** `stock-dashboard.html` is 4,424 lines (89.8% JS). Logic, markup, i18n, indicators, and styles are entangled in a single file. Phase 1 splits static assets into separate files served by the existing Node server — no build step, no new npm dependencies, native ES modules (`<script type="module">`).
+
+### US-88 — Static File Serving in server.js
+**As a** developer, **I want** `server.js` to serve a `/static/` directory, **so that** extracted JS/CSS modules can be loaded by the browser.
+- `server.js` serves `GET /static/*` from `./static/` directory with correct MIME types.
+- Path traversal protection: `fpath.startsWith(DIR + path.sep)` (fixes existing vulnerability).
+- Blocks direct access to `.env`, `users.json`, `.git/`, `Dockerfile` (allowlist by extension or blocklist by path prefix).
+**Sprint:** 6 · **Effort:** 2h
+
+### US-89 — Extract CSS to static/app.css
+**As a** developer, **I want** the 226-line `<style>` block in its own file, **so that** styling is separately editable and browser-cacheable.
+- Move `<style>` block to `static/app.css`; replace with `<link rel="stylesheet" href="/static/app.css">`.
+- Verify all 7 themes still work; no visual regression.
+**Sprint:** 6 · **Effort:** 1h
+
+### US-90 — Extract i18n to static/i18n.js
+**As a** developer, **I want** the 558-key `LANGS` object in its own file, **so that** translations can be edited without touching application logic.
+- Move `LANGS` object to `static/i18n.js`; export as `window.LANGS` for backward compat.
+- Load via `<script src="/static/i18n.js">` before main script.
+- Verify all 279 EN + 279 PT keys load correctly; `t()` returns correct strings.
+**Sprint:** 6 · **Effort:** 1h
+
+### US-91 — Extract Indicator Math to static/indicators.js
+**As a** developer, **I want** the pure technical-indicator functions in their own file, **so that** they can be read, tested, and changed without navigating 4,000 lines.
+- Move `calcSMA`, `calcRSI`, `calcMACD`, `calcADX`, `calcBB`, `calcATR`, `analyze`, `pickSignal`, `scorePatternMatch`, `buildPatternOverlay` (~500 lines, zero DOM coupling) to `static/indicators.js`.
+- All functions remain on `window` (no module system change required).
+- Run a full scan after extraction — all scores identical to pre-extraction.
+**Sprint:** 6 · **Effort:** 2h
+
+### US-92 — Extract FX Helpers to static/fx.js
+**As a** developer, **I want** the FX rate fetching and conversion helpers isolated, **so that** currency logic is centrally owned.
+- Move `fetchFxRates`, `getFxRates`, `getCurrencySymbol`, `convertToUSD`, `renderFxBar` and related constants (`FX_CACHE_KEY`, `FX_CACHE_TTL`) to `static/fx.js`.
+- Verify FX bar still updates and portfolio currency conversion still works.
+**Sprint:** 6 · **Effort:** 1h
+
+### US-93 — Extract Patterns Data to static/patterns.js
+**As a** developer, **I want** the `PATTERNS` definition array in its own file, **so that** adding or editing patterns doesn't require touching the main script.
+- Move `PATTERNS` array (~200 lines) to `static/patterns.js`.
+- Pattern simulator and pattern detection still work after extraction.
+**Sprint:** 6 · **Effort:** 1h
+
+---
+
+## Epic 26 — Security Hardening (Sprint 7)
+
+**Context:** Opus audit identified four critical security issues: (1) `.env`/`users.json`/`.git` are reachable via the static file route, leaking `JWT_SECRET`, `RESEND_API_KEY`, and all user PII; (2) path traversal protection uses `startsWith(DIR)` instead of `startsWith(DIR + sep)`; (3) JWT tokens remain valid after password change; (4) unauthenticated endpoints have no rate limiting.
+
+### US-94 — Block Sensitive Files from Static Route
+**As an** operator, **I want** `.env`, `users.json`, `.git/`, and `Dockerfile` to be unreachable via HTTP, **so that** secrets and PII are never exposed.
+- Static file handler rejects requests whose resolved path matches a blocklist: `['.env', 'users.json', '.git', 'Dockerfile', 'package.json']` or any path outside of `/static/` and known HTML files.
+- `GET /.env` returns 403. `GET /data/users.json` returns 403. `GET /.git/config` returns 403.
+- Existing `GET /`, `GET /legend.html`, `GET /docs.html` still work.
+**Sprint:** 7 · **Effort:** 1h · **Priority:** CRITICAL
+
+### US-95 — Fix Path Traversal in Static File Serving
+**As an** operator, **I want** the path traversal check to use `path.sep`, **so that** sibling-directory collision attacks are prevented.
+- Change `fpath.startsWith(DIR)` → `fpath === DIR || fpath.startsWith(DIR + path.sep)`.
+**Sprint:** 7 · **Effort:** 15min · **Priority:** CRITICAL
+
+### US-96 — Rate Limit Unauthenticated API Endpoints
+**As an** operator, **I want** `/api/news`, `/api/calendar`, and `/api/tickers/b3` to have IP-based rate limiting, **so that** they can't be used to DoS the server or proxy-spam third parties.
+- `/api/news` and `/api/calendar`: 60 requests/min per IP.
+- `/api/tickers/b3`: 120 requests/min per IP (autocomplete — higher tolerance).
+- Exceeding limit returns `429 Too Many Requests`.
+**Sprint:** 7 · **Effort:** 2h
+
+### US-97 — Invalidate JWT on Password Change
+**As a** user who changes their password after a suspected compromise, **I want** all existing sessions to be invalidated, **so that** an attacker with a stolen token is locked out immediately.
+- Add `passwordChangedAt: ISO-string` to user record on every password change (change-password + reset-password endpoints).
+- `verifyToken` rejects tokens issued before `passwordChangedAt`.
+- Existing sessions (including the user's own) are invalidated; user must log in again.
+**Sprint:** 7 · **Effort:** 2h
+
+### US-98 — Add Content-Security-Policy Header
+**As an** operator, **I want** a CSP header, **so that** injected scripts from a stored XSS cannot execute.
+- Add `Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.resend.com https://query1.finance.yahoo.com https://brapi.dev` (once US-91 removes indicators from inline, `'unsafe-inline'` can be dropped from `script-src`).
+- No visual or functional regression.
+**Sprint:** 7 · **Effort:** 1h
+
+---
+
+## Epic 27 — Server Reliability (Sprint 8)
+
+**Context:** Opus audit identified silent data loss paths: `loadUsers` returns `[]` on corrupt JSON (wiping the user DB on next save); `saveUsers` failure returns HTTP 200 to client; Yahoo fetch calls have no timeout (hung upstream stalls Node). No health check endpoint, no graceful shutdown, no structured logging.
+
+### US-99 — Request Timeouts on External Fetch Calls
+**As an** operator, **I want** all Yahoo Finance and brapi.dev fetch calls to time out after 8 seconds, **so that** a hung upstream never stalls the Node event loop.
+- Wrap `yahooFetch` and brapi fetch calls with `AbortController` + `setTimeout(abort, 8000)`.
+- On timeout, return `null` (same as current network error path) and log `[fetch] timeout: <url>`.
+**Sprint:** 8 · **Effort:** 2h
+
+### US-100 — Health Check Endpoint
+**As an** operator, **I want** `GET /api/health` to return a structured status, **so that** Docker/load balancers can probe liveness without loading the full app.
+- Returns `{ status: 'ok', uptime: seconds, users: count, version: '5.1' }`.
+- No auth required. Responds in < 5ms.
+**Sprint:** 8 · **Effort:** 30min
+
+### US-101 — Graceful Shutdown on SIGTERM
+**As an** operator, **I want** the server to finish in-flight requests before exiting, **so that** Docker restarts don't drop active scans or corrupt mid-write data.
+- Register `process.on('SIGTERM', ...)` to stop accepting new connections and wait up to 10s for active requests to finish before exiting.
+**Sprint:** 8 · **Effort:** 1h
+
+### US-102 — Fix loadUsers Silent Data Loss on Corrupt JSON
+**As an** operator, **I want** `loadUsers` to refuse to start rather than silently overwrite the user DB with an empty array, **so that** a corrupted `users.json` doesn't result in all users being deleted.
+- If `JSON.parse` throws, log `[FATAL] users.json is corrupt — refusing to start. Restore from backup.` and call `process.exit(1)`.
+- If file is missing (first run), continue with empty array as before.
+**Sprint:** 8 · **Effort:** 30min · **Priority:** HIGH
+
+### US-103 — Surface saveUsers Failures to API Callers
+**As a** user, **I want** the server to return an error when it can't persist my changes (e.g. disk full), **so that** I'm not misled into thinking my password change succeeded when it didn't.
+- Wrap `saveUsers` in try/catch; if write fails, throw so the calling route handler can return `500`.
+- All callers (`change-password`, `profile`, `reset-password`, `signup`, etc.) return `500` instead of `200` on save failure.
+**Sprint:** 8 · **Effort:** 1h
+
+---
+
+## Epic 28 — Server-Side Portfolio Storage (Sprint 9)
+
+**Context:** Portfolio data (positions, tracked picks, loss carryforward, tax rate) is 100% localStorage-only. Users lose all data on browser clear, can't use the app on a second device, and account deletion cannot honor "Right to Erasure" for portfolio data. The consent dialog at line 828 incorrectly states data is stored server-side — a LGPD/GDPR inconsistency.
+
+### US-104 — Server-Side Portfolio Storage
+**As a** Pro user, **I want** my portfolio positions saved to the server, **so that** I don't lose them when I clear my browser or switch devices.
+- `PUT /api/portfolio` — auth required; saves full portfolio JSON blob to user record.
+- `GET /api/portfolio` — auth required; returns saved blob or `[]`.
+- Frontend writes to both localStorage (immediate) and server (debounced 2s).
+- On login, server data is authoritative; merged with local if server returns empty.
+**Sprint:** 9 · **Effort:** 1 day
+
+### US-105 — Server-Side Tracked Picks Storage
+**As a** Pro user, **I want** my tracked picks saved to the server, **so that** my watchlist persists across browsers and devices.
+- `PUT /api/tracked` / `GET /api/tracked` — same pattern as US-104.
+**Sprint:** 9 · **Effort:** 3h
+
+### US-106 — Fix Consent Dialog Data Storage Claim
+**As a** user, **I want** the consent dialog to accurately describe where my data is stored, **so that** I can make an informed consent decision.
+- Update consent text (line 828) to reflect actual storage (localStorage for portfolio, server for account). After US-104/105 land, update again to reflect server-side storage.
+**Sprint:** 9 · **Effort:** 30min · **Priority:** HIGH (LGPD)
+
+### US-107 — Account Deletion Removes All Portfolio Data
+**As a** user who deletes their account, **I want** all my server-side data removed, **so that** my Right to Erasure (LGPD Art. 18) is fully honored.
+- `DELETE /api/auth/account` removes user row, portfolio blob, and tracked picks blob.
+**Sprint:** 9 · **Effort:** 30min
+
+---
+
+## Epic 29 — Frontend State & Reliability (Sprint 10)
+
+**Context:** 45 ad-hoc re-render call sites with inconsistent pairing; scan requests have no abort mechanism (stale results land on new state); scan errors are silently swallowed (`catch(() => {})`); portfolio data has no schema version (migrations are fragile one-shot code).
+
+### US-108 — AbortController for In-Flight Scans
+**As a** user, **I want** switching markets to cancel the previous scan immediately, **so that** I don't see results from the wrong market or waste server quota.
+- Store `_scanAbort = new AbortController()` before each scan; pass `signal` to each `fetchHistory` call.
+- `switchMarket()` calls `_scanAbort.abort()` before starting new scan.
+- Aborted fetches are silently ignored (not surfaced as errors).
+**Sprint:** 10 · **Effort:** 2h
+
+### US-109 — Surface Scan Errors to User
+**As a** user, **I want** to see a message when a scan fails, **so that** I know why I'm seeing zero results instead of assuming the market has no signals.
+- Replace `catch(() => {})` in `scanMarket` with `catch(e => { if (!aborted) showToast(...) }`.
+- Network error → `"Erro de rede — tente novamente"` toast.
+- 429 rate limit → `"Limite de varredura atingido — aguarde"` toast with remaining time.
+**Sprint:** 10 · **Effort:** 2h
+
+### US-110 — Portfolio Schema Versioning
+**As a** developer, **I want** localStorage portfolio data to carry a schema version, **so that** future migrations are safe and detectable.
+- Add `_schemaVersion: 2` to the root of saved portfolio JSON.
+- `loadPortfolio` checks version; runs appropriate migration chain; saves back with new version.
+- Missing `tradeType` on existing positions defaults to `'swing'` and is written back explicitly (fixes silent DARF mis-classification).
+**Sprint:** 10 · **Effort:** 2h
+
+### US-111 — Setter Pattern for Module Globals
+**As a** developer, **I want** state mutations to go through setters, **so that** re-renders are automatic and can't be forgotten.
+- Create `setState(key, value)` that updates the global, calls the relevant renderer, and optionally persists.
+- Migrate the 6 most-mutated globals first: `_signalFilter`, `_portfolioMonthFilter`, `_lang`, `_eduTopic`, `_taxReportMonth`, `_newsSentimentFilter`.
+- Each setter replaces all direct-assignment + manual re-render call sites.
+**Sprint:** 10 · **Effort:** 1 day
+
+---
+
+*End of User Stories — v1.5*
+*160 stocks · 4 markets · 2 languages · 111 stories across 29 epics*
+
+| Sprint | Epics | Stories | Theme |
+|--------|-------|---------|-------|
+| 1 | 1–13 | US-1–52 | MVP |
+| 2 | 14–20 | US-53–74 | Brazilian Market & UX |
+| 3 | 21–22 | US-75–77 | Compliance & Stability |
+| 4 | 23 | US-78–79 | Monetisation (blocked on keys) |
+| 5 | 24 | US-80–87 | Primeiros Passos Course |
+| 6 | 25 | US-88–93 | Code Structure: File Split |
+| 7 | 26 | US-94–98 | Security Hardening |
+| 8 | 27 | US-99–103 | Server Reliability |
+| 9 | 28 | US-104–107 | Server-Side Portfolio Storage |
+| 10 | 29 | US-108–111 | Frontend State & Reliability |
