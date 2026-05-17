@@ -1088,6 +1088,48 @@ Brazil's LGPD requires collecting only data with a stated purpose. CPF is needed
 
 ---
 
-*End of User Stories — v1.3*
-*160 stocks · 4 markets · 2 languages · 77 stories across 22 epics*
-*Sprint 1 complete · Sprint 2 stories: US-53–US-74 (Epics 14–20) · Sprint 3 stories: US-75–US-77 (Epics 21–22)*
+### US-78 — Custom Domain for Transactional Emails
+
+**As a** user receiving password reset and verification emails,
+**I want** emails to come from a verified custom domain (e.g. `noreply@momentum.app`),
+**so that** messages are delivered reliably and don't land in spam.
+
+**Background:**
+Resend's `onboarding@resend.dev` test address can only guarantee delivery to the Resend account owner's inbox. All other recipients may see spam filtering or outright rejection. A verified domain unlocks full deliverability for all users.
+
+**Acceptance criteria:**
+- A custom domain is verified in the Resend dashboard.
+- `RESEND_FROM_EMAIL` in `.env` / `docker-compose.yml` is updated to `Momentum <noreply@yourdomain.com>`.
+- Password reset, email verification, and resend-verification emails all arrive in inbox (not spam) for external recipients.
+- No code changes required — purely an ops/config task once the domain is verified.
+
+**Sprint:** 4 (blocked on domain setup)
+**Estimated effort:** 30 minutes (DNS + Resend dashboard config, zero code)
+**Dependencies:** Resend account with a verified domain
+
+---
+
+## Epic 23 — Monetisation (Sprint 4)
+
+### US-79 — Stripe Checkout for Pro Subscription
+
+**As a** free-tier user,
+**I want** to upgrade to Pro via Stripe Checkout,
+**so that** I can access portfolio tracking, DARF calculator, and correlation features without limits.
+
+**Acceptance criteria:**
+- "Go Pro" button opens Stripe Checkout (monthly subscription).
+- On success, user tier is upgraded to `pro` server-side; JWT is refreshed.
+- On cancel, user lands back on the app with no change.
+- Stripe webhook (`customer.subscription.deleted`) downgrades tier back to `free` when subscription lapses.
+- Works for both BRL (Pix) and international cards.
+
+**Sprint:** 4
+**Estimated effort:** 1 day
+**Dependencies:** `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_WEBHOOK_SECRET` in env
+
+---
+
+*End of User Stories — v1.4*
+*160 stocks · 4 markets · 2 languages · 79 stories across 23 epics*
+*Sprint 1 complete · Sprint 2: US-53–US-74 · Sprint 3: US-75–US-78 · Sprint 4: US-79 (Epics 21–23)*
