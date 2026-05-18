@@ -2041,37 +2041,52 @@ function showComingSoon() {
 
 // ─── ADMIN ───────────────────────────────────────────────────────────────
 async function showAdminView() {
+  const scanHdr = document.getElementById('scanHeader');
+  const grid = document.getElementById('resultsGrid');
+  const sidebar = document.getElementById('legacySidebar');
+  if (scanHdr) scanHdr.style.display = 'none';
+  if (grid) grid.style.display = 'none';
+  if (sidebar) sidebar.style.display = 'none';
+  const container = document.getElementById('dashboard');
+  container.style.display = 'block';
+  container.innerHTML = '<div class="shell" style="padding-top:var(--s-7)"><div class="kicker">⚙️ Admin</div><h1 class="hed1" style="margin-top:8px">Painel de <span style="color:var(--primary)">controle</span>.</h1><p class="dek" style="margin-top:8px;margin-bottom:var(--s-6)">Carregando usuários...</p></div>';
+
   const data = await apiGet('/api/admin/users');
   if (data.error) { alert(data.error); return; }
-  const container = document.getElementById('dashboard');
-  let html = '<div class="card" style="padding:0;overflow-x:auto">';
-  html += '<div style="padding:10px 14px;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:11px">👑 <strong>ADMIN</strong> — User Management</div>';
-  html += '<div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;gap:20px;font-size:11px;font-family:var(--font-mono)">';
-  html += '👤 Total: <strong>'+data.stats.total+'</strong>';
-  html += ' | 🟢 Free: <strong>'+data.stats.free+'</strong>';
-  html += ' | ⭐ Pro: <strong>'+data.stats.pro+'</strong>';
-  html += ' | 👑 Admin: <strong>'+(data.stats.admin||0)+'</strong>';
-  html += ' | 💳 Active subs: <strong>'+data.stats.activeSubscriptions+'</strong>';
+
+  let html = '<div class="shell" style="padding-top:var(--s-7);padding-bottom:var(--s-8)">';
+  html += '<div class="kicker">⚙️ Admin</div>';
+  html += '<h1 class="hed1" style="margin-top:8px">Painel de <span style="color:var(--primary)">controle</span>.</h1>';
+
+  // Big stats
+  html += '<div class="grid-4" style="margin-top:var(--s-6);margin-bottom:var(--s-5)">';
+  html += `<div class="big-stat"><div class="lbl">Total usuários</div><div class="val">${data.stats.total}</div><div class="sub">cadastrados</div></div>`;
+  html += `<div class="big-stat"><div class="lbl">Free</div><div class="val">${data.stats.free}</div><div class="sub">plano gratuito</div></div>`;
+  html += `<div class="big-stat"><div class="lbl">Pro</div><div class="val" style="color:var(--buy)">${data.stats.pro}</div><div class="sub">assinantes</div></div>`;
+  html += `<div class="big-stat"><div class="lbl">Subs ativas</div><div class="val" style="color:var(--primary)">${data.stats.activeSubscriptions}</div><div class="sub">Stripe ativo</div></div>`;
   html += '</div>';
+
+  // User table
+  html += '<div class="card-flush" style="overflow-x:auto;margin-bottom:var(--s-5)">';
   html += '<table class="tracked-table"><thead><tr><th>#</th><th>EMAIL</th><th>TIER</th><th>SUB END</th><th>SINCE</th><th>PRO</th><th>ADMIN</th></tr></thead><tbody>';
   data.users.forEach(u => {
     const tierBadge = u.tier === 'admin'
-      ? '<span class="status-badge active" style="background:rgba(200,90,23,0.15);color:var(--accent-amber);border-color:rgba(200,90,23,0.3)">👑 ADMIN</span>'
+      ? '<span class="chip chip-magenta">👑 Admin</span>'
       : u.tier === 'pro'
-        ? '<span class="status-badge tp">⭐ PRO</span>'
-        : '<span class="status-badge active" style="opacity:0.6">FREE</span>';
+        ? '<span class="chip chip-primary">⭐ Pro</span>'
+        : '<span class="chip">Free</span>';
     const proBtn = u.tier === 'admin'
-      ? '<span style="color:var(--text-dim);font-size:10px">—</span>'
+      ? '<span style="color:var(--ink-4);font-size:10px">—</span>'
       : u.tier === 'pro'
-        ? '<button class="btn" onclick="setUserTier(\'' + u.email + '\',\'free\')" style="font-size:9px;padding:2px 8px;color:var(--red-bear)">↓ Revoke Pro</button>'
-        : '<button class="btn" onclick="setUserTier(\'' + u.email + '\',\'pro\')" style="font-size:9px;padding:2px 8px;color:var(--green-bull)">⭐ Make Pro</button>';
+        ? `<button class="btn-default" onclick="setUserTier('${u.email}','free')" style="font-size:10px;padding:4px 10px;color:var(--sell)">↓ Revogar</button>`
+        : `<button class="btn-default" onclick="setUserTier('${u.email}','pro')" style="font-size:10px;padding:4px 10px;color:var(--buy)">⭐ Pro</button>`;
     const adminBtn = u.tier === 'admin'
-      ? '<span style="color:var(--text-dim);font-size:10px">—</span>'
-      : '<button class="btn" onclick="setAdmin(\'' + u.email + '\')" style="font-size:9px;padding:2px 8px;color:var(--accent-amber)">👑 Make Admin</button>';
-    html += `<tr><td style="color:var(--text-dim)">${u.id}</td><td>${u.email}</td><td>${tierBadge}</td><td style="color:var(--text-dim)">${u.subscriptionEnd ? u.subscriptionEnd.slice(0,10) : '—'}</td><td style="color:var(--text-dim)">${u.createdAt.slice(0,10)}</td><td>${proBtn}</td><td>${adminBtn}</td></tr>`;
+      ? '<span style="color:var(--ink-4);font-size:10px">—</span>'
+      : `<button class="btn-default" onclick="setAdmin('${u.email}')" style="font-size:10px;padding:4px 10px;color:var(--magenta)">👑 Admin</button>`;
+    html += `<tr><td style="color:var(--ink-4)">${u.id}</td><td style="font-family:var(--font-mono);font-size:12px">${u.email}</td><td>${tierBadge}</td><td style="color:var(--ink-4);font-family:var(--font-mono);font-size:11px">${u.subscriptionEnd ? u.subscriptionEnd.slice(0,10) : '—'}</td><td style="color:var(--ink-4);font-family:var(--font-mono);font-size:11px">${u.createdAt.slice(0,10)}</td><td>${proBtn}</td><td>${adminBtn}</td></tr>`;
   });
   html += '</tbody></table></div>';
-  html += '<div style="margin-top:8px;display:flex;gap:8px"><button class="btn" onclick="renderDashboard()" style="font-size:10px">' + t('nav_back') + '</button></div>';
+  html += '</div>';
   container.innerHTML = html;
 }
 
@@ -4919,8 +4934,8 @@ function renderFxBar() {
     const sym = codeToSym[code] || code;
     return `<span style="color:var(--text-dim)">${sym}</span><span style="color:var(--accent-amber);font-weight:700">R$${entry.rate.toFixed(2)}</span><span style="font-size:8px;color:var(--text-dim)">${age}</span>`;
   });
-  bar.style.display = 'flex';
-  bar.innerHTML = `<span style="color:var(--text-dim);margin-right:2px">💱</span>${parts.join('<span style="color:var(--border-light);padding:0 3px">·</span>')}<button class="btn" onclick="autoFetchFxRates(true)" style="font-size:8px;padding:1px 6px;margin-left:4px;color:var(--accent-amber);border-color:var(--accent-amber)">🔄</button>`;
+  bar.style.display = '';
+  bar.innerHTML = `${parts.join('<span style="color:var(--line);padding:0 4px">·</span>')}`;
 }
 
 async function autoFetchFxRates(forceRefresh) {
