@@ -1256,6 +1256,31 @@ input, select, textarea { font-family: inherit; }
 @media (max-width: 900px) {
   .sim-stage { grid-template-columns: 1fr; }
 }
+.amount-pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 8px 16px; border-radius: var(--r-pill);
+  border: 1px solid var(--line-2); background: var(--bg-2);
+  font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+  color: var(--ink-2); cursor: pointer; transition: all .15s;
+}
+.amount-pill:hover { border-color: var(--primary); color: var(--ink); }
+.amount-pill.active { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
+.ticker-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: var(--r-pill);
+  border: 1px solid var(--line-2); background: var(--bg-2);
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  color: var(--ink-3); cursor: pointer; transition: all .15s;
+}
+.ticker-pill:hover { border-color: var(--primary); color: var(--ink); }
+.ticker-pill.active { background: var(--bg-3); border-color: var(--primary); color: var(--ink); }
+.scenario-box {
+  border-radius: var(--r-lg); padding: var(--s-5); margin-bottom: var(--s-3);
+  display: flex; align-items: flex-start; gap: var(--s-4);
+}
+.scenario-box.level-tp { background: color-mix(in srgb, var(--buy) 12%, var(--bg-2)); border: 1px solid color-mix(in srgb, var(--buy) 30%, transparent); }
+.scenario-box.level-now { background: var(--bg-2); border: 1px solid var(--line); }
+.scenario-box.level-sl { background: color-mix(in srgb, var(--sell) 12%, var(--bg-2)); border: 1px solid color-mix(in srgb, var(--sell) 30%, transparent); }
 
 /* ── AppBar ── */
 .appbar { position:sticky;top:0;z-index:100;background:rgba(var(--bg-rgb,12,14,16),.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--line); }
@@ -1374,6 +1399,7 @@ input, select, textarea { font-family: inherit; }
       <button class="nav-pill" onclick="scanAll()" data-view="scan">Scanner</button>
       <button class="nav-pill" onclick="showTrackedView()" data-view="tracked">Acompanhados</button>
       <button class="nav-pill" onclick="showEducationView()" data-view="learn">Aprender</button>
+      <button class="nav-pill" onclick="showSimulatorView()" data-view="simulator">Simular</button>
       <button class="nav-pill" onclick="showPortfolioView()" data-view="portfolio">Carteira</button>
     </nav>
 
@@ -1521,10 +1547,18 @@ input, select, textarea { font-family: inherit; }
       <div id="lbl_correlationDesc" style="font-size:10px;color:var(--text-dim);margin-bottom:8px;line-height:1.4">Measures how stocks move together. 🟢 +0.7 = move in sync. 🔴 -0.3 = move opposite. Diversify across uncorrelated picks.</div>
       <div id="correlationContent"><div style="color:var(--text-dim);font-size:11px">Scan at least 2 tickers to show correlation.</div></div>
     </div>
-    <div id="correlationProLock" style="display:block;text-align:center;padding:16px">
-      <div style="font-size:24px;margin-bottom:8px">⭐</div>
-      <div id="corrLockMsg" style="font-size:11px;color:var(--text-secondary);margin-bottom:8px">Correlation Matrix is a <strong>Pro feature</strong>.</div>
-      <button id="corrLockBtn" class="btn" onclick="upgradeToPro()" style="font-size:10px;color:var(--accent-amber);border-color:var(--accent-amber)">⬆ UPGRADE</button>
+    <div id="correlationProLock" style="display:block">
+      <div style="background:linear-gradient(160deg,color-mix(in srgb,var(--magenta) 16%,var(--bg-2)),var(--bg-2));border:1px solid color-mix(in srgb,var(--magenta) 30%,var(--line));border-radius:var(--r-xl);padding:24px;text-align:center">
+        <div style="width:52px;height:52px;border-radius:50%;background:var(--magenta);color:var(--bg);font-size:26px;display:grid;place-items:center;margin:0 auto 14px">⭐</div>
+        <h3 style="font-family:var(--font-display);font-size:17px;font-weight:700;margin:0 0 8px;color:var(--ink)">Matriz de correlação é Pro</h3>
+        <p style="font-size:13px;color:var(--ink-3);margin:0 0 14px;line-height:1.5">Veja como seus ativos se movem juntos e diversifique com inteligência.</p>
+        <ul style="list-style:none;padding:0;margin:0 0 16px;display:flex;flex-direction:column;gap:6px;text-align:left">
+          <li style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2)"><span style="width:18px;height:18px;border-radius:50%;background:var(--primary);color:var(--primary-ink);display:grid;place-items:center;font-size:10px;font-weight:700;flex-shrink:0">✓</span>Heatmap 6×6 colorido</li>
+          <li style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2)"><span style="width:18px;height:18px;border-radius:50%;background:var(--primary);color:var(--primary-ink);display:grid;place-items:center;font-size:10px;font-weight:700;flex-shrink:0">✓</span>Pares descorrelacionados</li>
+          <li style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2)"><span style="width:18px;height:18px;border-radius:50%;background:var(--primary);color:var(--primary-ink);display:grid;place-items:center;font-size:10px;font-weight:700;flex-shrink:0">✓</span>Insights em português</li>
+        </ul>
+        <button class="btn-magenta" onclick="upgradeToPro()" style="width:100%;padding:10px 16px;font-size:13px">⭐ Virar Pro — R$ 9/mês</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1623,7 +1657,7 @@ input, select, textarea { font-family: inherit; }
 
 <script>
 // ─── STATE ─────────────────────────────────────────────────────────────
-let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'dark', showTracked: false, showUniverse: false, showPortfolio: false, displayedStocks: [] };
+let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'dark', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, displayedStocks: [] };
 let _portfolioMonthFilter = 'all';
 let _signalFilter = 'buy';
 let _taxReportMonth = '';
@@ -2113,7 +2147,7 @@ async function apiPost(path, data) { const token = getToken(); const headers = {
 
 // ─── YAHOO DATA ────────────────────────────────────────────────────────
 async function fetchHistory(ticker) {
-  const data = await api('/api/history/' + ticker);
+  const data = await api('/api/history/' + ticker + '?lang=' + _lang);
   const result = data.chart.result[0];
   const ts = result.timestamp, q = result.indicators.quote[0];
   const cdl = [];
@@ -2121,7 +2155,7 @@ async function fetchHistory(ticker) {
     if (q.open[i] == null || q.close[i] == null) continue;
     cdl.push({ o:q.open[i], h:q.high[i], l:q.low[i], c:q.close[i], v:q.volume[i]||0, d:new Date(ts[i]*1000) });
   }
-  return cdl;
+  return { candles: cdl, why: data.why || null };
 }
 
 // ─── SENTIMENT ANALYZER ──────────────────────────────────────────────────
@@ -2284,9 +2318,10 @@ async function scanMarket(market) {
       const s = stocks[idx];
       const pct = Math.round((idx / stocks.length) * 100);
       updateScanProgress(pct, s.n || s.t);
-      fetchHistory(s.t).then(c => {
+      fetchHistory(s.t).then(({ candles: c, why: serverWhy }) => {
         if (c.length > 100) {
           const a = analyze(s.t, s.n, s.s||'', c);
+          if (serverWhy) a.why = serverWhy;
           if (a.signal === 'buy' || a.signal === 'neutral') {
             fetchNews(s.t).then(news => { a.news = news; renderDashboard(); renderNewsSentiment(); }).catch(()=>{});
           }
@@ -2336,6 +2371,7 @@ function switchMarket(market) {
   state.showTracked = false;
   state.showUniverse = false;
   state.showPortfolio = false;
+  state.showSimulator = false;
   document.getElementById('trackedTabBtn').style.borderColor = '';
   document.getElementById('trackedTabBtn').style.color = '';
   document.getElementById('universeTabBtn').style.borderColor = '';
@@ -2567,6 +2603,7 @@ function backToScanView() {
 // ─── RENDER ─────────────────────────────────────────────────────────────
 function renderDashboard() {
   if (state.showPortfolio) { renderPortfolioView(); return; }
+  if (state.showSimulator) { renderSimulator(); return; }
   if (state.showUniverse) { renderUniverseView(); return; }
   if (state.showTracked) { renderTrackedPicks(); return; }
 
@@ -2989,13 +3026,13 @@ async function refreshTracked() {
   document.getElementById('scanStatus').textContent = t('status_refreshingTracked');
   for (const pick of state.trackedPicks) {
     try {
-      const c = await fetchHistory(pick.ticker);
+      const { candles: c, why: serverWhy } = await fetchHistory(pick.ticker);
       if (c.length > 0) {
         const price = c[c.length-1].c;
         if (!state.analyzed[pick.market]) state.analyzed[pick.market] = [];
         const existing = state.analyzed[pick.market].find(s => s.ticker === pick.ticker);
-        if (existing) existing.price = price;
-        else state.analyzed[pick.market].push({ ticker:pick.ticker, price, candles:c });
+        if (existing) { existing.price = price; if (serverWhy) existing.why = serverWhy; }
+        else state.analyzed[pick.market].push({ ticker:pick.ticker, price, candles:c, why:serverWhy||null });
       }
     } catch {}
     await new Promise(r => setTimeout(r, 200));
@@ -3195,6 +3232,189 @@ function showPortfolioView() {
     }
     renderPortfolioView();
   } else renderDashboard();
+}
+
+let _simAmount = 500;
+let _simTicker = null;
+
+function showSimulatorView() {
+  state.showTracked = false;
+  state.showUniverse = false;
+  state.showPortfolio = false;
+  state.showSimulator = true;
+  document.querySelectorAll('.nav-pill[data-view]').forEach(b => b.classList.remove('active'));
+  const navBtn = document.querySelector('.nav-pill[data-view="simulator"]');
+  if (navBtn) navBtn.classList.add('active');
+  const scanHdr = document.getElementById('scanHeader');
+  const grid = document.getElementById('resultsGrid');
+  const sidebar = document.getElementById('legacySidebar');
+  if (scanHdr) scanHdr.style.display = 'none';
+  if (grid) grid.style.display = 'none';
+  if (sidebar) sidebar.style.display = 'none';
+  const container = document.getElementById('dashboard');
+  container.style.display = 'block';
+  renderSimulator();
+}
+
+function renderSimulator() {
+  if (!state.showSimulator) return;
+  const container = document.getElementById('dashboard');
+  container.style.display = 'block';
+
+  const amounts = [100, 250, 500, 1000, 2500];
+  const allStocks = Object.values(state.analyzed).flat().filter(s => s && s.ticker && s.price > 0);
+
+  if (!_simTicker && allStocks.length > 0) {
+    const buyStocks = allStocks.filter(s => s.signal === 'buy');
+    _simTicker = (buyStocks.length > 0 ? buyStocks[0] : allStocks[0]).ticker;
+  }
+
+  const stock = allStocks.find(s => s.ticker === _simTicker) || null;
+  const price = stock ? stock.price : 0;
+  const tp = stock ? stock.tp : 0;
+  const sl = stock ? stock.sl : 0;
+  const qty = price > 0 ? Math.floor(_simAmount / price) : 0;
+  const invested = qty * price;
+  const gainTP = qty * (tp - price);
+  const gainSL = qty * (sl - price);
+  const pctTP = price > 0 ? ((tp - price) / price * 100) : 0;
+  const pctSL = price > 0 ? ((sl - price) / price * 100) : 0;
+  const sym = stock ? getCurrencySymbol(stock.ticker) : 'R$';
+
+  let html = '<div class="shell" style="padding-top:var(--s-7);padding-bottom:var(--s-8)">';
+  html += '<div class="kicker">🎲 Simulador</div>';
+  html += '<h1 class="hed1" style="margin-top:8px">E se você <span style="color:var(--primary)">investisse</span> agora?</h1>';
+  html += '<p class="dek" style="margin-top:var(--s-3)">Escolha um valor e um ativo para ver os cenários possíveis. Apenas simulação — não é recomendação de investimento.</p>';
+
+  if (allStocks.length === 0) {
+    html += '<div class="card" style="padding:40px;text-align:center;margin-top:var(--s-6)">';
+    html += '<div style="font-size:48px;margin-bottom:16px">🎲</div>';
+    html += '<h3 class="hed3">Faça um scan primeiro</h3>';
+    html += '<p style="color:var(--ink-3);margin-top:8px;font-size:14px">Execute o scanner para ter ativos disponíveis no simulador.</p>';
+    html += `<button class="btn-primary" onclick="scanAll()" style="margin-top:20px">⚡ Varrer agora</button>`;
+    html += '</div></div>';
+    container.innerHTML = html;
+    return;
+  }
+
+  html += '<div class="sim-stage" style="margin-top:var(--s-6)">';
+  html += '<div>';
+
+  // Amount pills
+  html += '<div class="card" style="padding:var(--s-5);margin-bottom:var(--s-4)">';
+  html += '<div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:var(--s-3)">Quanto você quer investir</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+  amounts.forEach(a => {
+    html += `<button class="amount-pill${a === _simAmount ? ' active' : ''}" onclick="_simAmount=${a};renderSimulator()">R$ ${a.toLocaleString('pt-BR')}</button>`;
+  });
+  html += '</div></div>';
+
+  // Ticker pills
+  html += '<div class="card" style="padding:var(--s-5);margin-bottom:var(--s-5)">';
+  html += '<div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:var(--s-3)">Escolha o ativo</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+  const displayStocks = allStocks.slice(0, 16);
+  displayStocks.forEach(s => {
+    const isActive = s.ticker === _simTicker;
+    const sig = s.signal === 'neutral' ? 'hold' : s.signal;
+    const sigColor = sig === 'buy' ? 'var(--buy)' : sig === 'sell' ? 'var(--sell)' : 'var(--ink-3)';
+    html += `<button class="ticker-pill${isActive ? ' active' : ''}" onclick="_simTicker='${s.ticker}';renderSimulator()">
+      <span style="width:8px;height:8px;border-radius:50%;background:${sigColor};display:inline-block;flex-shrink:0"></span>
+      ${s.ticker}
+    </button>`;
+  });
+  html += '</div></div>';
+
+  if (!stock) {
+    html += '<div class="card" style="padding:32px;text-align:center"><p style="color:var(--ink-3)">Selecione um ativo acima para ver os cenários.</p></div>';
+  } else {
+    // Summary line
+    if (qty > 0) {
+      html += `<p style="font-size:14px;color:var(--ink-2);margin-bottom:var(--s-4)">Com <strong>R$ ${_simAmount.toLocaleString('pt-BR')}</strong> você compra <strong>${qty} ${stock.ticker}</strong> a <span style="font-family:var(--font-mono)">${sym} ${price.toFixed(2)}</span> = investido: <strong style="font-family:var(--font-mono)">${sym} ${invested.toFixed(2)}</strong></p>`;
+    } else {
+      html += `<p style="font-size:14px;color:var(--ink-2);margin-bottom:var(--s-4)">Valor insuficiente para comprar 1 unidade de ${stock.ticker} (preço: ${sym} ${price.toFixed(2)}).</p>`;
+    }
+
+    // Scenario: TP
+    html += `<div class="scenario-box level-tp">
+      <div style="font-size:32px;flex-shrink:0">🚀</div>
+      <div style="flex:1">
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--buy);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Cenário otimista — TP atingido</div>
+        <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--buy)">+${sym} ${Math.abs(gainTP).toFixed(2)}</div>
+        <div style="font-size:13px;color:var(--ink-3);margin-top:4px">${qty} ações × ${sym} ${tp.toFixed(2)} = ${sym} ${(qty*tp).toFixed(2)} · ganho de +${pctTP.toFixed(1)}%</div>
+      </div>
+    </div>`;
+
+    // Scenario: hold
+    html += `<div class="scenario-box level-now">
+      <div style="font-size:32px;flex-shrink:0">⚖️</div>
+      <div style="flex:1">
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Cenário neutro — preço atual</div>
+        <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--ink)">${sym} 0,00</div>
+        <div style="font-size:13px;color:var(--ink-3);margin-top:4px">${qty} ações × ${sym} ${price.toFixed(2)} = ${sym} ${invested.toFixed(2)} · sem variação</div>
+      </div>
+    </div>`;
+
+    // Scenario: SL
+    html += `<div class="scenario-box level-sl">
+      <div style="font-size:32px;flex-shrink:0">🛡️</div>
+      <div style="flex:1">
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--sell);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Cenário pessimista — SL atingido</div>
+        <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--sell)">−${sym} ${Math.abs(gainSL).toFixed(2)}</div>
+        <div style="font-size:13px;color:var(--ink-3);margin-top:4px">${qty} ações × ${sym} ${sl.toFixed(2)} = ${sym} ${(qty*sl).toFixed(2)} · perda de ${pctSL.toFixed(1)}%</div>
+      </div>
+    </div>`;
+
+    // Plain language summary
+    const simSig = stock.signal === 'neutral' ? 'hold' : stock.signal;
+    const whyTxt = feedCardWhy(stock);
+    html += `<div class="card" style="padding:var(--s-5);margin-top:var(--s-4)">
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Por que o Momentum sinalizou ${simSig === 'buy' ? 'Compra' : simSig === 'sell' ? 'Venda' : 'Aguardar'}</div>
+      <p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0">${whyTxt} Os valores de TP e SL são estimativas baseadas em suporte/resistência técnica e não garantem resultado.</p>
+    </div>`;
+  }
+
+  html += '</div>';
+
+  // Right aside: trading tip card
+  const tipStock = stock || allStocks.find(s => s.signal === 'buy') || allStocks[0];
+  html += '<div>';
+  html += '<div class="card-glow" style="padding:var(--s-5);margin-bottom:var(--s-4)">';
+  html += '<div style="font-size:28px;margin-bottom:var(--s-3)">💡</div>';
+  html += '<h3 style="font-family:var(--font-display);font-size:18px;font-weight:700;margin:0 0 var(--s-2)">Dica de operação</h3>';
+  html += '<p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0 0 var(--s-4)">Nunca arrisque mais do que você pode perder. Uma boa gestão de risco limita cada operação a 1–2% do capital total.</p>';
+  if (tipStock) {
+    const tipIdx = (state.analyzed[state.market]||[]).findIndex(s => s.ticker === tipStock.ticker);
+    html += `<button class="btn-primary" style="width:100%" onclick="openStockDetail('${tipStock.ticker}', ${tipIdx >= 0 ? tipIdx : 0})">Ver gráfico de ${tipStock.ticker} →</button>`;
+  }
+  html += '</div>';
+
+  // Quick stats card
+  if (stock && qty > 0) {
+    html += '<div class="card" style="padding:var(--s-5)">';
+    html += '<div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:var(--s-3)">Resumo da operação</div>';
+    const rows2 = [
+      ['Ativo', stock.ticker],
+      ['Preço atual', `${sym} ${price.toFixed(2)}`],
+      ['Qtd comprada', qty.toString()],
+      ['Valor investido', `${sym} ${invested.toFixed(2)}`],
+      ['Alvo (TP)', `${sym} ${tp.toFixed(2)}`],
+      ['Stop (SL)', `${sym} ${sl.toFixed(2)}`],
+      ['Risco/retorno', pctSL !== 0 ? `1:${Math.abs(pctTP/pctSL).toFixed(1)}` : 'N/A'],
+    ];
+    rows2.forEach(([lbl, val]) => {
+      html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:13px">
+        <span style="color:var(--ink-3)">${lbl}</span>
+        <span style="font-family:var(--font-mono);color:var(--ink);font-weight:600">${val}</span>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  html += '</div>'; // .sim-stage
+  html += '</div>'; // .shell
+  container.innerHTML = html;
 }
 
 function getPortfolioPrice(ticker) {
@@ -3686,35 +3906,77 @@ function generateTaxReport() {
   const soldItems = state.portfolio.filter(p => {
     if (p.status !== 'sold' || !p.sellPrice) return false;
     const sellMatch = monthMatch(p.sellDate, selectedMonth);
-    const buyMatch = monthMatch(p.buyDate, selectedMonth) && !p.sellDate; // if no sell date, use buy month
+    const buyMatch = monthMatch(p.buyDate, selectedMonth) && !p.sellDate;
     return sellMatch || buyMatch;
   });
   const holdingItems = state.portfolio.filter(p => {
     if (p.status !== 'holding') return false;
     return monthMatch(p.buyDate, selectedMonth);
   });
-  
-  let html = '<div class="card" style="padding:0;overflow:hidden">';
-  html += '<div style="padding:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">';
-  html += '<span style="font-family:var(--font-mono);font-size:14px;color:var(--accent-amber);font-weight:700">' + t('taxReport_title') + '</span>';
+
+  // Quick DARF estimate for hed1
+  const brlSoldQ = soldItems.filter(p => getCurrencySymbol(p.ticker) === 'R$');
+  const swingItemsQ = brlSoldQ.filter(p => (p.tradeType||'swing')==='swing');
+  const dtItemsQ = brlSoldQ.filter(p => p.tradeType==='daytrade');
+  const swingGrossQ = swingItemsQ.reduce((s,p) => s + p.sellPrice*p.quantity, 0);
+  const swingGainQ = swingItemsQ.reduce((s,p) => s + (p.sellPrice-p.buyPrice)*p.quantity, 0);
+  const dtGainQ = dtItemsQ.reduce((s,p) => s + (p.sellPrice-p.buyPrice)*p.quantity, 0);
+  const cf = loadLossCarryforward();
+  const isSwingExemptQ = swingGrossQ <= 20000;
+  const swingTaxQ = isSwingExemptQ ? 0 : Math.max(0, (swingGainQ - (cf.swing_BRL||0)) * 0.15 - swingGrossQ*0.00005);
+  const dtTaxQ = Math.max(0, (dtGainQ - (cf.daytrade_BRL||0)) * 0.20 - Math.max(0, dtGainQ)*0.01);
+  const estimatedDARF = swingTaxQ + dtTaxQ;
+  const totalRealizedBRL = swingGainQ + dtGainQ;
+  const grossSalesQ = swingGrossQ + dtItemsQ.reduce((s,p) => s + p.sellPrice*p.quantity, 0);
+
+  let html = '<div class="shell" style="padding-top:var(--s-7);padding-bottom:var(--s-8)">';
+  html += '<div class="kicker">📋 IR / DARF</div>';
+  if (soldItems.length === 0) {
+    html += '<h1 class="hed1" style="margin-top:8px">Sem operações <span style="color:var(--primary)">encerradas</span> neste período.</h1>';
+  } else if (estimatedDARF > 0) {
+    html += `<h1 class="hed1" style="margin-top:8px">Você tem <span style="color:var(--magenta)">R$ ${estimatedDARF.toFixed(2).replace('.',',')}</span> de imposto a pagar.</h1>`;
+  } else {
+    html += `<h1 class="hed1" style="margin-top:8px">Seu imposto neste período é <span style="color:var(--buy)">R$ 0,00</span>.</h1>`;
+  }
+
+  // Three stat cards
+  if (soldItems.length > 0) {
+    html += '<div class="grid-3" style="margin-top:var(--s-5);margin-bottom:var(--s-5)">';
+    html += `<div class="big-stat"><div class="lbl">Vendas brutas (BRL)</div><div class="val">R$ ${grossSalesQ.toFixed(2).replace('.',',')}</div><div class="sub">${brlSoldQ.length} operações</div></div>`;
+    html += `<div class="big-stat"><div class="lbl">Ganho realizado</div><div class="val ${totalRealizedBRL>=0?'up':'dn'}">${totalRealizedBRL>=0?'+':''}R$ ${Math.abs(totalRealizedBRL).toFixed(2).replace('.',',')}</div><div class="sub">Lucro líquido</div></div>`;
+    html += `<div class="big-stat"><div class="lbl">DARF estimado</div><div class="val ${estimatedDARF>0?'dn':'up'}">R$ ${estimatedDARF.toFixed(2).replace('.',',')}</div><div class="sub">Código 6015 (swing) / 6010 (day)</div></div>`;
+    html += '</div>';
+
+    // Yellow R$20k isenção warning card
+    html += `<div style="background:color-mix(in srgb,#f59e0b 10%,var(--bg-2));border:1px solid color-mix(in srgb,#f59e0b 30%,transparent);border-radius:var(--r-lg);padding:var(--s-4) var(--s-5);margin-bottom:var(--s-5);display:flex;align-items:flex-start;gap:var(--s-3)">
+      <span style="font-size:20px;flex-shrink:0">⚠️</span>
+      <div><strong style="font-size:14px;color:var(--ink)">Regra de isenção R$ 20.000</strong>
+      <p style="font-size:13px;color:var(--ink-2);margin:4px 0 0;line-height:1.5">Vendas de ações em swing trade abaixo de <strong>R$ 20.000/mês</strong> são isentas de IR. Day trade não tem isenção. ${isSwingExemptQ ? '✅ Suas vendas swing estão dentro do limite.' : '⚠ Suas vendas swing ultrapassaram R$ 20.000 — IR é devido.'}</p></div>
+    </div>`;
+  }
+
+  // Action buttons + month selector in a card
+  html += '<div class="card-flush" style="margin-bottom:var(--s-5)">';
+  html += '<div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">';
+  html += `<span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--ink)">${t('taxReport_title')}</span>`;
   html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
-  html += '<button class="btn" onclick="downloadTaxCSV()" style="font-size:10px">' + t('portfolio_csv') + '</button>';
-  html += '<button class="btn" onclick="downloadTaxMD()" style="font-size:10px">' + t('portfolio_md') + '</button>';
-  html += '<button class="btn" onclick="downloadTaxPDF()" style="font-size:10px">' + t('taxReport_pdf') + '</button>';
-  html += '<button class="btn" onclick="renderPortfolioView()" style="font-size:10px">' + t('portfolio_back') + '</button>';
+  html += `<button class="btn-default" onclick="downloadTaxCSV()" style="font-size:11px">${t('portfolio_csv')}</button>`;
+  html += `<button class="btn-default" onclick="downloadTaxMD()" style="font-size:11px">${t('portfolio_md')}</button>`;
+  html += `<button class="btn-default" onclick="downloadTaxPDF()" style="font-size:11px">${t('taxReport_pdf')}</button>`;
+  html += `<button class="btn-ghost" onclick="renderPortfolioView()" style="font-size:11px">← ${t('portfolio_back')}</button>`;
   html += '</div></div>';
-  
+
   // Month selector
-  html += '<div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
-  html += '<label style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">' + t('taxReport_selectMonth') + '</label>';
-  html += '<select id="taxMonthSelect" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:6px 8px;border-radius:4px;font-family:var(--font-mono);font-size:11px">';
-  html += '<option value="all">' + t('taxReport_allTime') + '</option>';
+  html += '<div style="padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
+  html += `<label style="font-size:13px;color:var(--ink-3)">${t('taxReport_selectMonth')}</label>`;
+  html += '<select id="taxMonthSelect" class="input" style="width:auto;padding:6px 10px">';
+  html += `<option value="all">${t('taxReport_allTime')}</option>`;
   months.forEach(m => {
     const sel = m.val === selectedMonth ? ' selected' : '';
     html += '<option value="' + m.val + '"' + sel + '>' + m.label + '</option>';
   });
   html += '</select>';
-  html += '<button class="btn" onclick="updateTaxReportMonth()" style="font-size:10px;padding:4px 10px">' + t('taxReport_update') + '</button>';
+  html += `<button class="btn-primary" onclick="updateTaxReportMonth()" style="font-size:12px;padding:7px 14px">${t('taxReport_update')}</button>`;
   html += '</div>';
   
   // Realized gains/losses (sold)
@@ -3837,7 +4099,6 @@ function generateTaxReport() {
   // ── DARF panel — BRL / B3 positions only ──────────────────────────────
   const brlSold = soldItems.filter(p => getCurrencySymbol(p.ticker) === 'R$');
   if (brlSold.length > 0) {
-    const cf = loadLossCarryforward();
     const swingItems = brlSold.filter(p => (p.tradeType || 'swing') === 'swing');
     const dtItems    = brlSold.filter(p => p.tradeType === 'daytrade');
 
@@ -3933,7 +4194,8 @@ function generateTaxReport() {
     html += '</div>'; // /darf panel
   }
 
-  html += '</div>'; // /card
+  html += '</div>'; // /card-flush
+  html += '</div>'; // /shell
 
   container.innerHTML = html;
 }

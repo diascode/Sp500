@@ -616,6 +616,62 @@ function getAuthUser(req) {
   return verifyToken(token);
 }
 
+// ─── INDICATOR HELPERS (server-side) ────────────────────────────────────
+function serverCalcRSI(closes, period = 14) {
+  if (closes.length < period + 1) return 50;
+  let gains = 0, losses = 0;
+  for (let i = 1; i <= period; i++) {
+    const d = closes[i] - closes[i - 1];
+    if (d > 0) gains += d; else losses -= d;
+  }
+  let avgGain = gains / period, avgLoss = losses / period;
+  for (let i = period + 1; i < closes.length; i++) {
+    const d = closes[i] - closes[i - 1];
+    avgGain = (avgGain * (period - 1) + Math.max(0, d)) / period;
+    avgLoss = (avgLoss * (period - 1) + Math.max(0, -d)) / period;
+  }
+  if (avgLoss === 0) return 100;
+  return 100 - 100 / (1 + avgGain / avgLoss);
+}
+
+function serverCalcMACD(closes) {
+  function ema(arr, n) {
+    const k = 2 / (n + 1);
+    let e = arr[0];
+    for (let i = 1; i < arr.length; i++) e = arr[i] * k + e * (1 - k);
+    return e;
+  }
+  if (closes.length < 26) return 0;
+  return ema(closes, 12) - ema(closes, 26);
+}
+
+function generateWhy(rsi, macd, adx, patternName, lang = 'pt') {
+  const parts = [];
+  if (lang === 'pt') {
+    if (rsi < 35) parts.push(`RSI em ${rsi.toFixed(0)}, indicando ativo sobrevendido e possível reversão.`);
+    else if (rsi > 70) parts.push(`RSI em ${rsi.toFixed(0)}, ativo sobrecomprado — sinal de cautela.`);
+    if (macd > 0 && adx > 25) parts.push(`MACD positivo com tendência forte (ADX ${adx.toFixed(0)}).`);
+    else if (macd > 0) parts.push('MACD positivo, momentum favorável.');
+    if (patternName && patternName !== 'none' && patternName !== 'Análise') parts.push(`Padrão ${patternName} identificado nos últimos 90 dias.`);
+    return parts.length > 0 ? parts.slice(0, 2).join(' ') : 'Sinal baseado em análise técnica de múltiplos indicadores.';
+  } else {
+    if (rsi < 35) parts.push(`RSI at ${rsi.toFixed(0)}, indicating oversold conditions and possible reversal.`);
+    else if (rsi > 70) parts.push(`RSI at ${rsi.toFixed(0)}, overbought — caution advised.`);
+    if (macd > 0 && adx > 25) parts.push(`Positive MACD with strong trend (ADX ${adx.toFixed(0)}).`);
+    else if (macd > 0) parts.push('Positive MACD, favourable momentum.');
+    if (patternName && patternName !== 'none' && patternName !== 'Analysis') parts.push(`${patternName} pattern identified in the last 90 days.`);
+    return parts.length > 0 ? parts.slice(0, 2).join(' ') : 'Signal based on multi-indicator technical analysis.';
+  }
+}
+
+function extractCloses(yahooData) {
+  try {
+    const result = yahooData.chart.result[0];
+    const q = result.indicators.quote[0];
+    return q.close.filter(v => v != null && !isNaN(v));
+  } catch { return []; }
+}
+
 // ─── REQUEST HANDLER ────────────────────────────────────────────────────
 async function handleRequest(req, res) {
   const allowedOrigin = ENV.APP_URL || 'http://localhost:8080';
@@ -997,8 +1053,13 @@ async function handleRequest(req, res) {
       if (!limit.allowed) return sendJSON(res, 429, { error: 'Scan limit reached for today', limit, tier: limit.tier });
       try {
         const ticker = decodeURIComponent(historyMatch[1]);
+        const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'pt';
         const data = await yahooFetch(ticker);
-        return sendJSON(res, 200, data);
+        const closes = extractCloses(data);
+        const rsi = closes.length >= 15 ? serverCalcRSI(closes) : 50;
+        const macd = closes.length >= 26 ? serverCalcMACD(closes) : 0;
+        const why = generateWhy(rsi, macd, 20, null, lang);
+        return sendJSON(res, 200, { ...data, why, _rsi: +rsi.toFixed(1), _macd: +macd.toFixed(3) });
       } catch (err) { return sendError(res, 502, err.message); }
     }
 
@@ -1015,11 +1076,19 @@ async function handleRequest(req, res) {
       if (!authUser) return sendError(res, 401, 'Sign in required to scan');
       const limit = checkScanLimit(authUser.email);
       if (!limit.allowed) return sendJSON(res, 429, { error: 'Daily scan limit reached', limit, tier: limit.tier });
+      const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'pt';
       const results = {};
       for (const [market, stocks] of Object.entries(UNIVERSES)) {
         const batch = [];
         for (const stock of stocks) {
-          try { const data = await yahooFetch(stock.t); batch.push({ ...stock, data }); } catch {}
+          try {
+            const data = await yahooFetch(stock.t);
+            const closes = extractCloses(data);
+            const rsi = closes.length >= 15 ? serverCalcRSI(closes) : 50;
+            const macd = closes.length >= 26 ? serverCalcMACD(closes) : 0;
+            const why = generateWhy(rsi, macd, 20, null, lang);
+            batch.push({ ...stock, data, why, _rsi: +rsi.toFixed(1), _macd: +macd.toFixed(3) });
+          } catch {}
           await new Promise(r => setTimeout(r, limit.scanInterval));
         }
         results[market] = batch;
