@@ -272,8 +272,10 @@ async function handleRequest(req, res) {
         id: user.id, email: user.email, tier: user.tier,
         cpf: user.cpf || null,
         createdAt: user.createdAt, subscriptionEnd: user.subscriptionEnd,
+        portfolio: user.portfolio || [],
+        trackedPicks: user.trackedPicks || [],
         exportedAt: new Date().toISOString(),
-        note: 'Portfolio and tracking data is stored locally in your browser (localStorage). This export covers only your account record on our server.',
+        note: 'Portfolio and tracked picks are stored server-side when signed in. Account deletion removes all data per LGPD Art. 18.',
       });
     }
 
@@ -286,6 +288,48 @@ async function handleRequest(req, res) {
       users.splice(idx, 1);
       saveUsers(users);
       return sendJSON(res, 200, { ok: true, message: 'Account deleted. All server-side personal data has been removed.' });
+    }
+
+    // ─── PORTFOLIO ───────────────────────────────────────────────
+    if (pathname === '/api/portfolio' && req.method === 'GET') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      const user = findUser(authUser.email);
+      if (!user) return sendError(res, 404, 'User not found');
+      return sendJSON(res, 200, user.portfolio || []);
+    }
+
+    if (pathname === '/api/portfolio' && req.method === 'PUT') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      const body = await readBody(req);
+      if (!Array.isArray(body)) return sendError(res, 400, 'Portfolio must be an array');
+      const user = findUser(authUser.email);
+      if (!user) return sendError(res, 404, 'User not found');
+      user.portfolio = body;
+      saveUsers(users);
+      return sendJSON(res, 200, { ok: true });
+    }
+
+    // ─── TRACKED PICKS ───────────────────────────────────────────
+    if (pathname === '/api/tracked' && req.method === 'GET') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      const user = findUser(authUser.email);
+      if (!user) return sendError(res, 404, 'User not found');
+      return sendJSON(res, 200, user.trackedPicks || []);
+    }
+
+    if (pathname === '/api/tracked' && req.method === 'PUT') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      const body = await readBody(req);
+      if (!Array.isArray(body)) return sendError(res, 400, 'Tracked picks must be an array');
+      const user = findUser(authUser.email);
+      if (!user) return sendError(res, 404, 'User not found');
+      user.trackedPicks = body;
+      saveUsers(users);
+      return sendJSON(res, 200, { ok: true });
     }
 
     // ─── B3 TICKER AUTOCOMPLETE ──────────────────────────────────

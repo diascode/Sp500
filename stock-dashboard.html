@@ -296,6 +296,8 @@
 // ─── STATE ─────────────────────────────────────────────────────────────
 let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, displayedStocks: [] };
 let _portfolioMonthFilter = 'all';
+let _portfolioSaveTimer = null;
+let _trackedSaveTimer = null;
 let _signalFilter = 'buy';
 let _taxReportMonth = '';
 let _newsSentimentFilter = 'all';
@@ -335,6 +337,9 @@ async function checkAuth() {
         localStorage.setItem('jerry_course_started', '1');
         showEducationView();
       }
+      // US-104/105: sync portfolio and tracked picks from server
+      syncPortfolioFromServer();
+      syncTrackedFromServer();
     }
     else { setToken(null); authUser = null; updateAuthUI(); }
   } catch { authUser = null; updateAuthUI(); }
@@ -673,7 +678,7 @@ function acceptCookies() {
 }
 
 function showPrivacyNote() {
-  alert('MOMENTUM stores your session token and preferences in your browser\'s localStorage. No third-party tracking cookies are used. Your portfolio data is stored on our server only when you are signed in. You can export or delete your data at any time from the account menu.');
+  alert('MOMENTUM stores your session token and preferences in your browser\'s localStorage. No third-party tracking cookies are used. Your portfolio positions and watchlist are saved to our server when you are signed in, and permanently removed when you delete your account (LGPD Art. 18). You can export or delete your data at any time from the account menu.');
 }
 
 async function upgradeToPro() {
@@ -1323,9 +1328,35 @@ function renderPortfolioTable() {
 
 function removePosition(i) { removePortfolioItem(i); }
 
+async function pushPortfolioToServer() {
+  if (!authUser) return;
+  try {
+    const token = getToken();
+    await fetch('/api/portfolio', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(state.portfolio) });
+  } catch {}
+}
+
+async function syncPortfolioFromServer() {
+  if (!authUser) return;
+  try {
+    const server = await apiGet('/api/portfolio');
+    if (Array.isArray(server) && server.length > 0) {
+      state.portfolio = server;
+      localStorage.setItem('jerry_portfolio', JSON.stringify(state.portfolio));
+    } else if (state.portfolio.length > 0) {
+      await pushPortfolioToServer();
+    }
+    updatePortfolioSidebar();
+  } catch {}
+}
+
 async function savePortfolio() {
   localStorage.setItem('jerry_portfolio', JSON.stringify(state.portfolio));
   updatePortfolioSidebar();
+  if (authUser) {
+    clearTimeout(_portfolioSaveTimer);
+    _portfolioSaveTimer = setTimeout(pushPortfolioToServer, 2000);
+  }
 }
 
 function loadPortfolio() {
@@ -1660,8 +1691,34 @@ function clearTracked() {
   renderTrackedPicks();
 }
 
+async function pushTrackedToServer() {
+  if (!authUser) return;
+  try {
+    const token = getToken();
+    await fetch('/api/tracked', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(state.trackedPicks) });
+  } catch {}
+}
+
+async function syncTrackedFromServer() {
+  if (!authUser) return;
+  try {
+    const server = await apiGet('/api/tracked');
+    if (Array.isArray(server) && server.length > 0) {
+      state.trackedPicks = server;
+      localStorage.setItem('jerry_tracked', JSON.stringify(state.trackedPicks));
+    } else if (state.trackedPicks.length > 0) {
+      await pushTrackedToServer();
+    }
+    updateTrackedCount();
+  } catch {}
+}
+
 function saveTrackedPicks() {
   localStorage.setItem('jerry_tracked', JSON.stringify(state.trackedPicks));
+  if (authUser) {
+    clearTimeout(_trackedSaveTimer);
+    _trackedSaveTimer = setTimeout(pushTrackedToServer, 2000);
+  }
 }
 
 function loadTrackedPicks() {

@@ -1360,6 +1360,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Context:** Portfolio data (positions, tracked picks, loss carryforward, tax rate) is 100% localStorage-only. Users lose all data on browser clear, can't use the app on a second device, and account deletion cannot honor "Right to Erasure" for portfolio data. The consent dialog at line 828 incorrectly states data is stored server-side — a LGPD/GDPR inconsistency.
 
 ### US-104 — Server-Side Portfolio Storage
+**Status: ✅ Complete**
 **As a** Pro user, **I want** my portfolio positions saved to the server, **so that** I don't lose them when I clear my browser or switch devices.
 - `PUT /api/portfolio` — auth required; saves full portfolio JSON blob to user record.
 - `GET /api/portfolio` — auth required; returns saved blob or `[]`.
@@ -1368,16 +1369,19 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 9 · **Effort:** 1 day
 
 ### US-105 — Server-Side Tracked Picks Storage
+**Status: ✅ Complete**
 **As a** Pro user, **I want** my tracked picks saved to the server, **so that** my watchlist persists across browsers and devices.
 - `PUT /api/tracked` / `GET /api/tracked` — same pattern as US-104.
 **Sprint:** 9 · **Effort:** 3h
 
 ### US-106 — Fix Consent Dialog Data Storage Claim
+**Status: ✅ Complete**
 **As a** user, **I want** the consent dialog to accurately describe where my data is stored, **so that** I can make an informed consent decision.
 - Update consent text (line 828) to reflect actual storage (localStorage for portfolio, server for account). After US-104/105 land, update again to reflect server-side storage.
 **Sprint:** 9 · **Effort:** 30min · **Priority:** HIGH (LGPD)
 
 ### US-107 — Account Deletion Removes All Portfolio Data
+**Status: ✅ Complete**
 **As a** user who deletes their account, **I want** all my server-side data removed, **so that** my Right to Erasure (LGPD Art. 18) is fully honored.
 - `DELETE /api/auth/account` removes user row, portfolio blob, and tracked picks blob.
 **Sprint:** 9 · **Effort:** 30min
