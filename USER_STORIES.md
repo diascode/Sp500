@@ -1782,8 +1782,73 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ---
 
-*End of User Stories — v1.6*
-*160 stocks · 4 markets · 2 languages · 128 stories across 30 epics*
+---
+
+## Epic 31 — UI Polish & Brasil Focus (Sprint 11)
+
+**Context:** User feedback from live session: (1) the legacy market-tabs bar shows 9 items at once causing horizontal scroll and visual noise; (2) US and Emerging markets are not relevant for the target audience (Brazilian retail investors); (3) the "Scanner" nav-pill duplicates the scan button already on Início; (4) the market-tabs bar stays visible when the user navigates to non-scanner views; (5) the 📘 emoji on Primeiros Passos nav looks cluttered; (6) the Calendário Econômico lives in a legacy sidebar card that doesn't match the design system; (7) the candlestick chart is ~330px wide on desktop instead of filling the card; (8) the profile dropdown overflows the viewport horizontally; (9) general padding/margin inconsistencies throughout.
+
+### US-129 — Remove US and Emerging Markets (Brasil Focus)
+**As a** Brazilian investor, **I want** the app to show only Brasil (B3) and Europe markets, **so that** the interface stays focused on what's relevant to me.
+- Remove `🇺🇸 US` and `🌍 Emerging` buttons from the market-tabs bar.
+- Remove US and Emerging region-filter buttons from the scan-header segmented control.
+- Default market remains `'brasil'`. If `state.market` is `'us'` or `'emerging'` on load (legacy localStorage), reset to `'brasil'`.
+- Server-side: keep UNIVERSES.us and UNIVERSES.emerging data (don't delete), but the UI never exposes them.
+**Sprint:** 11 · **Effort:** 1h · **Priority:** HIGH
+
+### US-130 — Remove Scanner Nav Pill from Top Nav
+**As a** user, **I want** the top nav to not have a redundant "Scanner" button, **so that** navigation is clean and unambiguous.
+- Remove `<button class="nav-pill" … data-view="scan">Scanner</button>` from the AppBar nav.
+- Scan is initiated via the scan button on Início — no second entry point needed.
+- No functionality is lost; `scanAll()` remains callable from Início.
+**Sprint:** 11 · **Effort:** 15min
+
+### US-131 — Hide Market-Tabs Bar When Not on Scanner View
+**As a** user, **I want** the market-tabs row to disappear when I navigate to Acompanhados, Carteira, Primeiros Passos, or Simular, **so that** I don't see irrelevant market buttons while I'm in a different section.
+- `showTrackedView()`, `showPortfolioView()`, `showEducationView()`, `showSimulatorView()` each call `document.getElementById('marketTabs').style.display = 'none'`.
+- `switchMarket()` (Início) restores `marketTabs` to `display: 'flex'`.
+- The user-dropdown menu closes automatically (`display: 'none'`) whenever any nav-pill or market-tab is clicked.
+**Sprint:** 11 · **Effort:** 1h
+
+### US-132 — Remove Emoji from Primeiros Passos Nav Button
+**As a** user, **I want** the Primeiros Passos nav button to show only text (with the progress pill), **so that** the nav bar looks consistent with the other text-only pills.
+- Remove the `📘` emoji from the nav-pill label in the HTML and from `updateCourseNavBtn()`.
+- Progress pill `<span class="course-nav-pill">N/13</span>` is kept when progress > 0.
+- Result: `PRIMEIROS PASSOS` or `PRIMEIROS PASSOS 3/13`.
+**Sprint:** 11 · **Effort:** 15min
+
+### US-133 — Fix Candlestick Chart Width in Detail View
+**As a** user, **I want** the candlestick chart to fill the full width of the detail card on desktop, **so that** I can actually read the price action without squinting.
+- Add CSS: `.chart-container canvas { width: 100%; height: 320px; display: block; }`.
+- The existing `drawChart()` already reads `rect.width || canvas.offsetWidth || canvas.parentElement?.offsetWidth || 800` — once the CSS sets the width, the chart renders correctly.
+- Verify on desktop (≥900px) and mobile (375px); chart should be full-width on both.
+**Sprint:** 11 · **Effort:** 30min · **Priority:** HIGH
+
+### US-134 — Fix Profile Dropdown Viewport Overflow
+**As a** user on a narrower viewport, **I want** the profile dropdown to stay within the screen, **so that** I don't have to scroll right to see "Sair" or "Exportar dados".
+- Change `.user-dropdown` CSS: add `max-width: min(280px, calc(100vw - 32px))` and `right: 0; left: auto`.
+- On mobile (< 480px), pin the dropdown to `right: var(--s-3)` relative to the viewport using `position: fixed` with `top` derived from the AppBar height.
+**Sprint:** 11 · **Effort:** 30min
+
+### US-135 — Revamp Calendário Econômico into Design-System Card
+**As a** user, **I want** the economic calendar to look like the rest of the app and appear in a natural position on Início, **so that** it doesn't feel like a legacy sidebar afterthought.
+- Move `#calendarContent` out of `#legacySidebar` and into the Início view, rendered as a `.card` section between the market pulse news and the stock grid.
+- Restyle each event row: date chip (`eyebrow` typography), event name (`dek`), impact dot (green/yellow/red for low/medium/high).
+- Remove the `legacySidebar` wrapper and the old `side-card` CSS class from this element.
+- Calendar still loads via `loadCalendar()` on init; no server changes needed.
+**Sprint:** 11 · **Effort:** 2h
+
+### US-136 — Global Padding & Margin Audit
+**As a** user, **I want** consistent spacing between all cards and sections, **so that** the app feels polished and intentional.
+- Audit and fix: card gaps in the scanner results grid, detail view inner padding, nav-pill spacing, market-tabs padding, and the gap between AppBar and page content.
+- All spacing uses design-token values (`--s-*`) — no magic pixel values.
+- Verify on desktop (1280px), tablet (768px), and mobile (375px).
+**Sprint:** 11 · **Effort:** 2h
+
+---
+
+*End of User Stories — v1.7*
+*140 B3 + Europe stocks · 2 languages · 136 stories across 31 epics*
 
 | Sprint | Epics | Stories | Theme |
 |--------|-------|---------|-------|
@@ -1798,3 +1863,4 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 | 8 | 27 | US-99–103 | Server Reliability |
 | 9 | 28 | US-104–107 | Server-Side Portfolio Storage |
 | 10 | 29 | US-108–111 | Frontend State & Reliability |
+| 11 | 31 | US-129–136 | UI Polish & Brasil Focus |
