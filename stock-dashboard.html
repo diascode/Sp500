@@ -292,7 +292,7 @@
 <script src="/static/i18n.js"></script>
 <script>
 // ─── STATE ─────────────────────────────────────────────────────────────
-let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'dark', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, displayedStocks: [] };
+let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, displayedStocks: [] };
 let _portfolioMonthFilter = 'all';
 let _signalFilter = 'buy';
 let _taxReportMonth = '';
@@ -4089,9 +4089,11 @@ function initTheme() {
   const saved = localStorage.getItem('jerry_theme') || 'brasil';
   const idx = THEMES.indexOf(saved);
   _themeIdx = idx >= 0 ? idx : 0;
-  document.documentElement.setAttribute('data-theme', THEMES[_themeIdx]);
+  const t = THEMES[_themeIdx];
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('jerry_theme', t); // sanitise legacy values (e.g. 'onedark')
   const lbl = document.getElementById('themeLabel');
-  if (lbl) lbl.textContent = THEME_LABELS[THEMES[_themeIdx]];
+  if (lbl) lbl.textContent = THEME_LABELS[t];
 }
 
 // ─── INIT ───────────────────────────────────────────────────────────────
