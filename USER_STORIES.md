@@ -1151,6 +1151,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 ## Epic 24 — Primeiros Passos: Interactive Course (Sprint 5)
 
 ### US-80 — Rename & Reposition Education Tab
+
+**Status: ✅ Complete**
 **As a** new Pro user, **I want** "Primeiros Passos" to be the first tab I see and the default landing on first login, **so that** I start learning immediately instead of facing an empty scanner.
 - Button renamed to "📘 PRIMEIROS PASSOS" / "📘 FIRST STEPS" (EN/PT).
 - Moved to first position in secondary nav (before TRACKED).
@@ -1158,6 +1160,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 5 · **Effort:** 1h
 
 ### US-81 — Module Structure & Course Sidebar
+
+**Status: ✅ Complete**
 **As a** Pro user in Primeiros Passos, **I want** topics grouped into logical modules with a visible sidebar, **so that** I can see my learning path at a glance.
 - Constant `COURSE_MODULES`: 🌱 Fundamentos (strategy, why, diversify) · 🌎 O Mercado (brazilstats, sectors, realcases) · 📊 Análise Técnica (rsi, macd, adx, sma, bb, patterns) · 🇧🇷 Impostos (darf).
 - Two-column layout desktop (200px sidebar + content); mobile collapses to horizontal pill row.
@@ -1165,6 +1169,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 5 · **Effort:** 3h
 
 ### US-82 — Mark Topic as Complete / Undo
+
+**Status: ✅ Complete**
 **As a** Pro user, **I want** to mark each topic as complete, **so that** my progress is tracked and I feel a sense of accomplishment.
 - "Marcar como concluído" button at bottom of each topic content panel.
 - Toggle: marked → button reads "✅ Concluído — Desfazer"; click again → unmarked.
@@ -1172,18 +1178,24 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 5 · **Effort:** 2h
 
 ### US-83 — Progress Bar in Course Header
+
+**Status: ✅ Complete**
 **As a** Pro user, **I want** to see a progress bar showing how much of the course I've completed, **so that** I'm motivated to finish.
 - Header shows `████████░░ 62% · 8/13 tópicos concluídos`.
 - Updates immediately on each toggle (re-render); 0% state shows empty bar cleanly.
 **Sprint:** 5 · **Effort:** 1h
 
 ### US-84 — Progress Pill on Nav Button
+
+**Status: ✅ Complete**
 **As a** Pro user, **I want** the nav button to show my progress count, **so that** I can see how far I am without opening the course.
 - After first completion: button shows `📘 PRIMEIROS PASSOS 1/13` green pill.
 - Pill hidden at 0 (clean first impression); `updateCourseNavBtn()` called on every toggle.
 **Sprint:** 5 · **Effort:** 1h
 
 ### US-85 — "Próximo Tópico" Button
+
+**Status: ✅ Complete**
 **As a** Pro user, **I want** a "next topic" button at the bottom of each topic, **so that** I can flow through the course without clicking the sidebar.
 - Shows next incomplete topic: `→ Próximo: 🌱 Estratégia`.
 - Calls `switchEduTopic(nextId)` and scrolls content to top.
@@ -1191,6 +1203,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 5 · **Effort:** 1h
 
 ### US-86 — 100% Completion Celebration
+
+**Status: ✅ Complete**
 **As a** Pro user who finishes all 13 topics, **I want** a celebration moment, **so that** the completion feels meaningful.
 - `showToast(t('course_complete'), true, 6000)` when progress reaches 13.
 - Progress bar replaced by `🎉 Curso concluído!` banner.
@@ -1198,6 +1212,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 5 · **Effort:** 1h
 
 ### US-87 — Reset Course Progress
+
+**Status: ✅ Complete**
 **As a** Pro user, **I want** to reset my course progress, **so that** I can go through the material again.
 - "Recomeçar curso" small link in header (visible only when progress > 0).
 - `confirm()` dialog → clears `jerry_course_progress` and `jerry_course_started`.
