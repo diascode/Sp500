@@ -2553,8 +2553,70 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ---
 
-*End of User Stories — v2.0*
-*B3 stocks · português · 172 stories across 37 epics*
+---
+
+## Epic 38 — Sprint 18: Lista Interatividade (Acompanhar + Carteira)
+
+### US-173 — Corrigir Botão Acompanhar na Lista (Bug: função inexistente)
+**As a** usuário na view Lista,
+**I want** que o botão ⭐/✓ de cada linha funcione corretamente para adicionar ou remover a ação dos Acompanhados,
+**so that** posso montar minha watchlist diretamente da Lista sem abrir o detalhe da ação.
+
+**Root Cause:**
+A função `listaTrack()` chama `trackPickFromBtn()` (linha ~1471 do stock-dashboard.html), que **não existe**. A função correta é `trackPick(ticker, market, entryPrice, tp, sl)`. Por isso, ao clicar ⭐ para adicionar, ocorre um `ReferenceError` silencioso e nada acontece.
+
+**Acceptance Criteria:**
+- Clicar ⭐ em uma linha da Lista chama `trackPick()` com os dados corretos e adiciona o ticker em `state.trackedPicks`.
+- O botão muda visualmente para ✓ (com borda verde) ao ser adicionado.
+- Clicar ✓ remove o ticker de `state.trackedPicks` e o botão volta ao estado ⭐.
+- Um toast confirma a ação: "✅ TICKER TRACKED!" ao adicionar ou "TICKER removido dos acompanhados" ao remover.
+- A lista rerenderiza mantendo a posição de scroll e o filtro de busca ativo.
+
+**Sprint:** 18 · **Effort:** 30min
+
+---
+
+### US-174 — Remover Botão 📊 Duplicado da Tabela Lista
+**As a** usuário na view Lista,
+**I want** que o botão 📊 (gráfico de barras) que aparece em cada linha da tabela seja removido,
+**so that** a interface fique mais limpa e sem ações redundantes ou confusas ao lado do botão de Acompanhar.
+
+**Context:**
+O botão `📊` atual chama `openPortfolioModal()` que abre o modal de adicionar à Carteira, mas sua presença ao lado do ⭐ cria confusão (dois botões de ação por linha, sem label). A ação de adicionar à Carteira será substituída por um botão mais claro (US-175).
+
+**Acceptance Criteria:**
+- O botão `📊` (que chama `openPortfolioModal`) é removido do HTML gerado por `renderHomeLista()`.
+- Cada linha da Lista passa a ter apenas o botão ⭐/✓ de Acompanhar.
+- Nenhuma regressão na funcionalidade de Carteira acessada por outras rotas (modal de detalhe da ação, view Carteira).
+
+**Sprint:** 18 · **Effort:** 15min
+
+---
+
+### US-175 — Botão "Adicionar à Carteira" na Tabela Lista
+**As a** usuário na view Lista,
+**I want** um botão dedicado em cada linha da tabela para adicionar aquela ação à minha Carteira,
+**so that** posso registrar uma compra diretamente da Lista sem precisar abrir o detalhe do ativo.
+
+**UX:**
+- Ícone: 📊 (gráfico de barras colorido — conforme referência visual do usuário)
+- Label tooltip: "Adicionar à Carteira"
+- Comportamento: abre o `portfolioModal` com ticker e preço pré-preenchidos (mesmo comportamento do `openPortfolioModal()` atual)
+- Posição: coluna de ações, após o botão ⭐/✓, separado visualmente
+
+**Acceptance Criteria:**
+- Cada linha da Lista exibe o botão 📊 após o ⭐/✓.
+- Clicar 📊 abre o modal de Carteira (`showPortfolioModal()`) com o campo Ticker e Preço já preenchidos.
+- `event.stopPropagation()` impede que o clique no botão abra o detalhe da ação.
+- O botão tem `title="Adicionar à Carteira"` para acessibilidade.
+- Funciona tanto para ações com dados de scan (preço disponível) quanto para ações sem scan (preço = 0 → campo preço vazio).
+
+**Sprint:** 18 · **Effort:** 30min
+
+---
+
+*End of User Stories — v2.1*
+*B3 stocks · português · 175 stories across 38 epics*
 
 | Sprint | Epics | Stories | Theme |
 |--------|-------|---------|-------|
@@ -2575,4 +2637,5 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 | 14 | 34 | US-147–152 | Mobile UX & Open Access |
 | 15 | 35 | US-153–161 | Qualidade & Português Completo |
 | 16 | 36 | US-162–164 | Watchlist P&L, Lista Redesign & DARF Fix |
-| 17 | 37 | US-165–171 | Simular, Primeiros Passos & Mobile Profile |
+| 17 | 37 | US-165–172 | Simular, Primeiros Passos & Mobile Profile |
+| 18 | 38 | US-173–175 | Lista Interatividade: Acompanhar + Carteira |
