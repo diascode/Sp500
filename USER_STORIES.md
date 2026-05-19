@@ -1226,6 +1226,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Context:** `stock-dashboard.html` is 4,424 lines (89.8% JS). Logic, markup, i18n, indicators, and styles are entangled in a single file. Phase 1 splits static assets into separate files served by the existing Node server — no build step, no new npm dependencies, native ES modules (`<script type="module">`).
 
 ### US-88 — Static File Serving in server.js
+**Status: ✅ Complete**
 **As a** developer, **I want** `server.js` to serve a `/static/` directory, **so that** extracted JS/CSS modules can be loaded by the browser.
 - `server.js` serves `GET /static/*` from `./static/` directory with correct MIME types.
 - Path traversal protection: `fpath.startsWith(DIR + path.sep)` (fixes existing vulnerability).
@@ -1233,12 +1234,14 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 6 · **Effort:** 2h
 
 ### US-89 — Extract CSS to static/app.css
+**Status: ✅ Complete**
 **As a** developer, **I want** the 226-line `<style>` block in its own file, **so that** styling is separately editable and browser-cacheable.
 - Move `<style>` block to `static/app.css`; replace with `<link rel="stylesheet" href="/static/app.css">`.
 - Verify all 7 themes still work; no visual regression.
 **Sprint:** 6 · **Effort:** 1h
 
 ### US-90 — Extract i18n to static/i18n.js
+**Status: ✅ Complete**
 **As a** developer, **I want** the 558-key `LANGS` object in its own file, **so that** translations can be edited without touching application logic.
 - Move `LANGS` object to `static/i18n.js`; export as `window.LANGS` for backward compat.
 - Load via `<script src="/static/i18n.js">` before main script.
@@ -1246,6 +1249,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 6 · **Effort:** 1h
 
 ### US-91 — Extract Indicator Math to static/indicators.js
+**Status: ✅ Complete**
 **As a** developer, **I want** the pure technical-indicator functions in their own file, **so that** they can be read, tested, and changed without navigating 4,000 lines.
 - Move `calcSMA`, `calcRSI`, `calcMACD`, `calcADX`, `calcBB`, `calcATR`, `analyze`, `pickSignal`, `scorePatternMatch`, `buildPatternOverlay` (~500 lines, zero DOM coupling) to `static/indicators.js`.
 - All functions remain on `window` (no module system change required).
@@ -1253,12 +1257,14 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 6 · **Effort:** 2h
 
 ### US-92 — Extract FX Helpers to static/fx.js
+**Status: ✅ Complete**
 **As a** developer, **I want** the FX rate fetching and conversion helpers isolated, **so that** currency logic is centrally owned.
 - Move `fetchFxRates`, `getFxRates`, `getCurrencySymbol`, `convertToUSD`, `renderFxBar` and related constants (`FX_CACHE_KEY`, `FX_CACHE_TTL`) to `static/fx.js`.
 - Verify FX bar still updates and portfolio currency conversion still works.
 **Sprint:** 6 · **Effort:** 1h
 
 ### US-93 — Extract Patterns Data to static/patterns.js
+**Status: ✅ Complete**
 **As a** developer, **I want** the `PATTERNS` definition array in its own file, **so that** adding or editing patterns doesn't require touching the main script.
 - Move `PATTERNS` array (~200 lines) to `static/patterns.js`.
 - Pattern simulator and pattern detection still work after extraction.
