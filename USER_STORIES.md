@@ -1404,6 +1404,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ### US-112 — Design Tokens & Typography
 
+**Status: ✅ Complete**
+
 **As a** developer,
 **I want** the CSS custom properties and font stack replaced with the new design system,
 **so that** all subsequent component work inherits the correct tokens automatically.
@@ -1425,6 +1427,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ### US-113 — AppBar Redesign
 
+**Status: ✅ Complete**
+
 **As a** user,
 **I want** the top navigation bar to reflect the new Momentum brand with the correct layout and user controls,
 **so that** the app feels like a modern Brazilian fintech product from the first pixel.
@@ -1443,6 +1447,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 ---
 
 ### US-114 — Home Screen
+
+**Status: ✅ Complete**
 
 **As a** user,
 **I want** the Home screen to show a personalised greeting, portfolio summary, and featured stock picks,
@@ -1465,6 +1471,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ### US-115 — Scanner Screen
 
+**Status: ✅ Complete**
+
 **As a** user,
 **I want** the Scanner screen to use the new segmented region control, filter chips, and ScanRing animation,
 **so that** scanning feels fast and visually distinct from the old terminal aesthetic.
@@ -1482,6 +1490,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 ---
 
 ### US-116 — Stock Detail Screen
+
+**Status: ✅ Complete**
 
 **As a** user,
 **I want** the Stock Detail screen to clearly show the signal rationale, chart, levels, and indicators in the new layout,
@@ -1502,6 +1512,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ### US-117 — Tracked / Watchlist Screen
 
+**Status: ✅ Complete**
+
 **As a** user,
 **I want** the Tracked screen to display my picks as the new FeedCard grid,
 **so that** monitoring my watchlist feels consistent with the rest of the app.
@@ -1519,6 +1531,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ### US-118 — Learn / Education Screen
 
+**Status: ✅ Complete**
+
 **As a** user,
 **I want** the Learn screen to use the new lesson card layout with the onboarding hero,
 **so that** the education section invites beginners rather than overwhelming them.
@@ -1534,6 +1548,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 ---
 
 ### US-119 — Portfolio Screen
+
+**Status: ✅ Complete**
 
 **As a** Pro user,
 **I want** the Portfolio screen to lead with big stat cards and a clean table layout,
@@ -1553,6 +1569,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ### US-120 — Correlation Screen (Pro Paywall + Matrix)
 
+**Status: ✅ Complete**
+
 **As a** Pro user,
 **I want** the Correlation screen to show the paywall for free users and the full heatmap for Pro/Admin,
 **so that** the feature gate is clear and the Pro experience is visually compelling.
@@ -1567,6 +1585,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 ---
 
 ### US-121 — DARF / IR Screen (Pro Paywall + Table)
+
+**Status: ✅ Complete**
 
 **As a** Brazilian Pro user,
 **I want** the DARF screen to present the paywall clearly and, when unlocked, show my tax liability with all required context,
@@ -1586,6 +1606,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ### US-122 — Simulator Screen
 
+**Status: ✅ Complete**
+
 **As a** any user,
 **I want** a Simulator screen where I can pick an amount and a stock to see best/expected/worst-case scenarios,
 **so that** I can understand potential outcomes before investing real money.
@@ -1604,6 +1626,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ### US-123 — Admin Panel Restyle
 
+**Status: ✅ Complete**
+
 **As an** admin,
 **I want** the Admin panel to use the new design language,
 **so that** the management interface matches the rest of the app.
@@ -1619,6 +1643,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 ---
 
 ### US-124 — Auth Modal Redesign
+
+**Status: ✅ Complete**
 
 **As a** visitor or returning user,
 **I want** the sign-in / sign-up modal to use the new friendly layout,
@@ -1640,6 +1666,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ### US-125 — LGPD Cookie Banner
 
+**Status: ✅ Complete**
+
 **As a** first-time visitor,
 **I want** to see a LGPD-compliant cookie consent banner,
 **so that** I understand how the app uses browser storage before proceeding.
@@ -1655,6 +1683,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 ---
 
 ### US-126 — Mobile Bottom Nav & Responsive Breakpoints
+
+**Status: ✅ Complete**
 
 **As a** mobile user,
 **I want** a bottom navigation bar and correctly stacked layouts under 720px,
@@ -1675,6 +1705,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ### US-127 — generateWhy() Server Function
 
+**Status: ✅ Complete**
+
 **As a** beginner user,
 **I want** each stock card to explain its signal in plain Portuguese,
 **so that** I understand *why* MOMENTUM recommends buying, holding, or selling.
@@ -1691,6 +1723,8 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 ---
 
 ### US-128 — Replace Legacy Themes with Four New Themes
+
+**Status: ✅ Complete**
 
 **As a** user,
 **I want** the theme switcher to offer the four new Brazilian fintech themes,
