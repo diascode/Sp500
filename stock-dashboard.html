@@ -20,76 +20,64 @@
 
 <header class="appbar" id="appbar">
   <div class="appbar-inner">
-    <!-- Brand -->
-    <div class="appbar-brand">
-      <div class="brand-mark">M</div>
-      <span class="brand-name">Momentum</span>
-    </div>
 
-    <!-- Center nav (desktop only) -->
-    <nav class="appbar-nav" id="appbarNav">
-      <button class="nav-pill active" onclick="switchMarket(state.market)" data-view="home">Início</button>
-      <button class="nav-pill" onclick="scanAll()" data-view="scan">Scanner</button>
-      <button class="nav-pill" id="learnNavBtn" onclick="showEducationView()" data-view="learn">📘 PRIMEIROS PASSOS</button>
-      <button class="nav-pill" onclick="showTrackedView()" data-view="tracked">Acompanhados</button>
-      <button class="nav-pill" onclick="showSimulatorView()" data-view="simulator">Simular</button>
-      <button class="nav-pill" onclick="showPortfolioView()" data-view="portfolio">Carteira</button>
-    </nav>
-
-    <!-- Right controls -->
-    <div class="appbar-right">
-      <!-- FX ticker desktop only -->
-      <div class="fx-bar" id="fxBar"></div>
-
-      <!-- Language toggle -->
-      <div class="lang-toggle" id="langToggle">
-        <button class="lang-btn active" onclick="switchLang('pt')" id="langPt">PT</button>
-        <button class="lang-btn" onclick="switchLang('en')" id="langEn">EN</button>
+    <!-- Row 1: Brand + Auth controls -->
+    <div class="appbar-row1">
+      <div class="appbar-brand">
+        <div class="brand-mark">M</div>
+        <span class="brand-name">Momentum</span>
       </div>
-
-      <!-- Theme toggle -->
-      <button class="btn-ghost" id="themeBtn" onclick="toggleTheme()"><span id="themeLabel">Brasil</span></button>
-
-      <!-- Scan CTA -->
-      <button class="btn-primary appbar-scan" id="scanBtn" onclick="scanAll()">⚡ Varrer</button>
-
-      <!-- Auth: signed out -->
-      <button class="btn-ghost" id="signInBtn" onclick="showAuthModal()" style="display:none">Entrar</button>
-
-      <!-- Auth: signed in -->
-      <div class="user-menu" id="userMenu" style="display:none">
-        <button class="user-btn" id="userBtn" onclick="toggleUserMenu()">
-          <span class="user-avatar" id="userAvatar">T</span>
-          <span class="tier-chip" id="tierChip">Free</span>
-        </button>
-        <div class="user-dropdown" id="userDropdown" style="display:none">
-          <div class="dropdown-header">
-            <div class="dropdown-email" id="dropdownEmail"></div>
-            <div class="dropdown-tier" id="dropdownTier"></div>
+      <div class="appbar-right">
+        <!-- Theme toggle -->
+        <button class="btn-ghost" id="themeBtn" onclick="toggleTheme()"><span id="themeLabel">Brasil</span></button>
+        <!-- Font size -->
+        <button class="btn-ghost font-size-btn" id="fontSizeBtn" onclick="cycleFontSize()" title="Tamanho da fonte">A</button>
+        <!-- Scan CTA (hidden, used for progress display) -->
+        <button class="btn-primary appbar-scan" id="scanBtn" onclick="scanAll()" style="display:none">⚡ Varrer</button>
+        <!-- Auth: signed out -->
+        <button class="btn-ghost" id="signInBtn" onclick="showAuthModal()" style="display:none">Entrar</button>
+        <!-- Auth: signed in -->
+        <div class="user-menu" id="userMenu" style="display:none">
+          <button class="user-btn" id="userBtn" onclick="toggleUserMenu()">
+            <span class="user-avatar" id="userAvatar">T</span>
+            <span class="tier-chip" id="tierChip">Free</span>
+          </button>
+          <div class="user-dropdown" id="userDropdown" style="display:none">
+            <div class="dropdown-header">
+              <div class="dropdown-email" id="dropdownEmail"></div>
+              <div class="dropdown-tier" id="dropdownTier"></div>
+            </div>
+            <button class="dropdown-item" onclick="showChangePassword()">🔑 Alterar senha</button>
+            <button class="dropdown-item" id="adminPanelBtn" onclick="showAdminView()" style="display:none">⚙️ Painel admin</button>
+            <button class="dropdown-item" onclick="exportMyData()">📥 Exportar meus dados</button>
+            <button class="dropdown-item danger" onclick="logout()">🚪 Sair</button>
+            <button class="dropdown-item danger" onclick="deleteMyAccount()">🗑️ Excluir conta</button>
           </div>
-          <button class="dropdown-item" onclick="showChangePassword()">🔑 Alterar senha</button>
-          <button class="dropdown-item pro-item" id="goProBtn" onclick="upgradeToPro()" style="display:none">⭐ Virar Pro</button>
-          <button class="dropdown-item" id="adminPanelBtn" onclick="showAdminView()" style="display:none">⚙️ Painel admin</button>
-          <button class="dropdown-item" onclick="exportMyData()">📥 Exportar meus dados</button>
-          <button class="dropdown-item danger" onclick="logout()">🚪 Sair</button>
-          <button class="dropdown-item danger" onclick="deleteMyAccount()">🗑️ Excluir conta</button>
         </div>
       </div>
     </div>
+
+    <!-- Row 2: Nav pills + FX bar (hidden on mobile — bottom nav used instead) -->
+    <div class="appbar-row2" id="appbarRow2">
+      <nav class="appbar-nav" id="appbarNav">
+        <button class="nav-pill active" onclick="switchMarket(state.market)" data-view="home">Início</button>
+        <button class="nav-pill" onclick="showTrackedView()" data-view="tracked">Acompanhados</button>
+        <button class="nav-pill" onclick="showSimulatorView()" data-view="simulator">Simular</button>
+        <button class="nav-pill" onclick="showPortfolioView()" data-view="portfolio">Carteira</button>
+      </nav>
+      <div class="fx-bar" id="fxBar"></div>
+    </div>
+
   </div>
 </header>
 
-<div class="market-tabs" id="marketTabs">
-  <button class="btn active-market" data-market="brasil" onclick="switchMarket('brasil')">🇧🇷 Brasil</button>
-  <button class="btn" data-market="us" onclick="switchMarket('us')">🇺🇸 US (50)</button>
-  <button class="btn" data-market="europe" onclick="switchMarket('europe')">🇪🇺 Europe (30)</button>
-  <button class="btn" data-market="emerging" onclick="switchMarket('emerging')">🌍 Emerging</button>
-  
-  <button class="btn" onclick="showTrackedView()" id="trackedTabBtn">📋 TRACKED (<span id="trackedCount">0</span>)</button>
-  <button class="btn" onclick="showUniverseView()" id="universeTabBtn">📈 ALL STOCKS</button>
-  <button class="btn" onclick="showEducationView()" id="patternsTabBtn" style="display:none">📘 EDUCATION</button>
-  <button class="btn" onclick="showSimulateView()" id="simulateTabBtn" style="display:none">🔍 PATTERNS</button>
-  <button class="btn" onclick="showPortfolioView()" id="portfolioTabBtn">📊 MY STOCKS AND TAX REPORTS</button>
+<div id="marketTabs" style="display:none">
+  <span id="trackedCount">0</span>
+  <button id="trackedTabBtn" onclick="showTrackedView()"></button>
+  <button id="universeTabBtn" onclick="showUniverseView()"></button>
+  <button id="patternsTabBtn" onclick="showEducationView()"></button>
+  <button id="simulateTabBtn" onclick="showSimulateView()"></button>
+  <button id="portfolioTabBtn" onclick="showPortfolioView()"></button>
 </div>
 
 <!-- Stats kept for JS compat, hidden from view -->
@@ -103,14 +91,17 @@
 <!-- New scanner header -->
 <div class="scan-header" id="scanHeader">
   <h1 class="hed1" id="scanHed">Pronto para varrer o mercado.</h1>
-  <div class="scan-controls">
-    <div class="seg" id="regionSeg">
-      <button class="seg-btn active" data-region="all" onclick="filterRegion('all')">Todos</button>
-      <button class="seg-btn" data-region="brasil" onclick="filterRegion('brasil')">🇧🇷 BR</button>
-      <button class="seg-btn" data-region="us" onclick="filterRegion('us')">🇺🇸 US</button>
-      <button class="seg-btn" data-region="europe" onclick="filterRegion('europe')">🇪🇺 EU</button>
-      <button class="seg-btn" data-region="emerging" onclick="filterRegion('emerging')">🌍 EM</button>
-    </div>
+
+  <!-- Home view mode switcher (US-144) -->
+  <div class="seg" id="homeModesSeg" style="margin-top:var(--s-4)">
+    <button class="seg-btn" data-mode="sinais" onclick="setHomeMode('sinais')">⚡ Sinais</button>
+    <button class="seg-btn" data-mode="lista"  onclick="setHomeMode('lista')">📋 Lista</button>
+    <button class="seg-btn" data-mode="padroes" onclick="setHomeMode('padroes')">🕯 Padrões</button>
+  </div>
+
+  <!-- Sinais controls (shown only in sinais mode) -->
+  <div class="scan-controls" id="sinaisControls">
+    <div id="regionSeg" style="display:none"></div>
     <div class="filter-chips" id="signalFilterChips">
       <button class="chip chip-active" data-signal="buy" onclick="filterSignal('buy')">Compra</button>
       <button class="chip" data-signal="neutral" onclick="filterSignal('neutral')">Aguardar</button>
@@ -121,77 +112,43 @@
   </div>
 </div>
 
-<!-- Scan progress ring -->
-<div class="scan-progress" id="scanProgress" style="display:none">
-  <div class="scan-ring-wrap" id="scanRingWrap"></div>
-  <p class="scan-progress-text" id="scanProgressText">Iniciando varredura…</p>
-  <div class="progress-bar-track"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+<!-- Scan progress (hidden — progress shown on scan button) -->
+<div id="scanProgress" style="display:none">
+  <div id="scanRingWrap"></div>
+  <p id="scanProgressText"></p>
+  <div><div id="progressFill"></div></div>
 </div>
 
 <!-- FeedCard results grid -->
 <div class="scan-grid" id="resultsGrid" style="display:none"></div>
 
-<!-- Pro upsell (kept hidden, referenced by JS) -->
-<div id="proUpsell" style="display:none"></div>
-  <div id="proUpsell" style="display:none;margin:0 auto 16px;max-width:1400px;border-radius:10px;border:1px solid rgba(255,193,7,0.3);background:linear-gradient(135deg,rgba(255,193,7,0.08),rgba(200,90,23,0.12));padding:16px 20px">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-      <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent-amber);letter-spacing:0.5px">⭐ UNLOCK FULL ACCESS — GO PRO</div>
-      <button class="btn" onclick="upgradeToPro()" style="font-size:12px;padding:10px 22px;background:linear-gradient(135deg,#ff8c00,#c85a17);color:#fff;border:none;font-weight:700;letter-spacing:1px;white-space:nowrap;box-shadow:0 0 20px rgba(200,90,23,0.3)">⬆ GO PRO — €9/MO</button>
-    </div>
-    <table style="width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:10px">
-      <thead><tr style="border-bottom:1px solid var(--border)">
-        <th style="padding:6px 8px;text-align:left;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">Feature</th>
-        <th style="padding:6px 8px;text-align:center;color:var(--green-bull);width:80px">🟢 FREE</th>
-        <th style="padding:6px 8px;text-align:center;color:var(--accent-amber);width:80px">⭐ PRO</th>
-      </tr></thead>
-      <tbody>
-        <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;color:var(--text-secondary)">🔍 Stocks per market</td><td style="padding:5px 8px;text-align:center;color:var(--text-dim)">5</td><td style="padding:5px 8px;text-align:center;color:var(--accent-amber)">Unlimited</td></tr>
-        <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;color:var(--text-secondary)">📌 Tracked picks</td><td style="padding:5px 8px;text-align:center;color:var(--text-dim)">5 max</td><td style="padding:5px 8px;text-align:center;color:var(--accent-amber)">Unlimited</td></tr>
-        <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;color:var(--text-secondary)">📊 MY STOCKS &amp; TAX REPORTS</td><td style="padding:5px 8px;text-align:center;color:var(--red-bear)">❌</td><td style="padding:5px 8px;text-align:center;color:var(--accent-amber)">✅</td></tr>
-        <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;color:var(--text-secondary)">📅 Monthly P&amp;L breakdown</td><td style="padding:5px 8px;text-align:center;color:var(--red-bear)">❌</td><td style="padding:5px 8px;text-align:center;color:var(--accent-amber)">✅</td></tr>
-        <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;color:var(--text-secondary)">💰 Tax report (CSV/MD/PDF)</td><td style="padding:5px 8px;text-align:center;color:var(--red-bear)">❌</td><td style="padding:5px 8px;text-align:center;color:var(--accent-amber)">✅</td></tr>
-        <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;color:var(--text-secondary)">🔗 Correlation matrix</td><td style="padding:5px 8px;text-align:center;color:var(--red-bear)">❌</td><td style="padding:5px 8px;text-align:center;color:var(--accent-amber)">✅</td></tr>
-        <tr><td style="padding:5px 8px;color:var(--text-secondary)">⚡ Priority scanning</td><td style="padding:5px 8px;text-align:center;color:var(--text-dim)">—</td><td style="padding:5px 8px;text-align:center;color:var(--accent-amber)">✅</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
 
 <!-- Legacy dashboard container — used by tracked/portfolio/admin views -->
 <div class="dashboard" id="dashboard" style="display:none"></div>
 
+<!-- Calendário Econômico — shown on Início only -->
+<section id="calendarSection">
+  <div class="shell" style="padding-top:var(--s-5);padding-bottom:var(--s-6)">
+    <div class="kicker" id="calTitle">📅 Calendário Econômico</div>
+    <div id="calendarContent" style="margin-top:var(--s-4)"><div style="color:var(--ink-3);font-size:13px">Carregando…</div></div>
+  </div>
+</section>
+
 <div id="legacySidebar">
 <div class="side-section">
   <div class="side-card">
-    <h3 id="calTitle">📅 ECONOMIC CALENDAR</h3>
-    <div id="calendarContent"><div style="color:var(--text-dim);font-size:11px">Loading...</div></div>
-  </div>
-  <div class="side-card" style="margin-top:12px">
     <h3 id="newsSentimentTitle">📰 MARKET NEWS</h3>
-    <div id="newsSentimentContent"><div style="color:var(--text-dim);font-size:11px" id="newsSentimentEmpty">Run a scan to see news.</div></div>
+    <div id="newsSentimentContent"><div style="color:var(--ink-3);font-size:11px" id="newsSentimentEmpty">Run a scan to see news.</div></div>
   </div>
 </div>
 
 <div class="side-section">
   <!-- Signal History removed -->
   <div class="side-card">
-    <div id="correlationSection" style="display:none">
+    <div id="correlationSection">
       <h3 id="lbl_correlationTitle">🔗 CORRELATION</h3>
-      <div id="lbl_correlationDesc" style="font-size:10px;color:var(--text-dim);margin-bottom:8px;line-height:1.4">Measures how stocks move together. 🟢 +0.7 = move in sync. 🔴 -0.3 = move opposite. Diversify across uncorrelated picks.</div>
-      <div id="correlationContent"><div style="color:var(--text-dim);font-size:11px">Scan at least 2 tickers to show correlation.</div></div>
-    </div>
-    <div id="correlationProLock" style="display:block">
-      <div style="background:linear-gradient(160deg,color-mix(in srgb,var(--magenta) 16%,var(--bg-2)),var(--bg-2));border:1px solid color-mix(in srgb,var(--magenta) 30%,var(--line));border-radius:var(--r-xl);padding:24px;text-align:center">
-        <div style="width:52px;height:52px;border-radius:50%;background:var(--magenta);color:var(--bg);font-size:26px;display:grid;place-items:center;margin:0 auto 14px">⭐</div>
-        <h3 style="font-family:var(--font-display);font-size:17px;font-weight:700;margin:0 0 8px;color:var(--ink)">Matriz de correlação é Pro</h3>
-        <p style="font-size:13px;color:var(--ink-3);margin:0 0 14px;line-height:1.5">Veja como seus ativos se movem juntos e diversifique com inteligência.</p>
-        <ul style="list-style:none;padding:0;margin:0 0 16px;display:flex;flex-direction:column;gap:6px;text-align:left">
-          <li style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2)"><span style="width:18px;height:18px;border-radius:50%;background:var(--primary);color:var(--primary-ink);display:grid;place-items:center;font-size:10px;font-weight:700;flex-shrink:0">✓</span>Heatmap 6×6 colorido</li>
-          <li style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2)"><span style="width:18px;height:18px;border-radius:50%;background:var(--primary);color:var(--primary-ink);display:grid;place-items:center;font-size:10px;font-weight:700;flex-shrink:0">✓</span>Pares descorrelacionados</li>
-          <li style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2)"><span style="width:18px;height:18px;border-radius:50%;background:var(--primary);color:var(--primary-ink);display:grid;place-items:center;font-size:10px;font-weight:700;flex-shrink:0">✓</span>Insights em português</li>
-        </ul>
-        <button class="btn-magenta" onclick="upgradeToPro()" style="width:100%;padding:10px 16px;font-size:13px">⭐ Virar Pro — R$ 9/mês</button>
-      </div>
+      <div id="lbl_correlationDesc" style="font-size:10px;color:var(--ink-3);margin-bottom:8px;line-height:1.4">Measures how stocks move together. 🟢 +0.7 = move in sync. 🔴 -0.3 = move opposite. Diversify across uncorrelated picks.</div>
+      <div id="correlationContent"><div style="color:var(--ink-3);font-size:11px">Scan at least 2 tickers to show correlation.</div></div>
     </div>
   </div>
 </div>
@@ -273,7 +230,6 @@
       <button class="btn" onclick="exportCSV('portfolio')" style="font-size:10px" id="portfolioModalCsv">📥 CSV</button>
       <button class="btn" onclick="exportMD('portfolio')" style="font-size:10px" id="portfolioModalMd">📝 MD</button>
     </div>
-    <div id="portfolioLimitNote" style="font-size:10px;color:var(--text-dim);margin-bottom:8px">Free tier: max 3 positions. <span style="color:var(--accent-amber);cursor:pointer" onclick="upgradeToPro()">Upgrade to Pro</span> for unlimited.</div>
     <div style="margin-bottom:12px">
       <input class="search-input" id="portfolioTicker" placeholder="TICKER" style="width:100px">
       <input class="search-input" id="portfolioShares" placeholder="SHARES" type="number" style="width:80px">
@@ -294,7 +250,7 @@
 <script src="/static/fx.js"></script>
 <script>
 // ─── STATE ─────────────────────────────────────────────────────────────
-let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, displayedStocks: [] };
+let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, displayedStocks: [], homeMode: localStorage.getItem('momentum_home_mode') || 'sinais' };
 let _portfolioMonthFilter = 'all';
 let _portfolioSaveTimer = null;
 let _trackedSaveTimer = null;
@@ -303,6 +259,30 @@ let _scanAbort = null;
 let _taxReportMonth = '';
 let _newsSentimentFilter = 'all';
 let _marketPulseNews = [];
+
+// ─── FEATURE FLAGS ───────────────────────────────────────────────────────
+let _featureFlags = {
+  correlation:   { free: true, pro: true },
+  patternFinder: { free: true, pro: true },
+  simulator:     { free: true, pro: true },
+  darfReport:    { free: true, pro: true },
+  portfolio:     { free: true, pro: true },
+  trackedPicks:  { free: true, pro: true },
+};
+
+async function loadFeatureFlags() {
+  try {
+    const data = await fetch('/api/feature-flags').then(r => r.json());
+    if (data && typeof data === 'object') _featureFlags = { ..._featureFlags, ...data };
+  } catch {}
+}
+
+function featureEnabled(key) {
+  const tier = authUser ? (authUser.tier === 'admin' ? 'pro' : authUser.tier) : 'free';
+  const flag = _featureFlags[key];
+  if (!flag) return true;
+  return flag[tier] !== false;
+}
 
 // ─── AUTH ────────────────────────────────────────────────────────────────
 const TOKEN_KEY = 'momentum_token';
@@ -332,12 +312,6 @@ async function checkAuth() {
     const data = await apiGet('/api/auth/me');
     if (data.id) {
       authUser = data; updateAuthUI();
-      // US-80: first-time Pro login lands on course
-      const isPro = authUser.tier === 'pro' || authUser.tier === 'admin';
-      if (isPro && !localStorage.getItem('jerry_course_started')) {
-        localStorage.setItem('jerry_course_started', '1');
-        showEducationView();
-      }
       // US-104/105: sync portfolio and tracked picks from server
       syncPortfolioFromServer();
       syncTrackedFromServer();
@@ -365,7 +339,6 @@ async function updateAuthUI() {
   const dropdownTier = document.getElementById('dropdownTier');
   const userAvatar = document.getElementById('userAvatar');
   const tierChip = document.getElementById('tierChip');
-  const goProBtn = document.getElementById('goProBtn');
   const adminPanelBtn = document.getElementById('adminPanelBtn');
   if (!signInBtn) return;
   if (authUser) {
@@ -373,55 +346,22 @@ async function updateAuthUI() {
     userMenu.style.display = 'block';
     if (userAvatar) userAvatar.textContent = authUser.email.charAt(0).toUpperCase();
     if (dropdownEmail) dropdownEmail.textContent = authUser.email;
-    if (dropdownTier) dropdownTier.textContent = authUser.tier === 'admin' ? '👑 Admin' : (authUser.tier === 'pro' ? '⭐ Pro subscriber' : 'Free tier');
+    if (dropdownTier) dropdownTier.textContent = authUser.tier === 'admin' ? '👑 Admin' : (authUser.tier === 'pro' ? '⭐ Pro' : 'Free');
     if (tierChip) tierChip.textContent = authUser.tier === 'admin' ? 'Admin' : (authUser.tier === 'pro' ? 'Pro' : 'Free');
-    // Show/hide Go Pro button
-    if (goProBtn) {
-      if (authUser.tier === 'free') {
-        goProBtn.style.display = 'flex';
-        goProBtn.textContent = '⭐ Virar Pro';
-      } else if (authUser.tier === 'pro') {
-        goProBtn.style.display = 'flex';
-        goProBtn.textContent = '⚙ Gerenciar Assinatura';
-      } else {
-        goProBtn.style.display = 'none';
-      }
-    }
-    // Admin check
+    // Admin panel button
     if (adminPanelBtn) {
       try {
         const data = await apiGet('/api/admin/users');
         adminPanelBtn.style.display = data.error ? 'none' : 'flex';
       } catch { adminPanelBtn.style.display = 'none'; }
     }
-    // Show pro upsell for non-admin users
-    const upsell = document.getElementById('proUpsell');
-    if (upsell) upsell.style.display = (authUser.tier === 'admin' || authUser.tier === 'pro') ? 'none' : 'block';
-    // Pro-lock Correlation (admins get full access)
-    const isPro = authUser.tier === 'pro' || authUser.tier === 'admin';
-    const corrSection = document.getElementById('correlationSection');
-    const corrLock = document.getElementById('correlationProLock');
-    if (corrSection) corrSection.style.display = isPro ? 'block' : 'none';
-    if (corrLock) corrLock.style.display = isPro ? 'none' : 'block';
-    // Education & Simulator: admin only
-    const patternsBtn = document.getElementById('patternsTabBtn');
-    if (patternsBtn) patternsBtn.style.display = authUser.tier === 'admin' ? 'inline-block' : 'none';
-    const simBtn = document.getElementById('simulateTabBtn');
-    if (simBtn) simBtn.style.display = authUser.tier === 'admin' ? 'inline-block' : 'none';
-    // Language toggle: show for all logged-in users
+    // All features open — no pro gates
     const langToggleEl = document.getElementById('langToggle');
     if (langToggleEl) langToggleEl.style.display = 'flex';
     updateCourseNavBtn();
   } else {
     signInBtn.style.display = 'inline-block';
     userMenu.style.display = 'none';
-    const upsell = document.getElementById('proUpsell');
-    if (upsell) upsell.style.display = 'none';
-    // Hide pro-locked sections for non-auth users
-    const corrLock = document.getElementById('correlationProLock');
-    if (corrLock) corrLock.style.display = 'block';
-    const corrSec = document.getElementById('correlationSection');
-    if (corrSec) corrSec.style.display = 'none';
   }
 }
 
@@ -448,11 +388,11 @@ async function showProfile() {
   const cpfVal = (authUser && authUser.cpf) ? formatCPF(authUser.cpf) : '';
   container.innerHTML = `
     <div class="card" style="max-width:420px;margin:40px auto">
-      <h3 style="font-family:var(--font-mono);color:var(--accent-amber);margin-bottom:4px">👤 ${t('profile_title')}</h3>
-      <div style="font-size:10px;color:var(--text-dim);margin-bottom:16px">${authUser ? authUser.email : ''}</div>
-      <label style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px">${t('profile_cpf')}</label>
+      <h3 style="font-family:var(--font-mono);color:var(--primary);margin-bottom:4px">👤 ${t('profile_title')}</h3>
+      <div style="font-size:10px;color:var(--ink-3);margin-bottom:16px">${authUser ? authUser.email : ''}</div>
+      <label style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px">${t('profile_cpf')}</label>
       <input class="search-input" id="profileCpf" type="text" inputmode="numeric" placeholder="000.000.000-00" value="${cpfVal}" maxlength="14" oninput="this.value=formatCPF(this.value)" style="width:100%;margin-bottom:4px;font-size:13px;font-family:var(--font-mono)">
-      <div style="font-size:10px;color:var(--text-dim);margin-bottom:12px">${t('profile_cpfHint')}</div>
+      <div style="font-size:10px;color:var(--ink-3);margin-bottom:12px">${t('profile_cpfHint')}</div>
       <div style="display:flex;gap:8px">
         <button class="btn primary" onclick="submitProfile()" style="flex:1">${t('profile_save')}</button>
         <button class="btn" onclick="renderDashboard()">${t('auth_cancel')}</button>
@@ -466,15 +406,15 @@ async function submitProfile() {
   const msgEl = document.getElementById('profileMsg');
   const cpf = input.value.trim();
   if (cpf && !validateCPFClient(cpf)) {
-    msgEl.style.color = 'var(--red-bear)'; msgEl.textContent = t('profile_cpfInvalid'); msgEl.style.display = 'block'; return;
+    msgEl.style.color = 'var(--sell)'; msgEl.textContent = t('profile_cpfInvalid'); msgEl.style.display = 'block'; return;
   }
   msgEl.style.display = 'none';
   const data = await apiPost('/api/auth/profile', { cpf });
   if (data.ok) {
     if (authUser) authUser.cpf = data.cpf;
-    msgEl.style.color = 'var(--green-bull)'; msgEl.textContent = '✅ ' + t('profile_saved'); msgEl.style.display = 'block';
+    msgEl.style.color = 'var(--buy)'; msgEl.textContent = '✅ ' + t('profile_saved'); msgEl.style.display = 'block';
   } else {
-    msgEl.style.color = 'var(--red-bear)'; msgEl.textContent = data.error || t('errors_fillFields'); msgEl.style.display = 'block';
+    msgEl.style.color = 'var(--sell)'; msgEl.textContent = data.error || t('errors_fillFields'); msgEl.style.display = 'block';
   }
 }
 
@@ -483,7 +423,7 @@ async function showChangePassword() {
   const container = document.getElementById('dashboard');
   container.innerHTML = `
     <div class="card" style="max-width:400px;margin:40px auto">
-      <h3 style="font-family:var(--font-mono);color:var(--accent-amber);margin-bottom:12px">🔑 ${t('auth_changePassword')}</h3>
+      <h3 style="font-family:var(--font-mono);color:var(--primary);margin-bottom:12px">🔑 ${t('auth_changePassword')}</h3>
       <input class="search-input" id="cpOld" type="password" placeholder="${t('auth_currentPassword')}" style="width:100%;margin-bottom:8px;font-size:13px">
       <input class="search-input" id="cpNew" type="password" placeholder="${t('auth_newPassword')}" style="width:100%;margin-bottom:8px;font-size:13px">
       <input class="search-input" id="cpConfirm" type="password" placeholder="${t('auth_confirmPassword')}" style="width:100%;margin-bottom:12px;font-size:13px">
@@ -491,7 +431,7 @@ async function showChangePassword() {
         <button class="btn primary" onclick="submitChangePassword()" style="flex:1">${t('auth_update')}</button>
         <button class="btn" onclick="renderDashboard()">${t('auth_cancel')}</button>
       </div>
-      <div id="cpError" style="margin-top:8px;font-size:11px;color:var(--red-bear);display:none"></div>
+      <div id="cpError" style="margin-top:8px;font-size:11px;color:var(--sell);display:none"></div>
     </div>`;
 }
 
@@ -549,11 +489,11 @@ async function submitForgotPassword() {
   try {
     await fetch('/api/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
     const msg = document.getElementById('forgotMsg');
-    msg.style.display = ''; msg.style.color = 'var(--green-bull)';
+    msg.style.display = ''; msg.style.color = 'var(--buy)';
     msg.textContent = 'If that email is registered, a reset link has been sent. Check your inbox.';
   } catch(e) {
     const msg = document.getElementById('forgotMsg');
-    msg.style.display = ''; msg.style.color = 'var(--red-bear)';
+    msg.style.display = ''; msg.style.color = 'var(--sell)';
     msg.textContent = 'Something went wrong. Please try again.';
   }
   btn.disabled = false; btn.textContent = 'SEND LINK';
@@ -565,21 +505,21 @@ function submitResetPassword() {
   const p1 = document.getElementById('resetPassword').value;
   const p2 = document.getElementById('resetPassword2').value;
   const msg = document.getElementById('resetMsg');
-  if (!p1 || p1.length < 6) { msg.style.color = 'var(--red-bear)'; msg.textContent = 'Password must be at least 6 characters.'; return; }
-  if (p1 !== p2) { msg.style.color = 'var(--red-bear)'; msg.textContent = 'Passwords do not match.'; return; }
+  if (!p1 || p1.length < 6) { msg.style.color = 'var(--sell)'; msg.textContent = 'Password must be at least 6 characters.'; return; }
+  if (p1 !== p2) { msg.style.color = 'var(--sell)'; msg.textContent = 'Passwords do not match.'; return; }
   const btn = document.getElementById('resetSubmitBtn');
   btn.disabled = true; btn.textContent = 'Updating...';
   fetch('/api/auth/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: _resetToken, password: p1 }) })
     .then(r => r.json())
     .then(data => {
       if (data.ok) {
-        msg.style.color = 'var(--green-bull)'; msg.textContent = 'Password updated! You can now sign in.';
+        msg.style.color = 'var(--buy)'; msg.textContent = 'Password updated! You can now sign in.';
         setTimeout(() => { document.getElementById('resetModal').classList.remove('show'); showAuthModal(); }, 2000);
       } else {
-        msg.style.color = 'var(--red-bear)'; msg.textContent = data.error || 'Link expired. Please request a new reset link.';
+        msg.style.color = 'var(--sell)'; msg.textContent = data.error || 'Link expired. Please request a new reset link.';
       }
     })
-    .catch(() => { msg.style.color = 'var(--red-bear)'; msg.textContent = 'Something went wrong.'; })
+    .catch(() => { msg.style.color = 'var(--sell)'; msg.textContent = 'Something went wrong.'; })
     .finally(() => { btn.disabled = false; btn.textContent = 'UPDATE PASSWORD'; });
 }
 
@@ -703,13 +643,13 @@ function showComingSoon() {
   container.innerHTML = `
     <div class="card" style="max-width:450px;margin:60px auto;text-align:center;padding:32px">
       <div style="font-size:48px;margin-bottom:12px">⭐</div>
-      <h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">Pro Subscription — Coming Soon</h2>
-      <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:20px">
+      <h2 style="font-family:var(--font-mono);color:var(--primary);font-size:16px;margin-bottom:8px">Pro Subscription — Coming Soon</h2>
+      <p style="font-size:13px;color:var(--ink-2);line-height:1.6;margin-bottom:20px">
         We're setting up payment processing. In the meantime, enjoy the full app for free!
       </p>
       <div style="background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.2);border-radius:8px;padding:14px;margin-bottom:16px;text-align:left">
-        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-bottom:6px">⚡ <strong style="color:var(--accent-amber)">Pro benefits (€9/month)</strong></div>
-        <div style="font-size:11px;color:var(--text-dim);line-height:1.8">
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-2);margin-bottom:6px">⚡ <strong style="color:var(--primary)">Pro benefits (€9/month)</strong></div>
+        <div style="font-size:11px;color:var(--ink-3);line-height:1.8">
           ✓ All stocks across all markets<br>
           ✓ Correlation Matrix<br>
           ✓ Education Reference &amp; 20 patterns<br>
@@ -772,8 +712,42 @@ async function showAdminView() {
     html += `<tr><td style="color:var(--ink-4)">${u.id}</td><td style="font-family:var(--font-mono);font-size:12px">${u.email}</td><td>${tierBadge}</td><td style="color:var(--ink-4);font-family:var(--font-mono);font-size:11px">${u.subscriptionEnd ? u.subscriptionEnd.slice(0,10) : '—'}</td><td style="color:var(--ink-4);font-family:var(--font-mono);font-size:11px">${u.createdAt.slice(0,10)}</td><td>${proBtn}</td><td>${adminBtn}</td></tr>`;
   });
   html += '</tbody></table></div>';
+
+  // Feature flags panel
+  const flags = await fetch('/api/feature-flags').then(r => r.json()).catch(() => ({}));
+  const FEATURE_LABELS = {
+    correlation:   '🔗 Matriz de Correlação',
+    patternFinder: '🔍 Buscar Padrões',
+    simulator:     '🎯 Simulador de Padrões',
+    darfReport:    '💰 Relatório DARF',
+    portfolio:     '📊 Carteira & P&L',
+    trackedPicks:  '📌 Picks Acompanhados',
+  };
+  html += '<div class="kicker" style="margin-top:var(--s-6);margin-bottom:var(--s-3)">⚙️ Feature Flags</div>';
+  html += '<div class="card-flush" style="overflow-x:auto;margin-bottom:var(--s-5)">';
+  html += '<table class="tracked-table"><thead><tr><th>FEATURE</th><th style="text-align:center;width:100px">FREE</th><th style="text-align:center;width:100px">PRO</th></tr></thead><tbody>';
+  for (const [key, label] of Object.entries(FEATURE_LABELS)) {
+    const f = flags[key] || { free: true, pro: true };
+    html += `<tr>
+      <td>${label}</td>
+      <td style="text-align:center"><input type="checkbox" ${f.free ? 'checked' : ''} onchange="toggleFeatureFlag('${key}','free',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--primary)"></td>
+      <td style="text-align:center"><input type="checkbox" ${f.pro ? 'checked' : ''} onchange="toggleFeatureFlag('${key}','pro',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--primary)"></td>
+    </tr>`;
+  }
+  html += '</tbody></table></div>';
   html += '</div>';
   container.innerHTML = html;
+}
+
+async function toggleFeatureFlag(key, tier, enabled) {
+  const body = { [key]: { [tier]: enabled } };
+  const result = await apiPost('/api/admin/feature-flags', body);
+  if (result.ok) {
+    _featureFlags = { ..._featureFlags, ...result.flags };
+    showToast(`${key} → ${tier}: ${enabled ? 'ON' : 'OFF'}`, true, 2000);
+  } else {
+    showToast('Erro ao salvar flag', false, 2000);
+  }
 }
 
 async function setAdmin(email) {
@@ -1015,7 +989,10 @@ async function scanAll() {
 
 function switchMarket(market) {
   if (_scanAbort) { _scanAbort.abort(); _scanAbort = null; }
+  // reset legacy/removed markets to brasil
+  if (market === 'us' || market === 'emerging' || market === 'europe') market = 'brasil';
   state.market = market;
+  
   _signalFilter = 'buy';
   state.showTracked = false;
   state.showUniverse = false;
@@ -1031,10 +1008,7 @@ function switchMarket(market) {
   const activeTab = document.querySelector(`.market-tabs .btn[data-market="${market}"]`);
   if (activeTab) activeTab.classList.add('active-market');
   const labels = {
-    us: '🇺🇸 ' + t('market_us'),
     brasil: '🇧🇷 ' + t('market_brasil'),
-    europe: '🇪🇺 ' + t('market_europe'),
-    emerging: '🌍 ' + t('market_emerging'),
   };
   document.getElementById('activeMarketLabel').textContent = labels[market] || market;
   renderDashboard();
@@ -1050,12 +1024,34 @@ function stockFlag(d) {
   return m === 'brasil' ? '🇧🇷' : m === 'us' ? '🇺🇸' : m === 'europe' ? '🇪🇺' : '🌍';
 }
 function feedCardWhy(d) {
-  if (d.why) return d.why;
-  if (d.rsi < 35) return `RSI em ${d.rsi.toFixed(0)}, ativo sobrevendido — possível reversão.`;
-  if (d.rsi > 70) return `RSI em ${d.rsi.toFixed(0)}, ativo sobrecomprado — sinal de cautela.`;
-  if (d.macd > 0 && d.adx > 25) return `MACD positivo com tendência forte (ADX ${d.adx.toFixed(0)}).`;
-  if (d.patternName && d.patternName !== 'none') return `Padrão ${d.patternName} identificado nos últimos 90 dias.`;
-  return 'Sinal baseado em análise técnica de múltiplos indicadores.';
+  const parts = [];
+  const rsi = d.rsi != null ? +d.rsi : null;
+  const macd = d.macd != null ? +d.macd : null;
+  const adx = d.adx != null ? +d.adx : null;
+  const sig = d.signal;
+
+  if (rsi !== null) {
+    if (rsi < 30) parts.push(`RSI em ${rsi.toFixed(0)} — zona de sobrevenda extrema, compradores tendem a retornar`);
+    else if (rsi < 40) parts.push(`RSI em ${rsi.toFixed(0)} — ativo pressionado, mas próximo de piso técnico`);
+    else if (rsi > 75) parts.push(`RSI em ${rsi.toFixed(0)} — sobrecomprado, risco de realização no curto prazo`);
+    else if (rsi > 65) parts.push(`RSI em ${rsi.toFixed(0)} — momentum forte, mas atenção ao topo`);
+    else parts.push(`RSI em ${rsi.toFixed(0)} — neutro`);
+  }
+  if (macd !== null && adx !== null) {
+    if (macd > 0 && adx > 25) parts.push(`MACD positivo com tendência consolidada (ADX ${adx.toFixed(0)}) — fluxo comprador presente`);
+    else if (macd < 0 && adx > 25) parts.push(`MACD negativo com tendência forte (ADX ${adx.toFixed(0)}) — pressão vendedora dominante`);
+    else if (macd > 0 && adx <= 25) parts.push(`MACD virou positivo, mas ADX ${adx.toFixed(0)} indica tendência ainda fraca`);
+    else if (macd < 0) parts.push(`MACD negativo — momentum de baixa ainda ativo`);
+  } else if (macd !== null) {
+    if (macd > 0) parts.push(`MACD positivo — momentum favorável`);
+    else parts.push(`MACD negativo — momentum desfavorável`);
+  }
+  if (d.patternName && d.patternName !== 'none') {
+    parts.push(`padrão gráfico "${d.patternName}" detectado nos últimos 90 dias`);
+  }
+  if (parts.length === 0) return 'Confluência de indicadores técnicos (RSI, MACD, ADX) aponta para este sinal.';
+  const sentence = parts.join('; ') + '.';
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1);
 }
 function feedCardPillLabel(sig) { return sig === 'buy' ? 'Compra' : sig === 'sell' ? 'Venda' : 'Aguardar'; }
 
@@ -1107,17 +1103,17 @@ function drawFeedSparkline(canvas, candles, signal) {
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d');
   const min = Math.min(...data), max = Math.max(...data), range = max - min || 1;
-  const color = signal === 'buy' ? 'oklch(0.78 0.17 145)' : signal === 'sell' ? 'oklch(0.70 0.22 25)' : 'oklch(0.82 0.16 90)';
+  const colorRgb = signal === 'buy' ? '0,200,83' : signal === 'sell' ? '255,23,68' : '255,179,0';
   const grad = ctx.createLinearGradient(0, 0, 0, h);
-  grad.addColorStop(0, color.replace('oklch', 'oklcha').replace(')', ', 0.3)'));
-  grad.addColorStop(1, color.replace('oklch', 'oklcha').replace(')', ', 0)'));
+  grad.addColorStop(0, `rgba(${colorRgb},0.3)`);
+  grad.addColorStop(1, `rgba(${colorRgb},0)`);
   ctx.beginPath();
   data.forEach((v, i) => {
     const x = (i / (data.length - 1)) * w;
     const y = h - ((v - min) / range) * (h - 8) - 4;
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   });
-  ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.strokeStyle = `rgb(${colorRgb})`; ctx.lineWidth = 1.5; ctx.stroke();
   ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
   ctx.fillStyle = grad; ctx.fill();
 }
@@ -1136,23 +1132,17 @@ function renderScanRing(pct) {
 }
 
 function updateScanProgress(pct, ticker) {
-  const prog = document.getElementById('scanProgress');
-  const grid = document.getElementById('resultsGrid');
-  if (prog) { prog.style.display = 'block'; }
-  if (grid) { grid.style.display = 'none'; }
-  const ring = document.getElementById('scanRingWrap');
-  if (ring) ring.innerHTML = renderScanRing(Math.round(pct));
+  const btn = document.getElementById('scanBtn');
+  if (btn) btn.textContent = `⚡ ${Math.round(pct)}%`;
   const fill = document.getElementById('progressFill');
   if (fill) fill.style.width = pct + '%';
-  const txt = document.getElementById('scanProgressText');
-  if (txt && ticker) txt.textContent = `Lendo a série de 90 dias de ${ticker}…`;
 }
 
 function hideScanProgress() {
-  const prog = document.getElementById('scanProgress');
+  const btn = document.getElementById('scanBtn');
+  if (btn) btn.textContent = '⚡ Varrer';
   const grid = document.getElementById('resultsGrid');
-  if (prog) prog.style.display = 'none';
-  if (grid) grid.style.display = 'grid';
+  if (grid && grid.style.display === 'none') grid.style.display = '';
 }
 
 function updateScanHed(stocks) {
@@ -1160,7 +1150,7 @@ function updateScanHed(stocks) {
   if (!hed) return;
   const buyCount = (stocks || []).filter(s => s.signal === 'buy').length;
   hed.innerHTML = buyCount > 0
-    ? `${buyCount} ação${buyCount !== 1 ? 'ões' : ''} com sinal de <span class="text-primary">compra</span>.`
+    ? `${buyCount} ${buyCount !== 1 ? 'ações' : 'ação'} com sinal de <span class="text-primary">compra</span>.`
     : 'Nenhum sinal de compra no momento.';
 }
 
@@ -1203,12 +1193,12 @@ function openStockDetail(ticker, idx) {
       </div>
       <div class="chart-container" style="margin-bottom:var(--s-4)">
         <div style="display:flex;gap:4px;padding:4px 6px;flex-wrap:wrap">
-          <button class="btn chart-period-btn" onclick="changeChartPeriod(${state.detailIdx},1)" style="font-size:10px;padding:5px 10px">1D</button>
-          <button class="btn chart-period-btn" onclick="changeChartPeriod(${state.detailIdx},22)" style="font-size:10px;padding:5px 10px">1M</button>
-          <button class="btn chart-period-btn active-period" onclick="changeChartPeriod(${state.detailIdx},55)" style="font-size:10px;padding:5px 10px">3M</button>
-          <button class="btn chart-period-btn" onclick="changeChartPeriod(${state.detailIdx},110)" style="font-size:10px;padding:5px 10px">6M</button>
-          <button class="btn chart-period-btn" onclick="changeChartPeriod(${state.detailIdx},252)" style="font-size:10px;padding:5px 10px">1A</button>
-          <button class="btn chart-period-btn" onclick="changeChartPeriod(${state.detailIdx},1260)" style="font-size:10px;padding:5px 10px">5A</button>
+          <button class="btn chart-period-btn" onclick="changeChartPeriod(${state.detailIdx},1)">1D</button>
+          <button class="btn chart-period-btn" onclick="changeChartPeriod(${state.detailIdx},22)">1M</button>
+          <button class="btn chart-period-btn active-period" onclick="changeChartPeriod(${state.detailIdx},55)">3M</button>
+          <button class="btn chart-period-btn" onclick="changeChartPeriod(${state.detailIdx},110)">6M</button>
+          <button class="btn chart-period-btn" onclick="changeChartPeriod(${state.detailIdx},252)">1A</button>
+          <button class="btn chart-period-btn" onclick="changeChartPeriod(${state.detailIdx},1260)">5A</button>
         </div>
         <canvas id="chart-${state.detailIdx}" data-period="55" data-idx="${state.detailIdx}"></canvas>
       </div>
@@ -1249,6 +1239,20 @@ function backToScanView() {
   renderDashboard();
 }
 
+// ─── HOME MODE ───────────────────────────────────────────────────────────
+function setHomeMode(mode) {
+  state.homeMode = mode;
+  localStorage.setItem('momentum_home_mode', mode);
+  // Update seg buttons
+  document.querySelectorAll('#homeModesSeg .seg-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  // Show sinais controls only in sinais mode
+  const sc = document.getElementById('sinaisControls');
+  if (sc) sc.style.display = mode === 'sinais' ? '' : 'none';
+  renderDashboard();
+}
+
 // ─── RENDER ─────────────────────────────────────────────────────────────
 function renderDashboard() {
   if (state.showPortfolio) { renderPortfolioView(); return; }
@@ -1256,7 +1260,6 @@ function renderDashboard() {
   if (state.showUniverse) { renderUniverseView(); return; }
   if (state.showTracked) { renderTrackedPicks(); return; }
 
-  const results = state.analyzed[state.market] || [];
   const grid = document.getElementById('resultsGrid');
   const scanHdr = document.getElementById('scanHeader');
   const dash = document.getElementById('dashboard');
@@ -1264,7 +1267,39 @@ function renderDashboard() {
   if (scanHdr) scanHdr.style.display = '';
   if (dash) { dash.style.display = 'none'; dash.innerHTML = ''; }
   const sidebar = document.getElementById('legacySidebar');
+  const calSec = document.getElementById('calendarSection');
+
+
+
+  // Sync home mode seg UI
+  document.querySelectorAll('#homeModesSeg .seg-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === state.homeMode);
+  });
+  const sc = document.getElementById('sinaisControls');
+  if (sc) sc.style.display = state.homeMode === 'sinais' ? '' : 'none';
+
+  // Dispatch to correct home view
+  if (state.homeMode === 'lista') {
+    if (grid) { grid.style.display = 'none'; grid.innerHTML = ''; }
+    if (sidebar) sidebar.style.display = 'none';
+    if (calSec) calSec.style.display = 'none';
+    if (dash) dash.style.display = 'block';
+    renderHomeLista();
+    return;
+  }
+  if (state.homeMode === 'padroes') {
+    if (grid) { grid.style.display = 'none'; grid.innerHTML = ''; }
+    if (sidebar) sidebar.style.display = 'none';
+    if (calSec) calSec.style.display = 'none';
+    if (dash) dash.style.display = 'block';
+    renderPatternFinder();
+    return;
+  }
+
+  // Default: sinais mode
   if (sidebar) sidebar.style.display = '';
+  if (calSec) calSec.style.display = '';
+  const results = state.analyzed[state.market] || [];
 
   if (results.length === 0) {
     if (grid) { grid.style.display = 'none'; grid.innerHTML = ''; }
@@ -1272,29 +1307,25 @@ function renderDashboard() {
     return;
   }
 
-  const isPro = authUser && (authUser.tier === 'pro' || authUser.tier === 'admin');
-  let display = isPro
-    ? (_signalFilter === 'all' ? results
-      : _signalFilter === 'neutral' ? results.filter(d => d.signal === 'neutral')
-      : _signalFilter === 'sell'    ? results.filter(d => d.signal === 'sell')
-      : results.filter(d => d.signal === 'buy'))
-    : results;
+  let display = _signalFilter === 'all' ? results
+    : _signalFilter === 'neutral' ? results.filter(d => d.signal === 'neutral')
+    : _signalFilter === 'sell'    ? results.filter(d => d.signal === 'sell')
+    : results.filter(d => d.signal === 'buy');
 
   state.displayedStocks = display;
   updateScanHed(results);
   hideScanProgress();
 
   if (grid) {
+    grid.style.display = '';
     grid.innerHTML = display.map((d, i) => buildFeedCard(d, i)).join('');
     requestAnimationFrame(() => requestAnimationFrame(() => {
       display.forEach((d, i) => {
         const cv = document.getElementById('spark-' + i);
         if (cv && d.candles) drawFeedSparkline(cv, d.candles, d.signal === 'neutral' ? 'hold' : d.signal);
       });
-      // wire track + portfolio buttons
       grid.querySelectorAll('.track-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          const el = btn.closest('.feed-card') || btn;
           trackPickFromBtn(btn.dataset.ticker, btn.dataset.market, parseFloat(btn.dataset.price), parseFloat(btn.dataset.tp), parseFloat(btn.dataset.sl));
         });
       });
@@ -1303,6 +1334,119 @@ function renderDashboard() {
       });
     }));
   }
+}
+
+// ─── LISTA DE AÇÕES (US-145) ─────────────────────────────────────────────
+let _listaSort = 'ticker';
+let _listaSortDir = 1;
+let _listaFilter = '';
+
+function renderHomeLista() {
+  const container = document.getElementById('dashboard');
+  const stocks = state.universeCache['brasil'] || [];
+  const analyzed = state.analyzed['brasil'] || [];
+  const sigMap = {};
+  analyzed.forEach(d => { sigMap[d.ticker] = d; });
+
+  // Apply filter
+  const q = _listaFilter.toLowerCase();
+  let rows = stocks.filter(s => !q || s.t.toLowerCase().includes(q) || (s.n||'').toLowerCase().includes(q));
+
+  // Sort
+  rows = rows.slice().sort((a, b) => {
+    let va, vb;
+    if (_listaSort === 'ticker')  { va = a.t; vb = b.t; return va < vb ? -_listaSortDir : va > vb ? _listaSortDir : 0; }
+    if (_listaSort === 'nome')    { va = a.n||''; vb = b.n||''; return va < vb ? -_listaSortDir : va > vb ? _listaSortDir : 0; }
+    if (_listaSort === 'setor')   { va = a.s||''; vb = b.s||''; return va < vb ? -_listaSortDir : va > vb ? _listaSortDir : 0; }
+    const da = sigMap[a.t], db = sigMap[b.t];
+    if (_listaSort === 'preco')   { va = da?.price||0; vb = db?.price||0; return (va-vb)*_listaSortDir; }
+    if (_listaSort === 'var')     { va = da?.changePercent||0; vb = db?.changePercent||0; return (va-vb)*_listaSortDir; }
+    if (_listaSort === 'sinal')   { va = da?.signal||'z'; vb = db?.signal||'z'; return va < vb ? -_listaSortDir : va > vb ? _listaSortDir : 0; }
+    return 0;
+  });
+
+  function th(key, label) {
+    const active = _listaSort === key;
+    const arrow = active ? (_listaSortDir === 1 ? ' ↑' : ' ↓') : '';
+    return `<th style="cursor:pointer;${active?'color:var(--ink)':''}" onclick="sortLista('${key}')">${label}${arrow}</th>`;
+  }
+
+  const sigBadge = (s) => {
+    if (!s) return '<span style="color:var(--ink-4)">—</span>';
+    if (s === 'buy')     return `<span class="status-badge active">Compra</span>`;
+    if (s === 'sell')    return `<span class="status-badge sl">Venda</span>`;
+    return `<span style="font-size:10px;color:var(--hold);font-weight:600">Aguardar</span>`;
+  };
+
+  let html = `<div class="shell" style="padding-top:var(--s-5);padding-bottom:var(--s-8)">`;
+  html += `<div style="display:flex;align-items:center;gap:var(--s-3);flex-wrap:wrap;margin-bottom:var(--s-4)">`;
+  html += `<input class="input" id="listaSearchInput" placeholder="Buscar ticker ou nome…" value="${_listaFilter}" oninput="_listaFilter=this.value;renderHomeLista()" style="max-width:260px">`;
+  html += `<span style="font-size:13px;color:var(--ink-3)">${rows.length} de ${stocks.length} ações</span>`;
+  html += `</div>`;
+
+  if (stocks.length === 0) {
+    html += `<div class="card" style="text-align:center;padding:var(--s-7) var(--s-5)">`;
+    html += `<div style="font-size:40px;margin-bottom:var(--s-3)">📋</div>`;
+    html += `<h3 class="hed3">Nenhuma ação carregada</h3>`;
+    html += `<p style="color:var(--ink-3);font-size:13px;margin-top:var(--s-2)">Clique em ⚡ Varrer agora para carregar o universo de ações.</p>`;
+    html += `</div>`;
+  } else {
+    html += `<div class="card-flush" style="overflow-x:auto"><table class="tracked-table">`;
+    html += `<thead><tr>${th('ticker','TICKER')}${th('nome','NOME')}${th('setor','SETOR')}${th('preco','PREÇO')}${th('var','VAR %')}${th('sinal','SINAL')}<th></th></tr></thead><tbody>`;
+    rows.forEach(s => {
+      const d = sigMap[s.t];
+      const price = d?.price;
+      const chg = d?.changePercent;
+      const chgStr = chg != null ? `<span style="color:${chg>=0?'var(--buy)':'var(--sell)'}">${chg>=0?'+':''}${chg.toFixed(2)}%</span>` : '<span style="color:var(--ink-4)">—</span>';
+      html += `<tr style="cursor:pointer" onclick="openStockDetailByTicker('${s.t}')">`;
+      html += `<td class="tkr">${s.t}</td>`;
+      html += `<td style="color:var(--ink-2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.n||'—'}</td>`;
+      html += `<td style="color:var(--ink-3);font-size:11px">${s.s||'—'}</td>`;
+      html += `<td style="font-family:var(--font-mono)">${price != null ? 'R$ '+price.toFixed(2) : '—'}</td>`;
+      html += `<td style="font-family:var(--font-mono)">${chgStr}</td>`;
+      html += `<td>${sigBadge(d?.signal)}</td>`;
+      const _isTracked = state.trackedPicks.some(p => p.ticker === s.t);
+      html += `<td style="white-space:nowrap" onclick="event.stopPropagation()">
+        <button class="btn" onclick="listaTrack('${s.t}',${price||0},${d?.tp||0},${d?.sl||0})" style="font-size:11px;padding:3px 8px;min-height:28px;${_isTracked?'color:var(--buy);border-color:var(--buy)':''}">${_isTracked?'✓':'⭐'}</button>
+        <button class="btn" onclick="openPortfolioModal('${s.t}','${price||0}')" style="font-size:11px;padding:3px 8px;min-height:28px;margin-left:4px">📊</button>
+      </td>`;
+      html += `</tr>`;
+    });
+    html += `</tbody></table></div>`;
+  }
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+function sortLista(key) {
+  if (_listaSort === key) _listaSortDir *= -1; else { _listaSort = key; _listaSortDir = 1; }
+  renderHomeLista();
+}
+
+function openStockDetailByTicker(ticker) {
+  for (const mkt of ['brasil','us','europe','emerging']) {
+    const idx = (state.analyzed[mkt]||[]).findIndex(s => s.ticker === ticker);
+    if (idx >= 0) { openStockDetail(ticker, idx); return; }
+  }
+}
+
+function listaTrack(ticker, price, tp, sl) {
+  const already = state.trackedPicks.findIndex(p => p.ticker === ticker);
+  if (already >= 0) {
+    state.trackedPicks.splice(already, 1);
+    showToast(ticker + ' removido dos acompanhados', false, 2000);
+  } else {
+    trackPickFromBtn(ticker, 'brasil', price, tp, sl);
+  }
+  renderHomeLista();
+}
+
+function openPortfolioModal(ticker, price) {
+  showPortfolioModal();
+  const tickerInput = document.getElementById('portfolioTicker');
+  const priceInput = document.getElementById('portfolioPrice');
+  if (tickerInput) tickerInput.value = ticker.replace('.SA','');
+  if (priceInput && parseFloat(price) > 0) priceInput.value = parseFloat(price).toFixed(2);
 }
 
 function cll(d,l,v,c){return `<div class="metric-item"><div class="metric-label">${l}</div><div class="metric-value ${c}">${v}</div></div>`}
@@ -1328,11 +1472,6 @@ function addPortfolioPosition() {
   const s = parseFloat(document.getElementById('portfolioShares').value);
   const p = parseFloat(document.getElementById('portfolioPrice').value);
   if (!t || !s || !p) { alert(t('errors_fillFields')); return; }
-  // Free tier limit: max 3 portfolio positions
-  if ((!authUser || (authUser.tier !== 'pro' && authUser.tier !== 'admin')) && state.portfolio.length >= 3) {
-    alert(t('errors_freeTierPortfolio'));
-    return;
-  }
   state.portfolio.push({ ticker:t, quantity:s, buyPrice:p, sellPrice:null, buyDate:new Date().toISOString().slice(0,10), sellDate:null, status:'holding' });
   document.getElementById('portfolioTicker').value = '';
   document.getElementById('portfolioShares').value = '';
@@ -1343,7 +1482,7 @@ function addPortfolioPosition() {
 
 function renderPortfolioTable() {
   const el = document.getElementById('portfolioTable');
-  if (state.portfolio.length === 0) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">No positions yet.</div>'; return; }
+  if (state.portfolio.length === 0) { el.innerHTML = '<div style="color:var(--ink-3);font-size:11px">No positions yet.</div>'; return; }
   el.innerHTML = state.portfolio.map((p,i) => {
     const currPrice = getPortfolioPrice(p.ticker);
     const currentVal = p.status === 'sold' && p.sellPrice ? p.sellPrice : (currPrice || p.buyPrice);
@@ -1354,8 +1493,8 @@ function renderPortfolioTable() {
       <span class="pos-ticker">${p.ticker}</span>
       <span>${p.quantity} × ${getCurrencySymbol(p.ticker)}${p.buyPrice.toFixed(2)}</span>
       <span class="pos-pnl ${pnl>=0?'pos':'neg'}">${pnl>=0?'+':''}${pnl.toFixed(2)}% (${pnlDollar>=0?'+':''}${getCurrencySymbol(p.ticker)}${pnlDollar.toFixed(2)})</span>
-      <span style="font-size:9px;color:var(--text-dim)">${statusIcon}</span>
-      <span style="cursor:pointer;color:var(--red-bear)" onclick="removePortfolioItem(${i})">✕</span>
+      <span style="font-size:9px;color:var(--ink-3)">${statusIcon}</span>
+      <span style="cursor:pointer;color:var(--sell)" onclick="removePortfolioItem(${i})">✕</span>
     </div>`;
   }).join('');
 }
@@ -1425,7 +1564,7 @@ function loadPortfolio() {
 function updatePortfolioSidebar() {
   const el = document.getElementById('portfolioContent');
   if (!el) return;
-  if (state.portfolio.length === 0) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">No positions. Add via 📁 Portfolio.</div>'; return; }
+  if (state.portfolio.length === 0) { el.innerHTML = '<div style="color:var(--ink-3);font-size:11px">No positions. Add via 📁 Portfolio.</div>'; return; }
   let total = 0;
   el.innerHTML = state.portfolio.map(p => {
     const currPrice = getPortfolioPrice(p.ticker);
@@ -1436,13 +1575,13 @@ function updatePortfolioSidebar() {
     return `<div class="portfolio-row">
       <span class="pos-ticker">${p.ticker}</span>
       <span class="pos-pnl ${pnl>=0?'pos':'neg'}">${pnl>=0?'+':''}${pnl.toFixed(2)}%</span>
-      <span style="font-size:9px;color:var(--text-dim)">${statusIcon}</span>
+      <span style="font-size:9px;color:var(--ink-3)">${statusIcon}</span>
     </div>`;
   }).join('');
   const totalPnlEl = document.getElementById('totalPnl');
   if (totalPnlEl) {
     totalPnlEl.textContent = (total>=0?'+':'') + '$' + total.toFixed(2); // aggregate across mixed currencies — symbol intentionally left as $
-    totalPnlEl.style.color = total>=0 ? 'var(--green-bull)' : 'var(--red-bear)';
+    totalPnlEl.style.color = total>=0 ? 'var(--buy)' : 'var(--sell)';
   }
 }
 
@@ -1455,41 +1594,53 @@ async function loadCalendar() {
     const el = document.getElementById('calendarContent');
     if (!el) return;
     const events = Array.isArray(data) ? data : (data.events || []);
-    if (!events.length) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">' + t('calendar_noEvents') + '</div>'; return; }
-    el.innerHTML = events.map(e => {
-      const title = (_lang === 'pt' && e.title_pt) ? e.title_pt : e.title;
-      const note  = (_lang === 'pt' && e.note_pt)  ? e.note_pt  : e.note;
-      const mktFlag = e.market === 'brasil' ? '🇧🇷' : e.market === 'us' ? '🇺🇸' : '🌐';
-      const impactColor = e.impact === 'high' ? 'var(--red-bear)' : e.impact === 'medium' ? 'var(--accent-amber)' : 'var(--text-dim)';
-      let tickersHtml = '';
-      if (e.tickers_up && e.tickers_up.length) {
-        tickersHtml += '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px;align-items:center"><span style="font-size:8px;color:var(--text-dim)">' + t('cal_tickersUp') + '</span>';
-        e.tickers_up.forEach(tk => { tickersHtml += '<span style="font-size:8px;background:rgba(76,175,80,0.15);color:var(--green-bull);border:1px solid rgba(76,175,80,0.3);border-radius:3px;padding:1px 4px">📈 ' + tk + '</span>'; });
-        tickersHtml += '</div>';
-      }
-      if (e.tickers_down && e.tickers_down.length) {
-        tickersHtml += '<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px;align-items:center"><span style="font-size:8px;color:var(--text-dim)">' + t('cal_tickersDown') + '</span>';
-        e.tickers_down.forEach(tk => { tickersHtml += '<span style="font-size:8px;background:rgba(229,57,53,0.15);color:var(--red-bear);border:1px solid rgba(229,57,53,0.3);border-radius:3px;padding:1px 4px">📉 ' + tk + '</span>'; });
-        tickersHtml += '</div>';
-      }
-      let linksHtml = '';
-      if (e.links && e.links.length) {
-        linksHtml = '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center"><span style="font-size:8px;color:var(--text-dim)">' + t('cal_sources') + '</span>';
-        e.links.forEach(lk => { linksHtml += '<a href="' + lk.url + '" target="_blank" rel="noopener" style="font-size:8px;color:var(--accent-amber);text-decoration:none;border:1px solid rgba(200,90,23,0.3);border-radius:3px;padding:1px 5px">' + lk.label + ' ↗</a>'; });
-        linksHtml += '</div>';
-      }
-      return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
-        + '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'
-        + '<span style="font-size:9px;color:var(--text-dim);font-family:var(--font-mono)">' + e.date + '</span>'
-        + '<span style="font-size:8px;color:' + impactColor + ';font-family:var(--font-mono);border:1px solid ' + impactColor + ';border-radius:2px;padding:0 3px">' + (e.impact || '').toUpperCase() + '</span>'
-        + '<span style="font-size:10px">' + mktFlag + '</span>'
-        + '</div>'
-        + '<div style="font-size:11px;color:var(--text-primary);margin-top:2px;line-height:1.3">' + title + '</div>'
-        + (note ? '<div style="font-size:9px;color:var(--text-dim);margin-top:2px;line-height:1.4">' + note + '</div>' : '')
-        + tickersHtml + linksHtml
-        + '</div>';
+    if (!events.length) {
+      el.innerHTML = '<div style="color:var(--ink-3);font-size:13px;padding:var(--s-4) 0">' + t('calendar_noEvents') + '</div>';
+      return;
+    }
+    // Group events by date
+    const byDate = {};
+    events.forEach(e => { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e); });
+    el.innerHTML = Object.entries(byDate).map(([date, evts]) => {
+      const rows = evts.map(e => {
+        const title = (_lang === 'pt' && e.title_pt) ? e.title_pt : e.title;
+        const note  = (_lang === 'pt' && e.note_pt)  ? e.note_pt  : e.note;
+        const mktFlag = e.market === 'brasil' ? '🇧🇷' : e.market === 'us' ? '🇺🇸' : '🌐';
+        const impactDot = e.impact === 'high' ? `<span style="width:8px;height:8px;border-radius:50%;background:var(--sell);display:inline-block;flex-shrink:0"></span>`
+          : e.impact === 'medium' ? `<span style="width:8px;height:8px;border-radius:50%;background:var(--primary);display:inline-block;flex-shrink:0"></span>`
+          : `<span style="width:8px;height:8px;border-radius:50%;background:var(--ink-3);display:inline-block;flex-shrink:0"></span>`;
+        let tickersHtml = '';
+        if (e.tickers_up && e.tickers_up.length) {
+          tickersHtml += '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center"><span style="font-size:10px;color:var(--ink-3)">' + t('cal_tickersUp') + '</span>';
+          e.tickers_up.forEach(tk => { tickersHtml += '<span style="font-size:10px;background:color-mix(in srgb,var(--buy) 12%,transparent);color:var(--buy);border:1px solid color-mix(in srgb,var(--buy) 30%,transparent);border-radius:var(--r-sm);padding:1px 6px">📈 ' + tk + '</span>'; });
+          tickersHtml += '</div>';
+        }
+        if (e.tickers_down && e.tickers_down.length) {
+          tickersHtml += '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center"><span style="font-size:10px;color:var(--ink-3)">' + t('cal_tickersDown') + '</span>';
+          e.tickers_down.forEach(tk => { tickersHtml += '<span style="font-size:10px;background:color-mix(in srgb,var(--sell) 12%,transparent);color:var(--sell);border:1px solid color-mix(in srgb,var(--sell) 30%,transparent);border-radius:var(--r-sm);padding:1px 6px">📉 ' + tk + '</span>'; });
+          tickersHtml += '</div>';
+        }
+        let linksHtml = '';
+        if (e.links && e.links.length) {
+          linksHtml = '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">';
+          e.links.forEach(lk => { linksHtml += '<a href="' + lk.url + '" target="_blank" rel="noopener" style="font-size:11px;color:var(--primary);text-decoration:none;border:1px solid color-mix(in srgb,var(--primary) 30%,transparent);border-radius:var(--r-sm);padding:2px 7px">' + lk.label + ' ↗</a>'; });
+          linksHtml += '</div>';
+        }
+        return `<div style="display:flex;align-items:flex-start;gap:10px;padding:var(--s-3) 0;border-bottom:1px solid var(--line)">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:3px;flex-shrink:0">${impactDot}<span style="font-size:14px">${mktFlag}</span></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;color:var(--ink);font-weight:500;line-height:1.3">${title}</div>
+            ${note ? `<div style="font-size:12px;color:var(--ink-3);margin-top:4px;line-height:1.4">${note}</div>` : ''}
+            ${tickersHtml}${linksHtml}
+          </div>
+        </div>`;
+      }).join('');
+      return `<div style="margin-bottom:var(--s-4)">
+        <div class="hed3" style="margin-bottom:var(--s-2);font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.06em">${date}</div>
+        <div class="card" style="padding:0 var(--s-4)">${rows}</div>
+      </div>`;
     }).join('');
-  } catch { const el = document.getElementById('calendarContent'); if (el) el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">' + t('calendar_loadError') + '</div>'; }
+  } catch { const el = document.getElementById('calendarContent'); if (el) el.innerHTML = '<div style="color:var(--ink-3);font-size:13px;padding:var(--s-4) 0">' + t('calendar_loadError') + '</div>'; }
 }
 
 function renderNewsSentiment() {
@@ -1521,36 +1672,36 @@ function renderNewsSentiment() {
   });
 
   if (!stockNews.length && !pulseNews.length) {
-    el.innerHTML = '<div style="color:var(--text-dim);font-size:11px;padding:4px 0">' + t('cal_noNews') + '</div>';
+    el.innerHTML = '<div style="color:var(--ink-3);font-size:11px;padding:4px 0">' + t('cal_noNews') + '</div>';
     return;
   }
 
-  const sentColor = s => s === 'bullish' ? 'var(--green-bull)' : s === 'bearish' ? 'var(--red-bear)' : 'var(--text-dim)';
+  const sentColor = s => s === 'bullish' ? 'var(--buy)' : s === 'bearish' ? 'var(--sell)' : 'var(--ink-3)';
   const sentLabel = s => s === 'bullish' ? t('news_bullish') : s === 'bearish' ? t('news_bearish') : t('news_neutral');
-  const signalColor = s => s === 'buy' ? 'var(--green-bull)' : s === 'sell' ? 'var(--red-bear)' : 'var(--text-dim)';
+  const signalColor = s => s === 'buy' ? 'var(--buy)' : s === 'sell' ? 'var(--sell)' : 'var(--ink-3)';
 
   const filterBtns = ['all','bullish','bearish','neutral'].map(f => {
     const active = _newsSentimentFilter === f;
     const lbl = f === 'all' ? t('news_filterAll') : sentLabel(f);
-    const col = f === 'all' ? 'var(--text-secondary)' : sentColor(f);
+    const col = f === 'all' ? 'var(--ink-2)' : sentColor(f);
     return '<button onclick="setNewsSentimentFilter(\'' + f + '\')" style="font-size:8px;padding:2px 6px;border-radius:10px;border:1px solid '
-      + (active ? col : 'var(--border)') + ';background:' + (active ? 'rgba(0,0,0,0.2)' : 'transparent')
-      + ';color:' + (active ? col : 'var(--text-dim)') + ';cursor:pointer;font-family:var(--font-mono)">' + lbl + '</button>';
+      + (active ? col : 'var(--line)') + ';background:' + (active ? 'rgba(0,0,0,0.2)' : 'transparent')
+      + ';color:' + (active ? col : 'var(--ink-3)') + ';cursor:pointer;font-family:var(--font-mono)">' + lbl + '</button>';
   }).join('');
 
   function renderItem(n, showTicker) {
     const sc = n.sentiment;
     const summary = n.summary ? n.summary.slice(0, 110) + (n.summary.length > 110 ? '…' : '') : '';
-    return '<div style="padding:7px 0;border-bottom:1px solid var(--border)">'
+    return '<div style="padding:7px 0;border-bottom:1px solid var(--line)">'
       + '<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;flex-wrap:wrap">'
       + (showTicker && n.ticker ? '<span style="font-size:8px;font-family:var(--font-mono);color:' + signalColor(n.signal) + ';border:1px solid ' + signalColor(n.signal) + ';border-radius:2px;padding:0 3px">' + n.ticker + '</span>' : '')
       + '<span style="font-size:8px;font-family:var(--font-mono);color:' + sentColor(sc) + ';background:rgba(0,0,0,0.2);border-radius:2px;padding:0 4px;border:1px solid ' + sentColor(sc) + '">' + sentLabel(sc) + '</span>'
-      + (n.publisher ? '<span style="font-size:8px;color:var(--text-dim)">' + n.publisher + '</span>' : '')
+      + (n.publisher ? '<span style="font-size:8px;color:var(--ink-3)">' + n.publisher + '</span>' : '')
       + '</div>'
-      + '<div style="font-size:10px;color:var(--text-secondary);line-height:1.4">'
-      + (n.link ? '<a href="' + n.link + '" target="_blank" rel="noopener" style="color:var(--text-secondary);text-decoration:none">' + n.title + ' ↗</a>' : n.title)
+      + '<div style="font-size:10px;color:var(--ink-2);line-height:1.4">'
+      + (n.link ? '<a href="' + n.link + '" target="_blank" rel="noopener" style="color:var(--ink-2);text-decoration:none">' + n.title + ' ↗</a>' : n.title)
       + '</div>'
-      + (summary ? '<div style="font-size:9px;color:var(--text-dim);margin-top:2px;line-height:1.4">' + summary + '</div>' : '')
+      + (summary ? '<div style="font-size:9px;color:var(--ink-3);margin-top:2px;line-height:1.4">' + summary + '</div>' : '')
       + '</div>';
   }
 
@@ -1560,17 +1711,17 @@ function renderNewsSentiment() {
   let html = '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px">' + filterBtns + '</div>';
 
   if (filteredPulse.length) {
-    html += '<div style="font-size:9px;font-family:var(--font-mono);color:var(--accent-amber);margin-bottom:4px;letter-spacing:0.5px">' + t('news_marketPulse') + '</div>';
+    html += '<div style="font-size:9px;font-family:var(--font-mono);color:var(--primary);margin-bottom:4px;letter-spacing:0.5px">' + t('news_marketPulse') + '</div>';
     html += filteredPulse.slice(0, 5).map(n => renderItem(n, false)).join('');
   }
 
   if (filteredStock.length) {
-    if (filteredPulse.length) html += '<div style="font-size:9px;font-family:var(--font-mono);color:var(--accent-amber);margin:8px 0 4px;letter-spacing:0.5px">' + t('news_stockNews') + '</div>';
+    if (filteredPulse.length) html += '<div style="font-size:9px;font-family:var(--font-mono);color:var(--primary);margin:8px 0 4px;letter-spacing:0.5px">' + t('news_stockNews') + '</div>';
     html += filteredStock.slice(0, 15).map(n => renderItem(n, true)).join('');
   }
 
   if (!filteredPulse.length && !filteredStock.length) {
-    html += '<div style="color:var(--text-dim);font-size:11px;padding:4px 0">' + t('news_noResults') + '</div>';
+    html += '<div style="color:var(--ink-3);font-size:11px;padding:4px 0">' + t('news_noResults') + '</div>';
   }
 
   el.innerHTML = html;
@@ -1582,7 +1733,7 @@ function calcCorrelation() {
   // Gather all analyzed stocks with price data
   const all = [...(state.analyzed.us||[]), ...(state.analyzed.europe||[]), ...(state.analyzed.emerging||[])];
   const withData = all.filter(d => d.candles && d.candles.length > 20);
-  if (withData.length < 2) { el.innerHTML = '<div style="color:var(--text-dim);font-size:11px">' + t('correlation_scanFirst') + '</div>'; return; }
+  if (withData.length < 2) { el.innerHTML = '<div style="color:var(--ink-3);font-size:11px">' + t('correlation_scanFirst') + '</div>'; return; }
   // Take top 6 by volume
   const top = withData.sort((a,b) => b.volAvg - a.volAvg).slice(0,8);
   // Calc daily returns for last 20 days
@@ -1604,10 +1755,10 @@ function calcCorrelation() {
   }
   let html = '<div style="overflow-x:auto"><table style="border-collapse:collapse;font-family:var(--font-mono);font-size:9px">';
   html += '<tr><td style="padding:2px 4px"></td>';
-  returns.forEach(r => { html += `<td style="padding:2px 4px;color:var(--text-dim)">${r.ticker}</td>`; });
+  returns.forEach(r => { html += `<td style="padding:2px 4px;color:var(--ink-3)">${r.ticker}</td>`; });
   html += '</tr>';
   returns.forEach((r1, i) => {
-    html += `<tr><td style="padding:2px 4px;color:var(--text-dim)">${r1.ticker}</td>`;
+    html += `<tr><td style="padding:2px 4px;color:var(--ink-3)">${r1.ticker}</td>`;
     returns.forEach((r2, j) => {
       const corr = pearson(r1.returns, r2.returns);
       const bg = i === j ? 'rgba(255,255,255,0.05)' : corr > 0.5 ? 'rgba(76,175,80,0.3)' : corr > 0.2 ? 'rgba(76,175,80,0.12)' : corr < -0.3 ? 'rgba(229,57,53,0.2)' : 'rgba(255,193,7,0.08)';
@@ -1616,7 +1767,7 @@ function calcCorrelation() {
     html += '</tr>';
   });
   html += '</table></div>';
-  html += '<div style="margin-top:6px;font-size:9px;color:var(--text-dim)">🟢 ' + t('correlation_together') + ' &nbsp; 🔴 ' + t('correlation_opposite') + '</div>';
+  html += '<div style="margin-top:6px;font-size:9px;color:var(--ink-3)">🟢 ' + t('correlation_together') + ' &nbsp; 🔴 ' + t('correlation_opposite') + '</div>';
   el.innerHTML = html;
 }
 
@@ -1651,12 +1802,12 @@ function b3Suggest(input) {
       const data = await res.json();
       if (!data.length) { box.style.display = 'none'; return; }
       box.innerHTML = data.map(d =>
-        '<div style="padding:6px 10px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border)" '
+        '<div style="padding:6px 10px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--line)" '
         + 'onmousedown="selectB3Ticker(\'' + d.ticker + '\',\'' + d.name.replace(/'/g,'&#39;') + '\')" '
         + 'onmouseover="this.style.background=\'rgba(200,90,23,0.15)\'" '
         + 'onmouseout="this.style.background=\'\'">'
-        + '<strong style="color:var(--accent-amber)">' + d.ticker.replace('.SA','') + '</strong>'
-        + '<span style="color:var(--text-secondary);margin-left:6px">' + d.name + '</span>'
+        + '<strong style="color:var(--primary)">' + d.ticker.replace('.SA','') + '</strong>'
+        + '<span style="color:var(--ink-2);margin-left:6px">' + d.name + '</span>'
         + '</div>'
       ).join('');
       box.style.display = 'block';
@@ -1695,7 +1846,7 @@ function trackPick(ticker, market, entryPrice, tp, sl) {
   const tab = document.getElementById('trackedTabBtn');
   if (tab) {
     tab.textContent = '📋 TRACKED (' + state.trackedPicks.length + ') ✓';
-    tab.style.borderColor = 'var(--green-bull)';
+    tab.style.borderColor = 'var(--buy)';
     setTimeout(() => { tab.style.borderColor = ''; tab.textContent = '📋 TRACKED (' + state.trackedPicks.length + ')'; }, 1500);
   }
 }
@@ -1800,14 +1951,16 @@ function showTrackedView() {
   state.showUniverse = false;
   state.showPortfolio = false;
   document.querySelectorAll('.market-tabs .btn[data-market]').forEach(b => b.classList.remove('active-market'));
+  
+  const _cs = document.getElementById('calendarSection'); if (_cs) _cs.style.display = 'none';
   document.getElementById('universeTabBtn').style.borderColor = '';
   document.getElementById('universeTabBtn').style.color = '';
   document.getElementById('portfolioTabBtn').style.borderColor = '';
   document.getElementById('portfolioTabBtn').style.color = '';
   state.showTracked = !state.showTracked;
   if (state.showTracked) {
-    document.getElementById('trackedTabBtn').style.borderColor = 'var(--accent-amber)';
-    document.getElementById('trackedTabBtn').style.color = 'var(--accent-amber)';
+    document.getElementById('trackedTabBtn').style.borderColor = 'var(--primary)';
+    document.getElementById('trackedTabBtn').style.color = 'var(--primary)';
     renderTrackedPicks();
   } else {
     document.getElementById('trackedTabBtn').style.borderColor = '';
@@ -1910,12 +2063,14 @@ function showPortfolioView() {
   state.showUniverse = false;
   state.showPortfolio = !state.showPortfolio;
   document.querySelectorAll('.market-tabs .btn[data-market]').forEach(b => b.classList.remove('active-market'));
+  
+  const _cs = document.getElementById('calendarSection'); if (_cs) _cs.style.display = 'none';
   document.getElementById('trackedTabBtn').style.borderColor = '';
   document.getElementById('trackedTabBtn').style.color = '';
   document.getElementById('universeTabBtn').style.borderColor = '';
   document.getElementById('universeTabBtn').style.color = '';
-  document.getElementById('portfolioTabBtn').style.borderColor = state.showPortfolio ? 'var(--accent-amber)' : '';
-  document.getElementById('portfolioTabBtn').style.color = state.showPortfolio ? 'var(--accent-amber)' : '';
+  document.getElementById('portfolioTabBtn').style.borderColor = state.showPortfolio ? 'var(--primary)' : '';
+  document.getElementById('portfolioTabBtn').style.color = state.showPortfolio ? 'var(--primary)' : '';
   if (state.showPortfolio) {
     const scanHdr = document.getElementById('scanHeader');
     const grid = document.getElementById('resultsGrid');
@@ -1964,6 +2119,8 @@ function showSimulatorView() {
   if (scanHdr) scanHdr.style.display = 'none';
   if (grid) grid.style.display = 'none';
   if (sidebar) sidebar.style.display = 'none';
+  
+  const _cs = document.getElementById('calendarSection'); if (_cs) _cs.style.display = 'none';
   const container = document.getElementById('dashboard');
   container.style.display = 'block';
   renderSimulator();
@@ -2203,7 +2360,7 @@ function renderPortfolioView() {
   // Positions heading
   html += `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:var(--s-3)"><h2 class="hed3">Suas posições</h2></div>`;
   html += '<div class="card-flush" style="margin-bottom:var(--s-5);overflow-x:auto"><table class="tracked-table"><thead><tr>';
-  html += '<th>#</th><th>TICKER</th><th>QTY</th><th>' + t('portfolio_buyPrice') + '</th><th>' + t('portfolio_currentSell') + '</th><th>' + t('portfolio_costBasis') + '</th><th>' + t('portfolio_valueNow') + '</th><th>' + t('portfolio_pnlPct') + '</th><th>' + t('portfolio_pnlDollar') + '</th><th>STATUS</th><th>' + t('darf_tradeType') + '</th><th>' + t('portfolio_monthProfit') + '</th><th></th><th></th><th></th>';
+  html += '<th>#</th><th>TICKER</th><th>QTD</th><th>' + t('portfolio_buyPrice') + '</th><th>' + t('portfolio_currentSell') + '</th><th>' + t('portfolio_costBasis') + '</th><th>' + t('portfolio_valueNow') + '</th><th>' + t('portfolio_pnlPct') + '</th><th>' + t('portfolio_pnlDollar') + '</th><th>SITUAÇÃO</th><th>' + t('darf_tradeType') + '</th><th>' + t('portfolio_monthProfit') + '</th><th></th><th></th><th></th>';
   html += '</tr></thead><tbody>';
   
   // Track totals per currency symbol for summary
@@ -2234,24 +2391,24 @@ function renderPortfolioView() {
     const pnlClass = pnlDollar >= 0 ? 'pnl-up' : 'pnl-dn';
     
     html += '<tr>';
-    html += '<td style="color:var(--text-dim)">' + (i+1) + '</td>';
+    html += '<td style="color:var(--ink-3)">' + (i+1) + '</td>';
     html += '<td class="tkr">' + p.ticker + '</td>';
     html += '<td>' + p.quantity + '</td>';
     html += '<td>' + getCurrencySymbol(p.ticker) + p.buyPrice.toFixed(2) + '</td>';
     html += '<td>' + getCurrencySymbol(p.ticker) + (p.status === 'sold' && p.sellPrice ? p.sellPrice.toFixed(2) : (hasPrice ? currPrice.toFixed(2) : '—')) + '</td>';
-    html += '<td style="color:var(--text-dim)">' + getCurrencySymbol(p.ticker) + costBasis.toFixed(2) + '</td>';
+    html += '<td style="color:var(--ink-3)">' + getCurrencySymbol(p.ticker) + costBasis.toFixed(2) + '</td>';
     html += '<td>' + getCurrencySymbol(p.ticker) + valueNow.toFixed(2) + '</td>';
     html += '<td class="' + pnlClass + '">' + (pnlPercent >= 0 ? '+' : '') + pnlPercent.toFixed(2) + '%</td>';
     html += '<td class="' + pnlClass + '">' + (pnlDollar >= 0 ? '+' : '') + getCurrencySymbol(p.ticker) + pnlDollar.toFixed(2) + '</td>';
     html += '<td><span class="status-badge ' + statusClass + '">' + statusLabel + '</span></td>';
     const tradeTypeBadge = (p.tradeType || 'swing') === 'daytrade'
-      ? '<span style="font-size:9px;background:rgba(200,150,30,0.15);border:1px solid rgba(200,150,30,0.4);color:var(--accent-amber);padding:1px 5px;border-radius:3px">⚡ DT</span>'
-      : '<span style="font-size:9px;background:rgba(100,200,100,0.1);border:1px solid rgba(100,200,100,0.3);color:var(--green-bull);padding:1px 5px;border-radius:3px">📈 SW</span>';
+      ? '<span style="font-size:9px;background:rgba(200,150,30,0.15);border:1px solid rgba(200,150,30,0.4);color:var(--primary);padding:1px 5px;border-radius:3px">⚡ DT</span>'
+      : '<span style="font-size:9px;background:rgba(100,200,100,0.1);border:1px solid rgba(100,200,100,0.3);color:var(--buy);padding:1px 5px;border-radius:3px">📈 SW</span>';
     html += '<td>' + tradeTypeBadge + '</td>';
-    html += '<td style="font-weight:600;font-size:10px;' + (rowProfit > 0 ? 'color:var(--green-bull)' : rowProfit < 0 ? 'color:var(--red-bear)' : 'color:var(--text-dim)') + '">' + monthProfitStr + '</td>';
-    html += '<td>' + (p.status === 'holding' ? '<span style="cursor:pointer;color:var(--red-bear);font-size:11px;font-weight:700" onclick="sellPortfolioItem(' + i + ')" title="Sell">' + t('portfolio_sell') + '</span>' : '') + '</td>';
-    html += '<td><span style="cursor:pointer;color:var(--accent-amber);font-size:13px" onclick="editPortfolioPosition(' + i + ')" title="Edit">✎</span></td>';
-    html += '<td><span style="cursor:pointer;color:var(--red-bear);font-size:14px" onclick="removePortfolioItem(' + i + ')" title="Remove">✕</span></td>';
+    html += '<td style="font-weight:600;font-size:10px;' + (rowProfit > 0 ? 'color:var(--buy)' : rowProfit < 0 ? 'color:var(--sell)' : 'color:var(--ink-3)') + '">' + monthProfitStr + '</td>';
+    html += '<td>' + (p.status === 'holding' ? '<span style="cursor:pointer;color:var(--sell);font-size:11px;font-weight:700" onclick="sellPortfolioItem(' + i + ')" title="Sell">' + t('portfolio_sell') + '</span>' : '') + '</td>';
+    html += '<td><span style="cursor:pointer;color:var(--primary);font-size:13px" onclick="editPortfolioPosition(' + i + ')" title="Edit">✎</span></td>';
+    html += '<td><span style="cursor:pointer;color:var(--sell);font-size:14px" onclick="removePortfolioItem(' + i + ')" title="Remove">✕</span></td>';
     html += '</tr>';
   });
   
@@ -2266,17 +2423,17 @@ function renderPortfolioView() {
     const pnlClass = totalPnl >= 0 ? 'pnl-up' : 'pnl-dn';
     const rgClass = g.realized >= 0 ? 'pnl-up' : 'pnl-dn';
     const ugClass = g.unrealized >= 0 ? 'pnl-up' : 'pnl-dn';
-    html += '<div style="display:flex;flex-wrap:wrap;gap:16px;font-family:var(--font-mono);font-size:11px;padding:10px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;align-items:center">';
-    html += '<div style="color:var(--accent-amber);font-weight:700;min-width:28px">' + sym + '</div>';
-    html += '<div><span style="color:var(--text-dim)">' + t('portfolio_costBasis') + ':</span> <strong>' + sym + g.cost.toFixed(2) + '</strong></div>';
-    html += '<div><span style="color:var(--text-dim)">' + t('portfolio_valueNow') + ':</span> <strong>' + sym + g.value.toFixed(2) + '</strong></div>';
-    html += '<div><span style="color:var(--text-dim)">P&amp;L:</span> <strong class="' + pnlClass + '">' + (totalPnl >= 0 ? '+' : '') + sym + totalPnl.toFixed(2) + '</strong></div>';
-    html += '<div><span style="color:var(--text-dim)">' + t('portfolio_totalRealized') + ':</span> <strong class="' + rgClass + '">' + (g.realized >= 0 ? '+' : '') + sym + g.realized.toFixed(2) + '</strong></div>';
-    html += '<div><span style="color:var(--text-dim)">' + t('portfolio_totalUnrealized') + ':</span> <strong class="' + ugClass + '">' + (g.unrealized >= 0 ? '+' : '') + sym + g.unrealized.toFixed(2) + '</strong></div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:16px;font-family:var(--font-mono);font-size:11px;padding:10px 12px;background:var(--bg-2);border:1px solid var(--line);border-radius:8px;align-items:center">';
+    html += '<div style="color:var(--primary);font-weight:700;min-width:28px">' + sym + '</div>';
+    html += '<div><span style="color:var(--ink-3)">' + t('portfolio_costBasis') + ':</span> <strong>' + sym + g.cost.toFixed(2) + '</strong></div>';
+    html += '<div><span style="color:var(--ink-3)">' + t('portfolio_valueNow') + ':</span> <strong>' + sym + g.value.toFixed(2) + '</strong></div>';
+    html += '<div><span style="color:var(--ink-3)">P&amp;L:</span> <strong class="' + pnlClass + '">' + (totalPnl >= 0 ? '+' : '') + sym + totalPnl.toFixed(2) + '</strong></div>';
+    html += '<div><span style="color:var(--ink-3)">' + t('portfolio_totalRealized') + ':</span> <strong class="' + rgClass + '">' + (g.realized >= 0 ? '+' : '') + sym + g.realized.toFixed(2) + '</strong></div>';
+    html += '<div><span style="color:var(--ink-3)">' + t('portfolio_totalUnrealized') + ':</span> <strong class="' + ugClass + '">' + (g.unrealized >= 0 ? '+' : '') + sym + g.unrealized.toFixed(2) + '</strong></div>';
     html += '</div>';
   });
-  html += '<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);padding:2px 4px">';
-  html += 'Positions: <strong style="color:var(--text-primary)">' + state.portfolio.length + '</strong> (' + state.portfolio.filter(p => p.status === 'holding').length + ' holding, ' + state.portfolio.filter(p => p.status === 'sold').length + ' sold)</div>';
+  html += '<div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);padding:2px 4px">';
+  html += 'Positions: <strong style="color:var(--ink)">' + state.portfolio.length + '</strong> (' + state.portfolio.filter(p => p.status === 'holding').length + ' holding, ' + state.portfolio.filter(p => p.status === 'sold').length + ' sold)</div>';
   html += '</div>';
   
   // Monthly profit breakdown — grouped by currency then month
@@ -2320,39 +2477,39 @@ function renderPortfolioView() {
   if (hasProfits) {
     html += '<div class="card" style="padding:14px;margin-bottom:14px">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
-    html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--accent-amber);text-transform:uppercase;letter-spacing:1px">📅 ' + t('portfolio_monthlyBreakdown') + '</h3>';
+    html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--primary);text-transform:uppercase;letter-spacing:1px">📅 ' + t('portfolio_monthlyBreakdown') + '</h3>';
     html += '<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">';
     const ranges = [{v:'3m',l:'3M'},{v:'6m',l:'6M'},{v:'12m',l:'12M'},{v:'all',l:'ALL'}];
     ranges.forEach(r => {
       const active = _portfolioMonthFilter === r.v;
-      html += '<button class="btn" onclick="filterPortfolioMonths(\'' + r.v + '\')" style="font-size:9px;padding:3px 8px;' + (active ? 'background:var(--accent-burnt);border-color:var(--accent-amber);color:#fff' : '') + '">' + r.l + '</button>';
+      html += '<button class="btn" onclick="filterPortfolioMonths(\'' + r.v + '\')" style="font-size:9px;padding:3px 8px;' + (active ? 'background:var(--primary);border-color:var(--primary);color:#fff' : '') + '">' + r.l + '</button>';
     });
     // Month dropdown
     const specificActive = !['3m','6m','12m','all'].includes(_portfolioMonthFilter);
-    html += '<select onchange="filterPortfolioMonths(this.value)" style="background:var(--bg-term);border:1px solid ' + (specificActive ? 'var(--accent-amber)' : 'var(--border)') + ';color:' + (specificActive ? 'var(--accent-amber)' : 'var(--text-secondary)') + ';padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:9px">';
+    html += '<select onchange="filterPortfolioMonths(this.value)" style="background:var(--bg);border:1px solid ' + (specificActive ? 'var(--primary)' : 'var(--line)') + ';color:' + (specificActive ? 'var(--primary)' : 'var(--ink-2)') + ';padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:9px">';
     html += '<option value="all">' + t('portfolio_month') + '...</option>';
     allMonthsSorted.forEach(m => {
       html += '<option value="' + m + '"' + (_portfolioMonthFilter === m ? ' selected' : '') + '>' + m + '</option>';
     });
     html += '</select>';
-    html += '<button class="btn" onclick="generateTaxReport()" style="font-size:10px;color:var(--accent-amber);border-color:var(--accent-amber)">' + t('taxReport_title') + '</button>';
+    html += '<button class="btn" onclick="generateTaxReport()" style="font-size:10px;color:var(--primary);border-color:var(--primary)">' + t('taxReport_title') + '</button>';
     html += '</div></div>';
 
     // Realized — one table per currency
     if (hasFilteredRealized) {
-      html += '<div style="font-size:10px;color:var(--green-bull);margin-bottom:6px;font-family:var(--font-mono)">' + t('taxReport_realized') + '</div>';
+      html += '<div style="font-size:10px;color:var(--buy);margin-bottom:6px;font-family:var(--font-mono)">' + t('taxReport_realized') + '</div>';
       realizedSymbols.forEach(sym => {
         const months = filterMonths(Object.keys(realizedByMonth[sym]).sort(), _portfolioMonthFilter);
         if (months.length === 0) return;
-        html += '<div style="font-size:9px;color:var(--accent-amber);font-family:var(--font-mono);margin-bottom:3px">' + sym + '</div>';
+        html += '<div style="font-size:9px;color:var(--primary);font-family:var(--font-mono);margin-bottom:3px">' + sym + '</div>';
         html += '<table class="tracked-table" style="margin-bottom:10px"><thead><tr><th>' + t('portfolio_month') + '</th><th>' + t('portfolio_profitDeficit') + '</th></tr></thead><tbody>';
         let grand = 0;
         months.forEach(month => {
           const profit = realizedByMonth[sym][month];
           grand += profit;
-          html += '<tr><td style="color:var(--text-dim)">' + month + '</td><td class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + sym + profit.toFixed(2) + '</td></tr>';
+          html += '<tr><td style="color:var(--ink-3)">' + month + '</td><td class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + sym + profit.toFixed(2) + '</td></tr>';
         });
-        html += '<tr><td style="font-weight:700;color:var(--text-primary)">' + t('portfolio_totalRealized') + '</td><td class="' + (grand >= 0 ? 'pnl-up' : 'pnl-dn') + '" style="font-weight:700">' + (grand >= 0 ? '+' : '') + sym + grand.toFixed(2) + '</td></tr>';
+        html += '<tr><td style="font-weight:700;color:var(--ink)">' + t('portfolio_totalRealized') + '</td><td class="' + (grand >= 0 ? 'pnl-up' : 'pnl-dn') + '" style="font-weight:700">' + (grand >= 0 ? '+' : '') + sym + grand.toFixed(2) + '</td></tr>';
         html += '</tbody></table>';
       });
     }
@@ -2368,7 +2525,6 @@ function renderPortfolioView() {
   html += '<h4 style="font-family:var(--font-display);font-size:18px;font-weight:700;margin:0 0 6px">Relatório de IR (DARF)</h4>';
   html += '<p style="margin:0;color:var(--ink-3);font-size:14px;line-height:1.5">Calcula automaticamente seu imposto sobre ganhos, gera DARF mensal e exporta tudo em CSV pra você não passar nervoso em abril.</p>';
   html += '</div>';
-  html += '<button class="btn-magenta" onclick="upgradeToPro()" style="white-space:nowrap">Pro · R$ 9/mês</button>';
   html += '</div></div>';
 
   // Disclaimer
@@ -2410,7 +2566,7 @@ function sellPortfolioItem(index) {
   const container = document.getElementById('dashboard');
 
   let html = '<div class="card" style="max-width:450px;margin:40px auto">';
-  html += '<h3 style="font-family:var(--font-mono);font-size:13px;color:var(--accent-amber);margin-bottom:14px">' + t('portfolio_sellModalTitle') + ' ' + p.ticker + '</h3>';
+  html += '<h3 style="font-family:var(--font-mono);font-size:13px;color:var(--primary);margin-bottom:14px">' + t('portfolio_sellModalTitle') + ' ' + p.ticker + '</h3>';
   html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px;margin-bottom:12px;font-family:var(--font-mono);font-size:11px;line-height:1.8">';
   html += '<div>' + t('portfolio_holdingLabel') + ': <strong>' + p.quantity + ' shares</strong></div>';
   html += '<div>Bought at: <strong>' + getCurrencySymbol(p.ticker) + p.buyPrice.toFixed(2) + '</strong></div>';
@@ -2421,19 +2577,19 @@ function sellPortfolioItem(index) {
   }
   html += '</div>';
   html += '<div style="margin-bottom:12px">';
-  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">' + t('portfolio_sharesToSell') + ' ' + p.quantity + ')</label>';
+  html += '<label style="display:block;font-size:10px;color:var(--ink-3);margin-bottom:4px;font-family:var(--font-mono)">' + t('portfolio_sharesToSell') + ' ' + p.quantity + ')</label>';
   html += '<input class="search-input" id="sellQtyInput" type="number" step="1" min="1" max="' + p.quantity + '" value="' + p.quantity + '" style="width:100%;font-size:14px;margin-bottom:10px">';
-  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">' + t('portfolio_sellPrice') + '</label>';
+  html += '<label style="display:block;font-size:10px;color:var(--ink-3);margin-bottom:4px;font-family:var(--font-mono)">' + t('portfolio_sellPrice') + '</label>';
   html += '<input class="search-input" id="sellPriceInput" type="number" step="0.01" value="' + (curPrice ? curPrice.toFixed(2) : '') + '" style="width:100%;font-size:14px;margin-bottom:10px">';
-  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">' + t('portfolio_sellDate') + '</label>';
+  html += '<label style="display:block;font-size:10px;color:var(--ink-3);margin-bottom:4px;font-family:var(--font-mono)">' + t('portfolio_sellDate') + '</label>';
   html += '<input class="search-input" id="sellDateInput" type="date" value="' + new Date().toISOString().slice(0,10) + '" style="width:100%;font-size:14px;margin-bottom:10px">';
   html += '</div>';
   html += '<div id="sellPreview" style="font-family:var(--font-mono);font-size:12px;padding:8px 10px;border-radius:4px;margin-bottom:12px;background:rgba(0,0,0,0.1)"></div>';
   html += '<div style="display:flex;gap:8px">';
-  html += '<button class="btn primary" onclick="confirmSell(' + index + ')" style="flex:1;background:rgba(229,57,53,0.2);border-color:var(--red-bear);color:var(--red-bear)">' + t('portfolio_confirmSale') + '</button>';
+  html += '<button class="btn primary" onclick="confirmSell(' + index + ')" style="flex:1;background:rgba(229,57,53,0.2);border-color:var(--sell);color:var(--sell)">' + t('portfolio_confirmSale') + '</button>';
   html += '<button class="btn" onclick="renderPortfolioView()">' + t('auth_cancel') + '</button>';
   html += '</div>';
-  html += '<div id="sellError" style="margin-top:8px;font-size:11px;color:var(--red-bear);display:none"></div>';
+  html += '<div id="sellError" style="margin-top:8px;font-size:11px;color:var(--sell);display:none"></div>';
   html += '</div>';
   container.innerHTML = html;
 
@@ -2448,7 +2604,7 @@ function updateSellPreview(index) {
   const sellPrice = parseFloat(document.getElementById('sellPriceInput').value);
   const previewEl = document.getElementById('sellPreview');
   if (!sellPrice || isNaN(sellPrice) || !sellQty || isNaN(sellQty)) {
-    previewEl.innerHTML = '<span style="color:var(--text-dim)">Enter quantity and price to see preview</span>';
+    previewEl.innerHTML = '<span style="color:var(--ink-3)">Enter quantity and price to see preview</span>';
     return;
   }
   const qty = Math.min(sellQty, p.quantity);
@@ -2459,9 +2615,9 @@ function updateSellPreview(index) {
   previewEl.innerHTML += '<div>Selling: <strong>' + qty + ' of ' + p.quantity + ' shares</strong></div>';
   previewEl.innerHTML += '<div>Realized P&amp;L: <strong class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + getCurrencySymbol(p.ticker) + profit.toFixed(2) + ' (' + (profitPct >= 0 ? '+' : '') + profitPct.toFixed(2) + '%)</strong></div>';
   if (remaining > 0) {
-    previewEl.innerHTML += '<div style="margin-top:4px;color:var(--accent-amber)">Remaining holding: <strong>' + remaining + ' shares @ ' + getCurrencySymbol(p.ticker) + p.buyPrice.toFixed(2) + '</strong></div>';
+    previewEl.innerHTML += '<div style="margin-top:4px;color:var(--primary)">Remaining holding: <strong>' + remaining + ' shares @ ' + getCurrencySymbol(p.ticker) + p.buyPrice.toFixed(2) + '</strong></div>';
   }
-  previewEl.innerHTML += '<div style="margin-top:4px;font-size:10px;color:var(--text-dim)">' + (remaining > 0 ? 'Sold portion will be recorded as closed; remaining stays as holding.' : 'Full position will be closed.') + '</div>';
+  previewEl.innerHTML += '<div style="margin-top:4px;font-size:10px;color:var(--ink-3)">' + (remaining > 0 ? 'Sold portion will be recorded as closed; remaining stays as holding.' : 'Full position will be closed.') + '</div>';
 }
 
 function confirmSell(index) {
@@ -2520,36 +2676,36 @@ function editPortfolioPosition(index) {
   const container = document.getElementById('dashboard');
   
   let html = '<div class="card" style="max-width:500px;margin:40px auto">';
-  html += '<h3 style="font-family:var(--font-mono);font-size:13px;color:var(--accent-amber);margin-bottom:14px">✎ EDIT POSITION — ' + p.ticker + '</h3>';
+  html += '<h3 style="font-family:var(--font-mono);font-size:13px;color:var(--primary);margin-bottom:14px">✎ EDIT POSITION — ' + p.ticker + '</h3>';
   html += '<div style="margin-bottom:12px">';
-  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">TICKER</label>';
+  html += '<label style="display:block;font-size:10px;color:var(--ink-3);margin-bottom:4px;font-family:var(--font-mono)">TICKER</label>';
   html += '<input class="search-input" id="editTicker" value="' + p.ticker + '" style="width:100%;font-size:13px;margin-bottom:10px">';
-  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">QUANTITY</label>';
+  html += '<label style="display:block;font-size:10px;color:var(--ink-3);margin-bottom:4px;font-family:var(--font-mono)">QUANTITY</label>';
   html += '<input class="search-input" id="editQty" type="number" step="1" value="' + p.quantity + '" style="width:100%;font-size:13px;margin-bottom:10px">';
-  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">BUY PRICE ($)</label>';
+  html += '<label style="display:block;font-size:10px;color:var(--ink-3);margin-bottom:4px;font-family:var(--font-mono)">BUY PRICE ($)</label>';
   html += '<input class="search-input" id="editBuyPrice" type="number" step="0.01" value="' + p.buyPrice.toFixed(2) + '" style="width:100%;font-size:13px;margin-bottom:10px">';
-  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">' + t('portfolio_sellPriceOptional') + '</label>';
+  html += '<label style="display:block;font-size:10px;color:var(--ink-3);margin-bottom:4px;font-family:var(--font-mono)">' + t('portfolio_sellPriceOptional') + '</label>';
   html += '<input class="search-input" id="editSellPrice" type="number" step="0.01" value="' + (p.sellPrice ? p.sellPrice.toFixed(2) : '') + '" style="width:100%;font-size:13px;margin-bottom:10px">';
-  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">STATUS</label>';
-  html += '<select id="editStatus" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:8px;border-radius:4px;font-family:var(--font-mono);font-size:13px;width:100%;margin-bottom:10px">';
+  html += '<label style="display:block;font-size:10px;color:var(--ink-3);margin-bottom:4px;font-family:var(--font-mono)">STATUS</label>';
+  html += '<select id="editStatus" style="background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:8px;border-radius:4px;font-family:var(--font-mono);font-size:13px;width:100%;margin-bottom:10px">';
   html += '<option value="holding" ' + (p.status === 'holding' ? 'selected' : '') + '>🔵 HOLDING</option>';
   html += '<option value="sold" ' + (p.status === 'sold' ? 'selected' : '') + '>✅ SOLD</option>';
   html += '</select>';
-  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">' + t('darf_tradeType') + '</label>';
-  html += '<select id="editTradeType" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:8px;border-radius:4px;font-family:var(--font-mono);font-size:13px;width:100%;margin-bottom:10px">';
+  html += '<label style="display:block;font-size:10px;color:var(--ink-3);margin-bottom:4px;font-family:var(--font-mono)">' + t('darf_tradeType') + '</label>';
+  html += '<select id="editTradeType" style="background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:8px;border-radius:4px;font-family:var(--font-mono);font-size:13px;width:100%;margin-bottom:10px">';
   html += '<option value="swing" ' + ((p.tradeType || 'swing') === 'swing' ? 'selected' : '') + '>📈 ' + t('darf_swing') + '</option>';
   html += '<option value="daytrade" ' + (p.tradeType === 'daytrade' ? 'selected' : '') + '>⚡ ' + t('darf_daytrade') + '</option>';
   html += '</select>';
-  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">' + t('portfolio_sellDateOptional') + '</label>';
+  html += '<label style="display:block;font-size:10px;color:var(--ink-3);margin-bottom:4px;font-family:var(--font-mono)">' + t('portfolio_sellDateOptional') + '</label>';
   html += '<input class="search-input" id="editSellDate" type="date" value="' + (p.sellDate || '') + '" style="width:100%;font-size:13px;margin-bottom:10px">';
-  html += '<label style="display:block;font-size:10px;color:var(--text-dim);margin-bottom:4px;font-family:var(--font-mono)">BUY DATE</label>';
+  html += '<label style="display:block;font-size:10px;color:var(--ink-3);margin-bottom:4px;font-family:var(--font-mono)">BUY DATE</label>';
   html += '<input class="search-input" id="editBuyDate" type="date" value="' + (p.buyDate || '') + '" style="width:100%;font-size:13px;margin-bottom:10px">';
   html += '</div>';
   html += '<div style="display:flex;gap:8px">';
   html += '<button class="btn primary" onclick="savePortfolioEdit(' + index + ')" style="flex:1">' + t('portfolio_save') + '</button>';
   html += '<button class="btn" onclick="renderPortfolioView()">' + t('auth_cancel') + '</button>';
   html += '</div>';
-  html += '<div id="editError" style="margin-top:8px;font-size:11px;color:var(--red-bear);display:none"></div>';
+  html += '<div id="editError" style="margin-top:8px;font-size:11px;color:var(--sell);display:none"></div>';
   html += '</div>';
   container.innerHTML = html;
 }
@@ -2687,18 +2843,18 @@ function generateTaxReport() {
   html += '</div>';
   
   // Realized gains/losses (sold)
-  html += '<div style="padding:14px;border-bottom:1px solid var(--border)">';
-  html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--green-bull);margin-bottom:10px">' + t('taxReport_realized') + '</h3>';
+  html += '<div style="padding:14px;border-bottom:1px solid var(--line)">';
+  html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--buy);margin-bottom:10px">' + t('taxReport_realized') + '</h3>';
   if (soldItems.length === 0) {
-    html += '<div style="color:var(--text-dim);font-size:11px">' + t('taxReport_noRealized') + '</div>';
+    html += '<div style="color:var(--ink-3);font-size:11px">' + t('taxReport_noRealized') + '</div>';
   } else {
-    html += '<table class="tracked-table"><thead><tr><th>TICKER</th><th>QTY</th><th>' + t('portfolio_buyPrice') + '</th><th>' + t('portfolio_currentSell') + '</th><th>GAIN/LOSS</th><th>BUY DATE</th><th>SELL DATE</th></tr></thead><tbody>';
+    html += '<table class="tracked-table"><thead><tr><th>TICKER</th><th>QTD</th><th>' + t('portfolio_buyPrice') + '</th><th>' + t('portfolio_currentSell') + '</th><th>RESULTADO</th><th>COMPRA</th><th>VENDA</th></tr></thead><tbody>';
     const realizedByCur = {};
     soldItems.forEach(p => {
       const sym = getCurrencySymbol(p.ticker);
       const profit = (p.sellPrice - p.buyPrice) * p.quantity;
       realizedByCur[sym] = (realizedByCur[sym] || 0) + profit;
-      html += '<tr><td class="tkr">' + p.ticker + '</td><td>' + p.quantity + '</td><td>' + sym + p.buyPrice.toFixed(2) + '</td><td>' + sym + p.sellPrice.toFixed(2) + '</td><td class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + sym + profit.toFixed(2) + '</td><td style="color:var(--text-dim)">' + (p.buyDate || '—') + '</td><td style="color:var(--text-dim)">' + (p.sellDate || '—') + '</td></tr>';
+      html += '<tr><td class="tkr">' + p.ticker + '</td><td>' + p.quantity + '</td><td>' + sym + p.buyPrice.toFixed(2) + '</td><td>' + sym + p.sellPrice.toFixed(2) + '</td><td class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + sym + profit.toFixed(2) + '</td><td style="color:var(--ink-3)">' + (p.buyDate || '—') + '</td><td style="color:var(--ink-3)">' + (p.sellDate || '—') + '</td></tr>';
     });
     Object.entries(realizedByCur).forEach(([sym, total]) => {
       html += '<tr><td style="font-weight:700">' + t('portfolio_totalRealized') + ' (' + sym + ')</td><td></td><td></td><td></td><td class="' + (total >= 0 ? 'pnl-up' : 'pnl-dn') + '" style="font-weight:700">' + (total >= 0 ? '+' : '') + sym + total.toFixed(2) + '</td><td></td><td></td></tr>';
@@ -2721,21 +2877,21 @@ function generateTaxReport() {
   const missingRates = foreignCodes.filter(c => c !== 'BRL' && !fxCache[c]);
 
   html += '<div style="padding:14px">';
-  html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--accent-amber);margin-bottom:10px">' + t('taxReport_taxEstimate') + '</h3>';
+  html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--primary);margin-bottom:10px">' + t('taxReport_taxEstimate') + '</h3>';
 
   // Tax rate + refresh controls
   html += '<div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap">';
-  html += '<label style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">' + t('taxReport_taxRate') + '</label>';
-  html += '<input id="taxRateInput" type="number" step="0.1" min="0" max="100" value="' + taxRate + '" style="background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:6px 8px;border-radius:4px;font-family:var(--font-mono);font-size:12px;width:70px">';
-  html += '<span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">%</span>';
+  html += '<label style="font-family:var(--font-mono);font-size:11px;color:var(--ink-2)">' + t('taxReport_taxRate') + '</label>';
+  html += '<input id="taxRateInput" type="number" step="0.1" min="0" max="100" value="' + taxRate + '" style="background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:6px 8px;border-radius:4px;font-family:var(--font-mono);font-size:12px;width:70px">';
+  html += '<span style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3)">%</span>';
   html += '<button class="btn" onclick="saveTaxRate()" style="font-size:10px;padding:4px 10px">💾 SET</button>';
   if (foreignCodes.length > 0) {
-    html += '<button class="btn" onclick="autoFetchFxRates(true)" style="font-size:10px;padding:4px 10px;color:var(--accent-amber);border-color:var(--accent-amber)">🔄 ' + (missingRates.length > 0 ? 'Carregar Cotações' : 'Atualizar Cotações') + '</button>';
+    html += '<button class="btn" onclick="autoFetchFxRates(true)" style="font-size:10px;padding:4px 10px;color:var(--primary);border-color:var(--primary)">🔄 ' + (missingRates.length > 0 ? 'Carregar Cotações' : 'Atualizar Cotações') + '</button>';
   }
   html += '</div>';
 
   if (Object.keys(realizedGainByCur).length === 0) {
-    html += '<div style="color:var(--text-dim);font-size:11px">' + t('taxReport_noRealized') + '</div>';
+    html += '<div style="color:var(--ink-3);font-size:11px">' + t('taxReport_noRealized') + '</div>';
   } else {
     // Per-currency rows with editable FX rate
     html += '<table class="tracked-table" style="margin-bottom:14px"><thead><tr>';
@@ -2755,15 +2911,15 @@ function generateTaxReport() {
         ? new Date(cached.fetchedAt).toLocaleTimeString(_lang === 'pt' ? 'pt-BR' : 'en-US', { hour: '2-digit', minute: '2-digit' })
         : null;
       const rateLabel = isBRL ? '1,00 (BRL)' : (rate !== null
-        ? `<input type="number" step="0.01" min="0" value="${rate.toFixed(4)}" onchange="setFxRateManual('${code}',this.value);generateTaxReport()" style="width:80px;background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:3px 6px;border-radius:4px;font-family:var(--font-mono);font-size:11px"> <span style="font-size:9px;color:var(--text-dim)">${cached && cached.manual ? '✎ manual' : (rateAge ? '⏱ ' + rateAge : '')}</span>`
-        : '<span style="color:var(--yellow-neutral);font-size:10px">— clique em Carregar Cotações</span>');
+        ? `<input type="number" step="0.01" min="0" value="${rate.toFixed(4)}" onchange="setFxRateManual('${code}',this.value);generateTaxReport()" style="width:80px;background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:3px 6px;border-radius:4px;font-family:var(--font-mono);font-size:11px"> <span style="font-size:9px;color:var(--ink-3)">${cached && cached.manual ? '✎ manual' : (rateAge ? '⏱ ' + rateAge : '')}</span>`
+        : '<span style="color:var(--hold);font-size:10px">— clique em Carregar Cotações</span>');
 
       const gainClass = gain >= 0 ? 'pnl-up' : 'pnl-dn';
       const brlStr = brlEquiv !== null ? (brlEquiv >= 0 ? '+' : '') + 'R$' + brlEquiv.toFixed(2) : '—';
       const brlClass = brlEquiv !== null ? (brlEquiv >= 0 ? 'pnl-up' : 'pnl-dn') : '';
 
       html += '<tr>';
-      html += '<td style="font-weight:700;color:var(--accent-amber)">' + sym + ' (' + code + ')</td>';
+      html += '<td style="font-weight:700;color:var(--primary)">' + sym + ' (' + code + ')</td>';
       html += '<td class="' + gainClass + '">' + (gain >= 0 ? '+' : '') + sym + gain.toFixed(2) + '</td>';
       html += '<td>' + rateLabel + '</td>';
       html += '<td class="' + brlClass + '">' + brlStr + '</td>';
@@ -2780,26 +2936,26 @@ function generateTaxReport() {
       const taxBRL = totalBRL > 0 ? totalBRL * (taxRate / 100) : 0;
       const netBRL = totalBRL - taxBRL;
       html += '<div style="background:rgba(200,90,23,0.08);border:1px solid rgba(200,90,23,0.3);border-radius:8px;padding:14px;margin-bottom:10px">';
-      html += '<div style="font-family:var(--font-mono);font-size:11px;color:var(--accent-amber);font-weight:700;margin-bottom:10px">💰 TOTAL EM REAIS (R$)</div>';
+      html += '<div style="font-family:var(--font-mono);font-size:11px;color:var(--primary);font-weight:700;margin-bottom:10px">💰 TOTAL EM REAIS (R$)</div>';
       html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">';
       html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
-      html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">Ganho Realizado</div>';
-      html += '<div style="font-family:var(--font-mono);font-size:16px;font-weight:700;margin-top:4px;' + (totalBRL >= 0 ? 'color:var(--green-bull)' : 'color:var(--red-bear)') + '">' + (totalBRL >= 0 ? '+' : '') + 'R$' + totalBRL.toFixed(2) + '</div>';
+      html += '<div style="font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px">Ganho Realizado</div>';
+      html += '<div style="font-family:var(--font-mono);font-size:16px;font-weight:700;margin-top:4px;' + (totalBRL >= 0 ? 'color:var(--buy)' : 'color:var(--sell)') + '">' + (totalBRL >= 0 ? '+' : '') + 'R$' + totalBRL.toFixed(2) + '</div>';
       html += '</div>';
       html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
-      html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">IMPOSTO (' + taxRate + '%)</div>';
-      html += '<div style="font-family:var(--font-mono);font-size:16px;font-weight:700;margin-top:4px;color:var(--red-bear)">R$' + (totalBRL > 0 ? taxBRL.toFixed(2) : '0.00') + '</div>';
+      html += '<div style="font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px">IMPOSTO (' + taxRate + '%)</div>';
+      html += '<div style="font-family:var(--font-mono);font-size:16px;font-weight:700;margin-top:4px;color:var(--sell)">R$' + (totalBRL > 0 ? taxBRL.toFixed(2) : '0.00') + '</div>';
       html += '</div>';
       html += '<div style="background:rgba(0,0,0,0.15);border-radius:6px;padding:10px">';
-      html += '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">Líquido Após Imposto</div>';
-      html += '<div style="font-family:var(--font-mono);font-size:16px;font-weight:700;margin-top:4px;' + (netBRL >= 0 ? 'color:var(--green-bull)' : 'color:var(--red-bear)') + '">' + (netBRL >= 0 ? '+' : '') + 'R$' + netBRL.toFixed(2) + '</div>';
+      html += '<div style="font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px">Líquido Após Imposto</div>';
+      html += '<div style="font-family:var(--font-mono);font-size:16px;font-weight:700;margin-top:4px;' + (netBRL >= 0 ? 'color:var(--buy)' : 'color:var(--sell)') + '">' + (netBRL >= 0 ? '+' : '') + 'R$' + netBRL.toFixed(2) + '</div>';
       html += '</div>';
       html += '</div></div>';
     } else {
-      html += '<div style="padding:10px;background:rgba(255,193,7,0.08);border-radius:6px;font-size:11px;color:var(--yellow-neutral)">⚠️ Carregue as cotações do dia para ver o total em R$.</div>';
+      html += '<div style="padding:10px;background:rgba(255,193,7,0.08);border-radius:6px;font-size:11px;color:var(--hold)">⚠️ Carregue as cotações do dia para ver o total em R$.</div>';
     }
   }
-  html += '<div style="margin-top:10px;font-size:10px;color:var(--text-dim);padding:8px;background:rgba(255,193,7,0.08);border-radius:4px">';
+  html += '<div style="margin-top:10px;font-size:10px;color:var(--ink-3);padding:8px;background:rgba(255,193,7,0.08);border-radius:4px">';
   html += t('taxReport_disclaimer');
   html += '</div></div>';
 
@@ -2810,16 +2966,16 @@ function generateTaxReport() {
     const dtItems    = brlSold.filter(p => p.tradeType === 'daytrade');
 
     html += '<div style="padding:14px;border-top:2px solid rgba(200,90,23,0.4)">';
-    html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--accent-amber);margin-bottom:12px">' + t('darf_title') + '</h3>';
+    html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--primary);margin-bottom:12px">' + t('darf_title') + '</h3>';
 
     // Loss carryforward controls
-    html += '<div style="margin-bottom:14px;padding:10px 12px;background:rgba(0,0,0,0.12);border-radius:6px;border:1px solid var(--border)">';
-    html += '<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">' + t('darf_lossCarryforward') + '</div>';
+    html += '<div style="margin-bottom:14px;padding:10px 12px;background:rgba(0,0,0,0.12);border-radius:6px;border:1px solid var(--line)">';
+    html += '<div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">' + t('darf_lossCarryforward') + '</div>';
     html += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">';
-    html += '<label style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary)">' + t('darf_lossSwing') + '</label>';
-    html += '<input id="darfLossSwing" type="number" step="0.01" min="0" value="' + ((cf.swing_BRL || 0)).toFixed(2) + '" style="width:100px;background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:4px 8px;border-radius:4px;font-family:var(--font-mono);font-size:11px">';
-    html += '<label style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary)">' + t('darf_lossDaytrade') + '</label>';
-    html += '<input id="darfLossDaytrade" type="number" step="0.01" min="0" value="' + ((cf.daytrade_BRL || 0)).toFixed(2) + '" style="width:100px;background:var(--bg-term);border:1px solid var(--border);color:var(--text-primary);padding:4px 8px;border-radius:4px;font-family:var(--font-mono);font-size:11px">';
+    html += '<label style="font-family:var(--font-mono);font-size:10px;color:var(--ink-2)">' + t('darf_lossSwing') + '</label>';
+    html += '<input id="darfLossSwing" type="number" step="0.01" min="0" value="' + ((cf.swing_BRL || 0)).toFixed(2) + '" style="width:100px;background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:4px 8px;border-radius:4px;font-family:var(--font-mono);font-size:11px">';
+    html += '<label style="font-family:var(--font-mono);font-size:10px;color:var(--ink-2)">' + t('darf_lossDaytrade') + '</label>';
+    html += '<input id="darfLossDaytrade" type="number" step="0.01" min="0" value="' + ((cf.daytrade_BRL || 0)).toFixed(2) + '" style="width:100px;background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:4px 8px;border-radius:4px;font-family:var(--font-mono);font-size:11px">';
     html += '<button class="btn" onclick="saveDarfLossCarryforward()" style="font-size:10px;padding:4px 10px">' + t('darf_updateLoss') + '</button>';
     html += '</div></div>';
 
@@ -2837,7 +2993,7 @@ function generateTaxReport() {
       const newLoss    = Math.max(0, -realized);
 
       let b = '<div style="margin-bottom:12px;padding:10px 12px;background:rgba(0,0,0,0.1);border-radius:6px;border:1px solid ' + (isSwing ? 'rgba(100,200,100,0.2)' : 'rgba(200,150,30,0.25)') + '">';
-      b += '<div style="font-family:var(--font-mono);font-size:11px;font-weight:700;margin-bottom:10px;color:' + (isSwing ? 'var(--green-bull)' : 'var(--accent-amber)') + '">' + label + ' — ' + (rate * 100) + '%</div>';
+      b += '<div style="font-family:var(--font-mono);font-size:11px;font-weight:700;margin-bottom:10px;color:' + (isSwing ? 'var(--buy)' : 'var(--primary)') + '">' + label + ' — ' + (rate * 100) + '%</div>';
       b += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;font-family:var(--font-mono);font-size:10px">';
 
       const rows = [
@@ -2857,12 +3013,12 @@ function generateTaxReport() {
 
       rows.forEach(function(r) {
         b += '<div style="background:rgba(0,0,0,0.15);border-radius:4px;padding:6px 8px">';
-        b += '<div style="color:var(--text-dim);font-size:9px;text-transform:uppercase;letter-spacing:0.4px">' + r[0] + '</div>';
+        b += '<div style="color:var(--ink-3);font-size:9px;text-transform:uppercase;letter-spacing:0.4px">' + r[0] + '</div>';
         b += '<div class="' + r[2] + '" style="font-weight:700;margin-top:3px">' + r[1] + '</div>';
         b += '</div>';
       });
       b += '</div>';
-      if (newLoss > 0) b += '<div style="margin-top:6px;font-size:9px;color:var(--yellow-neutral)">⚠ ' + (isSwing ? t('darf_lossSwing') : t('darf_lossDaytrade')).replace(':','') + ': adicione R$' + newLoss.toFixed(2) + ' ao campo acima após encerrar o mês.</div>';
+      if (newLoss > 0) b += '<div style="margin-top:6px;font-size:9px;color:var(--hold)">⚠ ' + (isSwing ? t('darf_lossSwing') : t('darf_lossDaytrade')).replace(':','') + ': adicione R$' + newLoss.toFixed(2) + ' ao campo acima após encerrar o mês.</div>';
       b += '</div>';
       return { html: b, netDARF };
     };
@@ -2872,32 +3028,32 @@ function generateTaxReport() {
     html += swingBlock.html + dtBlock.html;
 
     if (swingItems.length === 0 && dtItems.length === 0) {
-      html += '<div style="color:var(--text-dim);font-size:11px">' + t('darf_noBrlTrades') + '</div>';
+      html += '<div style="color:var(--ink-3);font-size:11px">' + t('darf_noBrlTrades') + '</div>';
     }
 
     // DARF code + SicalcWeb link (US-70)
     const userCpf = authUser && authUser.cpf ? formatCPF(authUser.cpf) : null;
     const totalDARF = swingBlock.netDARF + dtBlock.netDARF;
     html += '<div style="margin:14px 0 10px;padding:10px 12px;background:rgba(200,90,23,0.07);border:1px solid rgba(200,90,23,0.3);border-radius:6px">';
-    html += '<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">' + t('darf_sicalcTitle') + '</div>';
+    html += '<div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">' + t('darf_sicalcTitle') + '</div>';
     html += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px">';
     html += '<span style="font-family:var(--font-mono);font-size:11px;background:rgba(200,90,23,0.12);border:1px solid rgba(200,90,23,0.35);padding:4px 10px;border-radius:4px">' + t('darf_code') + '</span>';
     if (totalDARF > 0) {
-      html += '<span style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--red-bear)">R$' + totalDARF.toFixed(2) + ' ' + t('darf_due') + '</span>';
+      html += '<span style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--sell)">R$' + totalDARF.toFixed(2) + ' ' + t('darf_due') + '</span>';
     }
     html += '</div>';
     if (userCpf) {
       html += '<div style="font-family:var(--font-mono);font-size:10px;margin-bottom:8px;display:flex;align-items:center;gap:8px">';
-      html += '<span style="color:var(--text-dim)">CPF:</span><span id="darfCpfDisplay" style="color:var(--text-primary);letter-spacing:1px">' + userCpf + '</span>';
+      html += '<span style="color:var(--ink-3)">CPF:</span><span id="darfCpfDisplay" style="color:var(--ink);letter-spacing:1px">' + userCpf + '</span>';
       html += '<button class="btn" onclick="navigator.clipboard.writeText(\'' + (authUser.cpf) + '\');showToast(\'CPF copiado\',true,2000)" style="font-size:9px;padding:2px 6px">' + t('darf_copy') + '</button>';
       html += '</div>';
     } else {
-      html += '<div style="font-size:10px;color:var(--text-dim);margin-bottom:8px">⚠ ' + t('darf_noCpf') + ' <a href="#" onclick="showProfile();return false" style="color:var(--accent-amber);text-decoration:underline">' + t('darf_addCpf') + '</a></div>';
+      html += '<div style="font-size:10px;color:var(--ink-3);margin-bottom:8px">⚠ ' + t('darf_noCpf') + ' <a href="#" onclick="showProfile();return false" style="color:var(--primary);text-decoration:underline">' + t('darf_addCpf') + '</a></div>';
     }
     html += '<a href="https://sicalc.receita.fazenda.gov.br/" target="_blank" rel="noopener noreferrer" class="btn primary" style="font-family:var(--font-mono);font-size:11px;display:inline-flex;align-items:center;gap:6px;text-decoration:none">' + t('darf_siCalcLink') + ' ↗</a>';
     html += '</div>';
 
-    html += '<div style="font-size:9px;color:var(--text-dim);padding:6px 8px;background:rgba(255,193,7,0.06);border-radius:4px">' + t('darf_disclaimer') + '</div>';
+    html += '<div style="font-size:9px;color:var(--ink-3);padding:6px 8px;background:rgba(255,193,7,0.06);border-radius:4px">' + t('darf_disclaimer') + '</div>';
     html += '</div>'; // /darf panel
   }
 
@@ -3027,7 +3183,7 @@ let universeData = {};
 
 async function loadUniverseData(market) {
   const stocks = await loadUniverse(market);
-  const labels = {us:'🇺🇸 S&P 500 — Tech, Semis, Financials, Healthcare, Consumer', europe:'🇪🇺 STOXX 600 — Germany, France, UK, Netherlands, Italy, Spain', emerging:'🌍 Emerging Markets — Brazil, Mexico, India, China, South Africa, Chile, Poland'};
+  const labels = {brasil:'🇧🇷 B3 — Ibovespa, FIIs, Blue Chips'};
   const desc = labels[market] || market;
   return { stocks, desc };
 }
@@ -3041,14 +3197,16 @@ function showUniverseView() {
   document.getElementById('trackedTabBtn').style.color = '';
   document.getElementById('portfolioTabBtn').style.borderColor = '';
   document.getElementById('portfolioTabBtn').style.color = '';
-  document.getElementById('universeTabBtn').style.borderColor = state.showUniverse ? 'var(--accent-amber)' : '';
-  document.getElementById('universeTabBtn').style.color = state.showUniverse ? 'var(--accent-amber)' : '';
+  document.getElementById('universeTabBtn').style.borderColor = state.showUniverse ? 'var(--primary)' : '';
+  document.getElementById('universeTabBtn').style.color = state.showUniverse ? 'var(--primary)' : '';
   if (state.showUniverse) renderUniverseView();
   else renderDashboard();
 }
 
 async function renderUniverseView() {
   if (!state.showUniverse) return;
+  const _cs = document.getElementById('calendarSection'); if (_cs) _cs.style.display = 'none';
+  
   const container = document.getElementById('dashboard');
   const market = state.market;
   const { stocks, desc } = await loadUniverseData(market);
@@ -3063,23 +3221,23 @@ async function renderUniverseView() {
   const meta = (state._universeMeta && state._universeMeta[market]) || { total: stocks.length, visible: stocks.length };
   const isLimited = meta.visible < meta.total;
   let html = `<div class="card" style="padding:0;overflow-x:auto">
-    <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)">
-      ${desc} — <strong style="color:var(--accent-amber)">${stocks.length}</strong> stocks ${isLimited ? `<span style="color:var(--text-dim);font-size:10px;margin-left:8px">(showing ${meta.visible} / ${meta.total})</span>` : ''}
+    <div style="padding:10px 14px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:11px;color:var(--ink-2)">
+      ${desc} — <strong style="color:var(--primary)">${stocks.length}</strong> stocks ${isLimited ? `<span style="color:var(--ink-3);font-size:10px;margin-left:8px">(showing ${meta.visible} / ${meta.total})</span>` : ''}
     </div>
-    ${isLimited ? `<div style="padding:8px 14px;border-bottom:1px solid var(--border);background:rgba(200,90,23,0.08);display:flex;align-items:center;justify-content:space-between;gap:8px">
-      <span style="font-size:11px;color:var(--text-secondary)">⭐ <strong style="color:var(--accent-amber)">Upgrade to Pro</strong> to see all stocks and unlock full universe</span>
+    ${isLimited ? `<div style="padding:8px 14px;border-bottom:1px solid var(--line);background:rgba(200,90,23,0.08);display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:11px;color:var(--ink-2)">⭐ <strong style="color:var(--primary)">Upgrade to Pro</strong> to see all stocks and unlock full universe</span>
       <button class="btn primary" onclick="upgradeToPro()" style="font-size:10px;white-space:nowrap">GO PRO</button>
     </div>` : ''}
-    <div style="padding:8px 10px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+    <div style="padding:8px 10px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px;align-items:center">
       <input class="search-input" id="univSearch" placeholder="🔍 Search ticker / name..." style="width:160px;font-size:11px" oninput="filterUniverse()">`;
   // Sector filter pills
   if (sectors.length > 0) {
     html += sectors.map(s => `<button class="btn univ-filter-btn" data-filter="sector-${s}" onclick="toggleUnivFilter('sector','${s}')" style="font-size:8px;padding:2px 8px">${s}</button>`).join('');
-    html += `<button class="btn" onclick="clearUnivFilters()" style="font-size:8px;padding:2px 8px;color:var(--text-dim)">✕ clear</button>`;
+    html += `<button class="btn" onclick="clearUnivFilters()" style="font-size:8px;padding:2px 8px;color:var(--ink-3)">✕ clear</button>`;
   }
   // Region filter (emerging markets only)
   if (market === 'emerging' && regions.length > 0) {
-    html += '<span style="color:var(--text-dim);font-size:9px;margin:0 2px">|</span>';
+    html += '<span style="color:var(--ink-3);font-size:9px;margin:0 2px">|</span>';
     html += regions.map(r => `<button class="btn univ-filter-btn" data-filter="region-${r}" onclick="toggleUnivFilter('region','${r}')" style="font-size:8px;padding:2px 8px">${r}</button>`).join('');
   }
   html += `</div>
@@ -3101,17 +3259,17 @@ async function renderUniverseView() {
     filtered.forEach((s, i) => {
       const found = analyzed.find(a => a.ticker === s.t);
       const price = found ? getCurrencySymbol(s.t) + found.price.toFixed(2) : '—';
-      const signal = found ? `<span class="card-signal ${found.signal}">${found.signal.toUpperCase()}</span>` : '<span style="color:var(--text-dim);font-size:10px">not scanned</span>';
+      const signal = found ? `<span class="card-signal ${found.signal}">${found.signal.toUpperCase()}</span>` : '<span style="color:var(--ink-3);font-size:10px">not scanned</span>';
       const tracked = state.trackedPicks.find(p => p.ticker === s.t && p.status === 'active');
-      const trackBtn = tracked ? '<span style="color:var(--green-bull);font-size:10px">📌</span>' : `<button class="btn" onclick="trackFromUniv('${s.t}','${market}',${found?.price||0})" style="font-size:8px;padding:2px 6px">+ TRACK</button>`;
+      const trackBtn = tracked ? '<span style="color:var(--buy);font-size:10px">📌</span>' : `<button class="btn" onclick="trackFromUniv('${s.t}','${market}',${found?.price||0})" style="font-size:8px;padding:2px 6px">+ TRACK</button>`;
       const inPortfolio = state.portfolio.find(p => p.ticker === s.t && p.status === 'holding');
-      const portfolioBtn = inPortfolio ? '<span style="color:var(--green-bull);font-size:10px">✅</span>' : `<button class="btn" onclick="addToMyStocksFromUniv('${s.t}',${found?.price||0})" style="font-size:8px;padding:2px 6px;margin-left:4px">+ MY STOCKS</button>`;
+      const portfolioBtn = inPortfolio ? '<span style="color:var(--buy);font-size:10px">✅</span>' : `<button class="btn" onclick="addToMyStocksFromUniv('${s.t}',${found?.price||0})" style="font-size:8px;padding:2px 6px;margin-left:4px">+ MY STOCKS</button>`;
       rows += `<tr class="univ-row" data-sector="${s.s||''}" data-region="${s.r||''}">
-        <td style="color:var(--text-dim)">${i+1}</td>
+        <td style="color:var(--ink-3)">${i+1}</td>
         <td class="tkr">${marketFlag} ${s.t}</td>
-        <td style="color:var(--text-secondary);font-size:11px">${s.n}</td>
-        <td style="color:var(--text-dim);font-size:10px">${s.s||''}</td>`;
-      if (market==='emerging') rows += `<td style="color:var(--text-dim);font-size:10px">${s.r||''}</td>`;
+        <td style="color:var(--ink-2);font-size:11px">${s.n}</td>
+        <td style="color:var(--ink-3);font-size:10px">${s.s||''}</td>`;
+      if (market==='emerging') rows += `<td style="color:var(--ink-3);font-size:10px">${s.r||''}</td>`;
       rows += `<td>${price}</td>
         <td>${signal}</td>
         <td style="white-space:nowrap">${trackBtn}${portfolioBtn}</td>
@@ -3123,7 +3281,7 @@ async function renderUniverseView() {
     const holdC = analyzed.filter(a => a.signal === 'neutral').length;
     const sellC = analyzed.filter(a => a.signal === 'sell').length;
     const summaryEl = document.getElementById('univSummary');
-    if (summaryEl) summaryEl.innerHTML = `🟢 Buy: <strong style="color:var(--green-bull)">${buyC}</strong> ◈ Hold: <strong style="color:var(--yellow-neutral)">${holdC}</strong> 🔴 Sell: <strong style="color:var(--red-bear)">${sellC}</strong> 📊 Scanned: <strong>${analyzed.length}</strong> / ${stocks.length} | Showing: <strong>${filtered.length}</strong>`;
+    if (summaryEl) summaryEl.innerHTML = `🟢 Buy: <strong style="color:var(--buy)">${buyC}</strong> ◈ Hold: <strong style="color:var(--hold)">${holdC}</strong> 🔴 Sell: <strong style="color:var(--sell)">${sellC}</strong> 📊 Scanned: <strong>${analyzed.length}</strong> / ${stocks.length} | Showing: <strong>${filtered.length}</strong>`;
   }
   window._univRenderRows = renderRows;
   html += '</tbody></table></div></div>';
@@ -3147,7 +3305,7 @@ function toggleUnivFilter(type, val) {
   document.querySelectorAll('.univ-filter-btn').forEach(b => {
     const f = b.dataset.filter;
     const [ftype, fval] = [f.split('-')[0], f.split('-').slice(1).join('-')];
-    if (state._univFilter[ftype] === fval) b.style.borderColor = 'var(--accent-amber)';
+    if (state._univFilter[ftype] === fval) b.style.borderColor = 'var(--primary)';
     else b.style.borderColor = '';
   });
   if (window._univRenderRows) window._univRenderRows();
@@ -3175,9 +3333,6 @@ function addToMyStocksFromUniv(ticker, price) {
   if (state.portfolio.find(p => p.ticker === ticker && p.status === 'holding')) {
     alert(ticker + ' ' + t('errors_alreadyInPortfolio')); return;
   }
-  if ((authUser.tier !== 'pro' && authUser.tier !== 'admin') && state.portfolio.length >= 3) {
-    alert(t('errors_freeTierPortfolio')); return;
-  }
   state.portfolio.push({ ticker, quantity: 1, buyPrice: price, sellPrice: null, buyDate: new Date().toISOString().slice(0,10), sellDate: null, status: 'holding' });
   savePortfolio();
   if (window._univRenderRows) window._univRenderRows();
@@ -3188,7 +3343,7 @@ function changeChartPeriod(idx, period) {
   const canvas = document.getElementById('chart-'+idx);
   if (!canvas) return;
   canvas.dataset.period = period;
-  const d = state.displayedStocks[idx];
+  const d = state.detailStock || state.displayedStocks[idx];
   if (!d) return;
   // Update active button styling
   const parent = canvas.parentElement;
@@ -3275,7 +3430,7 @@ function applyLang() {
   // Active market label — re-render with current market in new language
   const _aml = document.getElementById('activeMarketLabel');
   if (_aml && typeof state !== 'undefined' && state.market) {
-    const _mktLabels = { us:'🇺🇸 '+t('market_us'), brasil:'🇧🇷 '+t('market_brasil'), europe:'🇪🇺 '+t('market_europe'), emerging:'🌍 '+t('market_emerging') };
+    const _mktLabels = { brasil:'🇧🇷 '+t('market_brasil') };
     _aml.textContent = _mktLabels[state.market] || state.market;
   }
 
@@ -3333,7 +3488,7 @@ function applyLang() {
   set('portfolioModalSave', t('portfolio_save'));
   set('portfolioModalClose', t('portfolio_close'));
   const portfolioLimitNote = document.getElementById('portfolioLimitNote');
-  if (portfolioLimitNote) portfolioLimitNote.innerHTML = t('portfolio_freeTierLimit') + ' <span style="color:var(--accent-amber);cursor:pointer" onclick="upgradeToPro()">' + t('portfolio_upgradeLink') + '</span> for unlimited.';
+  if (portfolioLimitNote) portfolioLimitNote.innerHTML = t('portfolio_freeTierLimit') + ' <span style="color:var(--primary);cursor:pointer" onclick="upgradeToPro()">' + t('portfolio_upgradeLink') + '</span> for unlimited.';
 
   // Footer
   const fv = document.getElementById('footerVersion');
@@ -3597,7 +3752,7 @@ function buildPatternOverlay(candles, patternName) {
 function showSimulateView() {
   state.showTracked = false; state.showUniverse = false;
   if (!authUser || (authUser.tier !== 'pro' && authUser.tier !== 'admin')) {
-    document.getElementById('dashboard').innerHTML = '<div class="card" style="max-width:400px;margin:60px auto;text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:12px">🔍</div><h2 style="font-family:var(--font-mono);color:var(--accent-amber);font-size:16px;margin-bottom:8px">' + t('proGate_title') + '</h2><p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">' + t('proGate_signIn') + '<br><button class="btn primary" onclick="showAuthModal()" style="font-size:12px;margin-top:8px">🔑 ' + t('signIn') + '</button></p></div>';
+    document.getElementById('dashboard').innerHTML = '<div class="card" style="max-width:400px;margin:60px auto;text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:12px">🔍</div><h2 style="font-family:var(--font-mono);color:var(--primary);font-size:16px;margin-bottom:8px">' + t('proGate_title') + '</h2><p style="font-size:13px;color:var(--ink-2);margin-bottom:20px">' + t('proGate_signIn') + '<br><button class="btn primary" onclick="showAuthModal()" style="font-size:12px;margin-top:8px">🔑 ' + t('signIn') + '</button></p></div>';
     return;
   }
   renderPatternFinder();
@@ -3609,43 +3764,43 @@ function renderPatternFinder() {
   const dirPatterns = _simDir === 'all' ? PATTERNS : PATTERNS.filter(p => p.dir === _simDir);
 
   const dirs = [
-    { key:'all',     label: t('sim_allDir'),              color:'var(--text-secondary)' },
-    { key:'bull',    label: '▲ ' + t('edu_bullish'),      color:'var(--green-bull)' },
-    { key:'bear',    label: '▼ ' + t('edu_bearish'),      color:'var(--red-bear)' },
-    { key:'neutral', label: '◈ ' + t('edu_neutral'),      color:'var(--yellow-neutral)' },
+    { key:'all',     label: t('sim_allDir'),              color:'var(--ink-2)' },
+    { key:'bull',    label: '▲ ' + t('edu_bullish'),      color:'var(--buy)' },
+    { key:'bear',    label: '▼ ' + t('edu_bearish'),      color:'var(--sell)' },
+    { key:'neutral', label: '◈ ' + t('edu_neutral'),      color:'var(--hold)' },
   ];
 
   let html = '<div class="card" style="padding:0;overflow:hidden">';
 
   // Header
-  html += `<div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <span style="font-family:var(--font-mono);font-size:14px;color:var(--accent-amber);font-weight:700">${t('sim_title')}</span>
-    <button class="btn" onclick="renderDashboard()" style="font-size:10px">${t('nav_back')}</button>
+  html += `<div style="padding:12px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <span style="font-family:var(--font-mono);font-size:14px;color:var(--primary);font-weight:700">${t('sim_title')}</span>
+    <button class="btn" onclick="setHomeMode('sinais')" style="font-size:10px">${t('nav_back')}</button>
   </div>`;
 
   // Direction filter bar
-  html += `<div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-    <span style="font-size:10px;color:var(--text-dim);margin-right:2px;font-family:var(--font-mono)">${t('filter_show')}:</span>`;
+  html += `<div style="padding:8px 12px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+    <span style="font-size:10px;color:var(--ink-3);margin-right:2px;font-family:var(--font-mono)">${t('filter_show')}:</span>`;
   dirs.forEach(d => {
     const active = _simDir === d.key;
-    html += `<button onclick="setSimDir('${d.key}')" style="font-size:10px;padding:3px 10px;border-radius:4px;border:1px solid ${active ? d.color : 'var(--border)'};background:${active ? 'rgba(0,0,0,0.25)' : 'transparent'};color:${active ? d.color : 'var(--text-dim)'};cursor:pointer;font-family:var(--font-mono);font-weight:${active ? '700' : '400'}">${d.label}</button>`;
+    html += `<button onclick="setSimDir('${d.key}')" style="font-size:10px;padding:3px 10px;border-radius:4px;border:1px solid ${active ? d.color : 'var(--line)'};background:${active ? 'rgba(0,0,0,0.25)' : 'transparent'};color:${active ? d.color : 'var(--ink-3)'};cursor:pointer;font-family:var(--font-mono);font-weight:${active ? '700' : '400'}">${d.label}</button>`;
   });
   html += '</div>';
 
   // Pattern chips
-  html += '<div style="padding:6px 12px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:4px">';
+  html += '<div style="padding:6px 12px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px">';
   const allChipActive = !_simPattern;
-  html += `<button onclick="setSimPattern(null)" style="font-size:9px;padding:2px 8px;border-radius:10px;border:1px solid ${allChipActive ? 'var(--accent-amber)' : 'var(--border)'};background:${allChipActive ? 'rgba(200,90,23,0.15)' : 'transparent'};color:${allChipActive ? 'var(--accent-amber)' : 'var(--text-dim)'};cursor:pointer;font-family:var(--font-mono)">${t('sim_allPatterns')}</button>`;
+  html += `<button onclick="setSimPattern(null)" style="font-size:9px;padding:2px 8px;border-radius:10px;border:1px solid ${allChipActive ? 'var(--primary)' : 'var(--line)'};background:${allChipActive ? 'rgba(200,90,23,0.15)' : 'transparent'};color:${allChipActive ? 'var(--primary)' : 'var(--ink-3)'};cursor:pointer;font-family:var(--font-mono)">${t('sim_allPatterns')}</button>`;
   dirPatterns.forEach((p, i) => {
     const globalIdx = PATTERNS.indexOf(p);
     const active = _simPattern === p.name;
-    const pColor = p.dir === 'bull' ? 'var(--green-bull)' : p.dir === 'bear' ? 'var(--red-bear)' : 'var(--yellow-neutral)';
-    html += `<button onclick="setSimPattern(${globalIdx})" style="font-size:9px;padding:2px 8px;border-radius:10px;border:1px solid ${active ? pColor : 'var(--border)'};background:${active ? 'rgba(0,0,0,0.2)' : 'transparent'};color:${active ? pColor : 'var(--text-dim)'};cursor:pointer;font-family:var(--font-mono)">${p.name}</button>`;
+    const pColor = p.dir === 'bull' ? 'var(--buy)' : p.dir === 'bear' ? 'var(--sell)' : 'var(--hold)';
+    html += `<button onclick="setSimPattern(${globalIdx})" style="font-size:9px;padding:2px 8px;border-radius:10px;border:1px solid ${active ? pColor : 'var(--line)'};background:${active ? 'rgba(0,0,0,0.2)' : 'transparent'};color:${active ? pColor : 'var(--ink-3)'};cursor:pointer;font-family:var(--font-mono)">${p.name}</button>`;
   });
   html += '</div>';
 
   if (!hasData) {
-    html += `<div style="padding:40px 20px;text-align:center"><div style="font-size:32px;margin-bottom:12px">📡</div><div style="font-family:var(--font-mono);font-size:12px;color:var(--text-dim)">${t('sim_scanFirst')}</div></div></div>`;
+    html += `<div style="padding:40px 20px;text-align:center"><div style="font-size:32px;margin-bottom:12px">📡</div><div style="font-family:var(--font-mono);font-size:12px;color:var(--ink-3)">${t('sim_scanFirst')}</div></div></div>`;
     container.innerHTML = html;
     return;
   }
@@ -3653,62 +3808,62 @@ function renderPatternFinder() {
   const matches = findAllPatternMatches();
 
   // Results count bar
-  html += `<div style="padding:7px 14px;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:10px;color:var(--text-dim)">
-    <strong style="color:var(--text-primary)">${matches.length}</strong> ${t('sim_results')}${_simPattern ? ` · <span style="color:var(--accent-amber)">${_simPattern}</span>` : ''}
+  html += `<div style="padding:7px 14px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--ink-3)">
+    <strong style="color:var(--ink)">${matches.length}</strong> ${t('sim_results')}${_simPattern ? ` · <span style="color:var(--primary)">${_simPattern}</span>` : ''}
   </div>`;
 
   if (!matches.length) {
-    html += `<div style="padding:40px 20px;text-align:center"><div style="font-size:32px;margin-bottom:12px">🔍</div><div style="font-family:var(--font-mono);font-size:12px;color:var(--text-dim)">${t('sim_noMatch')}</div></div>`;
+    html += `<div style="padding:40px 20px;text-align:center"><div style="font-size:32px;margin-bottom:12px">🔍</div><div style="font-family:var(--font-mono);font-size:12px;color:var(--ink-3)">${t('sim_noMatch')}</div></div>`;
   } else {
     matches.forEach(d => {
       const isExpanded = _simExpanded === d.ticker;
-      const sigColor = d.signal==='buy'?'var(--green-bull)':d.signal==='sell'?'var(--red-bear)':'var(--yellow-neutral)';
+      const sigColor = d.signal==='buy'?'var(--buy)':d.signal==='sell'?'var(--sell)':'var(--hold)';
       const sigLabel = d.signal==='buy'?t('buy'):d.signal==='sell'?t('sell'):t('hold');
-      const patColor = d.matchPattern.dir==='bull'?'var(--green-bull)':d.matchPattern.dir==='bear'?'var(--red-bear)':'var(--yellow-neutral)';
+      const patColor = d.matchPattern.dir==='bull'?'var(--buy)':d.matchPattern.dir==='bear'?'var(--sell)':'var(--hold)';
       const scorePct = Math.min(100, Math.round((d.matchScore / 9) * 100));
-      const rsiC = d.rsi>55?'var(--green-bull)':d.rsi<40?'var(--red-bear)':'var(--yellow-neutral)';
-      const macdC = d.macd>0?'var(--green-bull)':'var(--red-bear)';
-      const adxC = d.adx>25?'var(--green-bull)':'var(--yellow-neutral)';
+      const rsiC = d.rsi>55?'var(--buy)':d.rsi<40?'var(--sell)':'var(--hold)';
+      const macdC = d.macd>0?'var(--buy)':'var(--sell)';
+      const adxC = d.adx>25?'var(--buy)':'var(--hold)';
       const sym = typeof getCurrencySymbol === 'function' ? getCurrencySymbol(d.ticker) : '$';
 
-      html += `<div style="border-bottom:1px solid var(--border)">
+      html += `<div style="border-bottom:1px solid var(--line)">
         <div onclick="setSimExpanded('${d.ticker}')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:${isExpanded ? 'rgba(200,90,23,0.06)' : 'transparent'}">
-          <svg viewBox="0 0 200 62" style="width:60px;height:22px;flex-shrink:0;border-radius:3px;background:#0d0906;border:1px solid var(--border)">
+          <svg viewBox="0 0 200 62" style="width:60px;height:22px;flex-shrink:0;border-radius:3px;background:#0d0906;border:1px solid var(--line)">
             <line x1="0" y1="31" x2="200" y2="31" stroke="#1f1812" stroke-width="0.5"/>
             ${d.matchPattern.svg || ''}
           </svg>
           <div style="display:flex;flex-direction:column;min-width:55px">
-            <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text-primary)">${d.ticker}</span>
+            <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--ink)">${d.ticker}</span>
             <span style="font-size:8px;color:${patColor};font-family:var(--font-mono)">${d.matchPattern.name}</span>
           </div>
           <span style="font-size:10px;color:${sigColor};font-family:var(--font-mono);font-weight:700;background:rgba(0,0,0,0.2);padding:2px 6px;border-radius:3px">${sigLabel}</span>
-          <span style="font-size:10px;color:var(--text-dim);font-family:var(--font-mono)">${sym}${d.price.toFixed(2)}</span>
+          <span style="font-size:10px;color:var(--ink-3);font-family:var(--font-mono)">${sym}${d.price.toFixed(2)}</span>
           <div style="display:flex;gap:8px;font-family:var(--font-mono);font-size:10px">
-            <span><span style="color:var(--text-dim)">RSI</span> <span style="color:${rsiC}">${d.rsi.toFixed(1)}</span></span>
-            <span><span style="color:var(--text-dim)">MACD</span> <span style="color:${macdC}">${d.macd.toFixed(2)}</span></span>
-            <span><span style="color:var(--text-dim)">ADX</span> <span style="color:${adxC}">${d.adx.toFixed(1)}</span></span>
+            <span><span style="color:var(--ink-3)">RSI</span> <span style="color:${rsiC}">${d.rsi.toFixed(1)}</span></span>
+            <span><span style="color:var(--ink-3)">MACD</span> <span style="color:${macdC}">${d.macd.toFixed(2)}</span></span>
+            <span><span style="color:var(--ink-3)">ADX</span> <span style="color:${adxC}">${d.adx.toFixed(1)}</span></span>
           </div>
           <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0">
-            <div title="${t('sim_matchQuality')}" style="width:44px;height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+            <div title="${t('sim_matchQuality')}" style="width:44px;height:4px;background:var(--line);border-radius:2px;overflow:hidden">
               <div style="width:${scorePct}%;height:100%;background:${patColor};border-radius:2px"></div>
             </div>
-            <span style="font-size:9px;color:var(--text-dim);font-family:var(--font-mono)">${d.matchScore}/9</span>
-            <span style="font-size:9px;color:var(--text-dim)">${isExpanded ? '▲' : '▼'}</span>
+            <span style="font-size:9px;color:var(--ink-3);font-family:var(--font-mono)">${d.matchScore}/9</span>
+            <span style="font-size:9px;color:var(--ink-3)">${isExpanded ? '▲' : '▼'}</span>
           </div>
         </div>`;
 
       if (isExpanded) {
-        html += `<div style="border-top:1px solid var(--border)">
-          <div style="display:flex;gap:4px;padding:4px 8px;border-bottom:1px solid var(--border)">
-            <button class="btn chart-period-btn" data-ticker="${d.ticker}" data-period="1"    onclick="changeSimChartPeriod('${d.ticker}',1)"    style="font-size:8px;padding:3px 6px">1D</button>
-            <button class="btn chart-period-btn" data-ticker="${d.ticker}" data-period="22"   onclick="changeSimChartPeriod('${d.ticker}',22)"   style="font-size:8px;padding:3px 6px">1M</button>
-            <button class="btn chart-period-btn active-period" data-ticker="${d.ticker}" data-period="60" onclick="changeSimChartPeriod('${d.ticker}',60)" style="font-size:8px;padding:3px 6px">3M</button>
-            <button class="btn chart-period-btn" data-ticker="${d.ticker}" data-period="110"  onclick="changeSimChartPeriod('${d.ticker}',110)"  style="font-size:8px;padding:3px 6px">6M</button>
-            <button class="btn chart-period-btn" data-ticker="${d.ticker}" data-period="252"  onclick="changeSimChartPeriod('${d.ticker}',252)"  style="font-size:8px;padding:3px 6px">1Y</button>
-            <button class="btn chart-period-btn" data-ticker="${d.ticker}" data-period="1260" onclick="changeSimChartPeriod('${d.ticker}',1260)" style="font-size:8px;padding:3px 6px">5Y</button>
+        html += `<div style="border-top:1px solid var(--line)">
+          <div style="display:flex;gap:4px;padding:4px 8px;border-bottom:1px solid var(--line)">
+            <button class="btn chart-period-btn" data-ticker="${d.ticker}" data-period="1"    onclick="changeSimChartPeriod('${d.ticker}',1)">1D</button>
+            <button class="btn chart-period-btn" data-ticker="${d.ticker}" data-period="22"   onclick="changeSimChartPeriod('${d.ticker}',22)">1M</button>
+            <button class="btn chart-period-btn active-period" data-ticker="${d.ticker}" data-period="60" onclick="changeSimChartPeriod('${d.ticker}',60)">3M</button>
+            <button class="btn chart-period-btn" data-ticker="${d.ticker}" data-period="110"  onclick="changeSimChartPeriod('${d.ticker}',110)">6M</button>
+            <button class="btn chart-period-btn" data-ticker="${d.ticker}" data-period="252"  onclick="changeSimChartPeriod('${d.ticker}',252)">1A</button>
+            <button class="btn chart-period-btn" data-ticker="${d.ticker}" data-period="1260" onclick="changeSimChartPeriod('${d.ticker}',1260)">5A</button>
           </div>
           <div class="chart-container" style="margin:0"><canvas id="pfChart_${d.ticker}" style="height:280px"></canvas></div>
-          <div style="padding:6px 12px;font-size:9px;color:var(--text-dim);font-family:var(--font-mono)">${t('sim_disclaimer')}</div>
+          <div style="padding:6px 12px;font-size:9px;color:var(--ink-3);font-family:var(--font-mono)">${t('sim_disclaimer')}</div>
         </div>`;
       }
 
@@ -3778,6 +3933,8 @@ function showEducationView() {
     if (scanHdr) scanHdr.style.display = 'none';
     if (grid) grid.style.display = 'none';
     if (sidebar) sidebar.style.display = 'none';
+    
+    const _cs = document.getElementById('calendarSection'); if (_cs) _cs.style.display = 'none';
     const d = document.getElementById('dashboard');
     d.style.display = 'block';
     if (!authUser || (authUser.tier !== 'pro' && authUser.tier !== 'admin')) {
@@ -3832,9 +3989,9 @@ function updateCourseNavBtn() {
   const prog = loadCourseProgress();
   const label = _lang === 'pt' ? 'PRIMEIROS PASSOS' : 'FIRST STEPS';
   if (prog.length === 0) {
-    btn.textContent = '📘 ' + label;
+    btn.textContent = label;
   } else {
-    btn.innerHTML = `📘 ${label} <span class="course-nav-pill">${prog.length}/13</span>`;
+    btn.innerHTML = `${label} <span class="course-nav-pill">${prog.length}/13</span>`;
   }
 }
 
@@ -4044,6 +4201,30 @@ function downloadFile(content, name, mime) {
   URL.revokeObjectURL(a.href);
 }
 
+// ─── FONT SIZE ───────────────────────────────────────────────────────────
+const FONT_SIZES = ['medium','large','small'];
+const FONT_SIZE_LABELS = { small:'A−', medium:'A', large:'A+' };
+const FONT_SIZE_PX = { small:'13px', medium:'15px', large:'17px' };
+
+function cycleFontSize() {
+  const current = document.body.dataset.fontsize || 'medium';
+  const idx = FONT_SIZES.indexOf(current);
+  const next = FONT_SIZES[(idx + 1) % FONT_SIZES.length];
+  applyFontSize(next);
+  localStorage.setItem('jerry_fontsize', next);
+}
+
+function applyFontSize(size) {
+  document.body.dataset.fontsize = size;
+  const btn = document.getElementById('fontSizeBtn');
+  if (btn) btn.textContent = FONT_SIZE_LABELS[size] || 'A';
+}
+
+function initFontSize() {
+  const saved = localStorage.getItem('jerry_fontsize') || 'medium';
+  applyFontSize(saved);
+}
+
 // ─── THEME ──────────────────────────────────────────────────────────────
 const THEMES = ['brasil','day','pop','calmo'];
 const THEME_LABELS = { brasil:'Brasil', day:'Dia', pop:'Pop', calmo:'Calmo' };
@@ -4094,18 +4275,9 @@ async function init() {
 
   // UI first — everything async happens in background
   initTheme();
-    const savedLang = localStorage.getItem('jerry_lang');
-  if (savedLang) { _lang = savedLang; const _ls = document.getElementById('langSelect'); if (_ls) _ls.value = savedLang; }
-  // Auto-detect browser language if no preference saved
-  if (!localStorage.getItem('jerry_lang')) {
-    _lang = navigator.language.startsWith('pt') ? 'pt' : 'en';
-    const sel = document.getElementById('langSelect');
-    if (sel) sel.value = _lang;
-  }
-  const fs = parseFloat(localStorage.getItem('jerry_fontsize') || '1');
-  document.documentElement.style.setProperty('--font-size', fs);
-  document.body.style.zoom = fs;
+  initFontSize();
   loadTrackedPicks(); loadPortfolio(); loadCalendar(); applyLang(); renderFxBar();
+  loadFeatureFlags();
   
   // Background: auth check, universe data, then scan
   // Phase 1: Auth immediately (non-blocking)
@@ -4113,19 +4285,9 @@ async function init() {
   // Phase 2: Universe counts after auth settles  
   setTimeout(async () => {
     try {
-      const us = await loadUniverse('us');
       await loadUniverse('brasil');
-      await loadUniverse('europe');
-      await loadUniverse('emerging');
-      const usMeta = state._universeMeta.us;
-      document.querySelector('[data-market="us"]').textContent = `🇺🇸 US (${usMeta.visible}/${usMeta.total})`;
       const brMeta = state._universeMeta.brasil;
-      if (brMeta) document.querySelector('[data-market="brasil"]').textContent = `🇧🇷 Brasil (${brMeta.visible}/${brMeta.total})`;
-      const euMeta = state._universeMeta.europe;
-      document.querySelector('[data-market="europe"]').textContent = `🇪🇺 Europe (${euMeta.visible}/${euMeta.total})`;
-      const emMeta = state._universeMeta.emerging;
-      document.querySelector('[data-market="emerging"]').textContent = `🌍 Emerging (${emMeta.visible}/${emMeta.total})`;
-      if (brMeta) document.getElementById('universeCount').textContent = brMeta.visible;
+      if (brMeta) { document.querySelector('[data-market="brasil"]').textContent = `🇧🇷 Brasil (${brMeta.visible})`; document.getElementById('universeCount').textContent = brMeta.visible; }
     } catch(e) { console.log('Universe load error:', e); }
   }, 50);
   // Phase 3: Correlation only — user must click SCAN explicitly
@@ -4152,7 +4314,7 @@ async function init() {
     const origText = btn.textContent;
     btn.textContent = '✅ TRACKED!';
     btn.style.background = 'rgba(76,175,80,0.25)';
-    btn.style.borderColor = 'var(--green-bull)';
+    btn.style.borderColor = 'var(--buy)';
     setTimeout(() => {
       btn.textContent = origText;
       btn.style.background = '';
@@ -4207,7 +4369,7 @@ async function init() {
     const origText = btn.textContent;
     btn.textContent = '✅ ADDED!';
     btn.style.background = 'rgba(76,175,80,0.25)';
-    btn.style.borderColor = 'var(--green-bull)';
+    btn.style.borderColor = 'var(--buy)';
     setTimeout(() => {
       btn.textContent = origText;
       btn.style.background = '';
@@ -4233,11 +4395,11 @@ init();
   </button>
   <button class="bn-item" onclick="scanAll()" data-view="scan">
     <span class="bn-icon">⚡</span>
-    <span class="bn-label">Scanner</span>
+    <span class="bn-label">Varrer</span>
   </button>
   <button class="bn-item" onclick="showTrackedView()" data-view="tracked">
     <span class="bn-icon">⭐</span>
-    <span class="bn-label">Watch</span>
+    <span class="bn-label">Rastrear</span>
   </button>
   <button class="bn-item" onclick="showEducationView()" data-view="learn">
     <span class="bn-icon">📘</span>
