@@ -64,6 +64,7 @@
         <button class="nav-pill" onclick="showTrackedView()" data-view="tracked">Acompanhados</button>
         <button class="nav-pill" onclick="showSimulatorView()" data-view="simulator">Simular</button>
         <button class="nav-pill" onclick="showPortfolioView()" data-view="portfolio">Carteira</button>
+        <button class="nav-pill" onclick="showEducationView()" data-view="learn">📘 Primeiros Passos</button>
       </nav>
       <div class="fx-bar" id="fxBar"></div>
     </div>
@@ -108,8 +109,6 @@
       <button class="chip" data-signal="sell" onclick="filterSignal('sell')">Venda</button>
       <button class="chip" data-signal="all" onclick="filterSignal('all')">Todos</button>
     </div>
-    <button class="btn-primary" onclick="scanAll()">⚡ Varrer agora</button>
-    <button class="btn-ghost" onclick="showEducationView()" style="border:1px solid var(--line)">📘 Primeiros Passos</button>
   </div>
 </div>
 
@@ -2145,11 +2144,14 @@ function renderSimulator() {
   container.style.display = 'block';
 
   const amounts = [100, 250, 500, 1000, 2500];
-  const allStocks = Object.values(state.analyzed).flat().filter(s => s && s.ticker && s.price > 0);
+  const allStocksRaw = Object.values(state.analyzed).flat().filter(s => s && s.ticker && s.price > 0);
+  // US-165: show only buy/neutral, sorted by RSI ascending (lower RSI = closer to entry zone)
+  const allStocks = allStocksRaw.length > 0
+    ? allStocksRaw.filter(s => s.signal === 'buy' || s.signal === 'neutral').sort((a, b) => (a.rsi || 50) - (b.rsi || 50))
+    : [];
 
   if (!_simTicker && allStocks.length > 0) {
-    const buyStocks = allStocks.filter(s => s.signal === 'buy');
-    _simTicker = (buyStocks.length > 0 ? buyStocks[0] : allStocks[0]).ticker;
+    _simTicker = allStocks[0].ticker;
   }
 
   const stock = allStocks.find(s => s.ticker === _simTicker) || null;
@@ -2169,12 +2171,21 @@ function renderSimulator() {
   html += '<h1 class="hed1" style="margin-top:8px">E se você <span style="color:var(--primary)">investisse</span> agora?</h1>';
   html += '<p class="dek" style="margin-top:var(--s-3)">Escolha um valor e um ativo para ver os cenários possíveis. Apenas simulação — não é recomendação de investimento.</p>';
 
-  if (allStocks.length === 0) {
+  if (allStocksRaw.length === 0) {
     html += '<div class="card" style="padding:40px;text-align:center;margin-top:var(--s-6)">';
     html += '<div style="font-size:48px;margin-bottom:16px">🎲</div>';
     html += '<h3 class="hed3">Faça um scan primeiro</h3>';
     html += '<p style="color:var(--ink-3);margin-top:8px;font-size:14px">Execute o scanner para ter ativos disponíveis no simulador.</p>';
-    html += `<button class="btn-primary" onclick="scanAll()" style="margin-top:20px">⚡ Varrer agora</button>`;
+    html += '</div></div>';
+    container.innerHTML = html;
+    return;
+  }
+
+  if (allStocks.length === 0) {
+    html += '<div class="card" style="padding:40px;text-align:center;margin-top:var(--s-6)">';
+    html += '<div style="font-size:48px;margin-bottom:16px">⏳</div>';
+    html += '<h3 class="hed3">Nenhum ativo elegível</h3>';
+    html += '<p style="color:var(--ink-3);margin-top:8px;font-size:14px">O Simular usa apenas ações com sinal de Compra ou Aguardar. Execute uma nova varredura ou aguarde sinais mais favoráveis.</p>';
     html += '</div></div>';
     container.innerHTML = html;
     return;
@@ -2182,6 +2193,14 @@ function renderSimulator() {
 
   html += '<div class="sim-stage" style="margin-top:var(--s-6)">';
   html += '<div>';
+
+  // US-166: criteria note
+  html += '<div class="card" style="padding:var(--s-4);margin-bottom:var(--s-4);border-left:3px solid var(--primary)">';
+  html += '<div style="font-size:12px;color:var(--ink-3);line-height:1.7">';
+  html += '🔍 <strong style="color:var(--ink-2)">Critérios do Simular:</strong> exibe apenas ações com sinal de <strong style="color:var(--buy)">Compra</strong> ou <strong style="color:var(--hold)">Aguardar</strong> da última varredura, ordenadas por RSI crescente (RSI menor = mais próximo de zona de entrada). ';
+  html += 'O score de correspondência indica o quanto o padrão histórico se encaixa nos candles recentes. ';
+  html += '<strong>⚠ Padrões gráficos são indicadores, não garantias. Use sempre Stop de Proteção.</strong>';
+  html += '</div></div>';
 
   // Amount pills
   html += '<div class="card" style="padding:var(--s-5);margin-bottom:var(--s-4)">';
@@ -3939,7 +3958,10 @@ function changeSimChartPeriod(ticker, period) {
 
 function showEducationView() {
   try {
-    state.showTracked = false; state.showUniverse = false;
+    state.showTracked = false; state.showUniverse = false; state.showSimulator = false; state.showPortfolio = false;
+    document.querySelectorAll('.nav-pill[data-view]').forEach(b => b.classList.remove('active'));
+    const learnPill = document.querySelector('.nav-pill[data-view="learn"]');
+    if (learnPill) learnPill.classList.add('active');
     const scanHdr = document.getElementById('scanHeader');
     const grid = document.getElementById('resultsGrid');
     const sidebar = document.getElementById('legacySidebar');
@@ -3966,7 +3988,7 @@ function toggleTopicComplete(id) {
   if (idx >= 0) prog.splice(idx, 1); else prog.push(id);
   saveCourseProgress(prog);
   updateCourseNavBtn();
-  if (prog.length === 13 && idx < 0) showToast('🎉 Curso concluído! Parabéns!', true, 6000);
+  if (prog.length === 16 && idx < 0) showToast('🎉 Curso concluído! Parabéns!', true, 6000);
   renderEdu();
 }
 
@@ -3986,7 +4008,7 @@ function updateCourseNavBtn() {
   if (prog.length === 0) {
     btn.textContent = label;
   } else {
-    btn.innerHTML = `${label} <span class="course-nav-pill">${prog.length}/13</span>`;
+    btn.innerHTML = `${label} <span class="course-nav-pill">${prog.length}/16</span>`;
   }
 }
 
@@ -3995,7 +4017,7 @@ function renderEdu() {
   container.style.display = 'block';
 
   const prog = loadCourseProgress();
-  const total = 13;
+  const total = 16;
   const pct = Math.round(prog.length / total * 100);
   const isComplete = prog.length >= total;
 
@@ -4004,22 +4026,26 @@ function renderEdu() {
     { icon:'🌎', name:'O Mercado',        topics:['brazilstats','sectors','realcases'] },
     { icon:'📊', name:'Análise Técnica',  topics:['rsi','macd','adx','sma','bb','patterns'] },
     { icon:'🇧🇷', name:'Impostos',        topics:['darf'] },
+    { icon:'🏦', name:'Renda Fixa',       topics:['tesouro','lci_lca','juros_compostos'] },
   ];
 
   const allTopics = [
-    { id:'strategy',   icon:'🧩', name:t('edu_strategyName'),   color:'#4caf50', title:t('edu_strategyTitle'),   subtitle:t('edu_strategySubtitle'),   body:t('edu_strategyBody') },
-    { id:'why',        icon:'🌱', name:t('edu_whyName'),        color:'#22d3ee', title:t('edu_whyTitle'),        subtitle:t('edu_whySubtitle'),        body:t('edu_whyBody') },
-    { id:'diversify',  icon:'🌐', name:t('edu_diversifyName'),  color:'#ff6a00', title:t('edu_diversifyTitle'),  subtitle:t('edu_diversifySubtitle'),  body:t('edu_diversifyBody') },
-    { id:'brazilstats',icon:'🇧🇷', name:t('edu_brazilstatsName'),color:'#e8a846',title:t('edu_brazilstatsTitle'),subtitle:t('edu_brazilstatsSubtitle'),body:t('edu_brazilstatsBody') },
-    { id:'sectors',    icon:'🏭', name:t('edu_sectorsName'),    color:'#9c27b0', title:t('edu_sectorTitle'),     subtitle:t('edu_sectorSubtitle'),     body:t('edu_sectorBody') },
-    { id:'realcases',  icon:'📈', name:t('edu_realcasesName'),  color:'#c85a17', title:t('edu_realcasesTitle'),  subtitle:t('edu_realcasesSubtitle'),  body:t('edu_realcasesBody') },
-    { id:'rsi',        icon:'📈', name:'RSI',                   color:'#22d3ee', title:t('edu_rsiTitle'),        subtitle:t('edu_rsiSubtitle'),        body:t('edu_rsiBody') },
-    { id:'macd',       icon:'🔄', name:'MACD',                  color:'#4caf50', title:t('edu_macdTitle'),       subtitle:t('edu_macdSubtitle'),       body:t('edu_macdBody') },
-    { id:'adx',        icon:'📊', name:'ADX',                   color:'#e8a846', title:t('edu_adxTitle'),        subtitle:t('edu_adxSubtitle'),        body:t('edu_adxBody') },
-    { id:'sma',        icon:'〰️', name:'SMA',                   color:'#ff6a00', title:t('edu_smaTitle'),        subtitle:t('edu_smaSubtitle'),        body:t('edu_smaBody') },
-    { id:'bb',         icon:'📉', name:'Bollinger',             color:'#c85a17', title:t('edu_bollingerTitle'),  subtitle:t('edu_bollingerSubtitle'),  body:t('edu_bollingerBody') },
-    { id:'patterns',   icon:'📐', name:t('edu_patternsTab'),    color:'#4caf50', title:t('edu_patternsTitle'),   subtitle:t('edu_patternsSubtitle'),   body:t('edu_patternsBody') },
-    { id:'darf',       icon:'🇧🇷', name:'DARF',                 color:'#e8a846', title:t('edu_darfTitle'),       subtitle:t('edu_darfSubtitle'),       body:t('edu_darfBody') },
+    { id:'strategy',        icon:'🧩', name:t('edu_strategyName'),      color:'#4caf50', title:t('edu_strategyTitle'),      subtitle:t('edu_strategySubtitle'),      body:t('edu_strategyBody') },
+    { id:'why',             icon:'🌱', name:t('edu_whyName'),           color:'#22d3ee', title:t('edu_whyTitle'),           subtitle:t('edu_whySubtitle'),           body:t('edu_whyBody') },
+    { id:'diversify',       icon:'🌐', name:t('edu_diversifyName'),     color:'#ff6a00', title:t('edu_diversifyTitle'),     subtitle:t('edu_diversifySubtitle'),     body:t('edu_diversifyBody') },
+    { id:'brazilstats',     icon:'🇧🇷', name:t('edu_brazilstatsName'),  color:'#e8a846', title:t('edu_brazilstatsTitle'),   subtitle:t('edu_brazilstatsSubtitle'),   body:t('edu_brazilstatsBody') },
+    { id:'sectors',         icon:'🏭', name:t('edu_sectorsName'),       color:'#9c27b0', title:t('edu_sectorTitle'),        subtitle:t('edu_sectorSubtitle'),        body:t('edu_sectorBody') },
+    { id:'realcases',       icon:'📈', name:t('edu_realcasesName'),     color:'#c85a17', title:t('edu_realcasesTitle'),     subtitle:t('edu_realcasesSubtitle'),     body:t('edu_realcasesBody') },
+    { id:'rsi',             icon:'📈', name:'RSI',                      color:'#22d3ee', title:t('edu_rsiTitle'),           subtitle:t('edu_rsiSubtitle'),           body:t('edu_rsiBody') },
+    { id:'macd',            icon:'🔄', name:'MACD',                     color:'#4caf50', title:t('edu_macdTitle'),          subtitle:t('edu_macdSubtitle'),          body:t('edu_macdBody') },
+    { id:'adx',             icon:'📊', name:'ADX',                      color:'#e8a846', title:t('edu_adxTitle'),           subtitle:t('edu_adxSubtitle'),           body:t('edu_adxBody') },
+    { id:'sma',             icon:'〰️', name:'SMA',                      color:'#ff6a00', title:t('edu_smaTitle'),           subtitle:t('edu_smaSubtitle'),           body:t('edu_smaBody') },
+    { id:'bb',              icon:'📉', name:'Bollinger',                color:'#c85a17', title:t('edu_bollingerTitle'),     subtitle:t('edu_bollingerSubtitle'),     body:t('edu_bollingerBody') },
+    { id:'patterns',        icon:'📐', name:t('edu_patternsTab'),       color:'#4caf50', title:t('edu_patternsTitle'),      subtitle:t('edu_patternsSubtitle'),      body:t('edu_patternsBody') },
+    { id:'darf',            icon:'🇧🇷', name:'DARF',                    color:'#e8a846', title:t('edu_darfTitle'),          subtitle:t('edu_darfSubtitle'),          body:t('edu_darfBody') },
+    { id:'tesouro',         icon:'🏛️', name:'Tesouro Direto',           color:'#22d3ee', title:'Tesouro Direto — A Renda Fixa do Governo', subtitle:'Selic, IPCA+ e Prefixado: qual escolher e quando.', body:t('edu_tesouроBody') },
+    { id:'lci_lca',         icon:'🌾', name:'LCI e LCA',                color:'#4caf50', title:'LCI e LCA — Renda Fixa Isenta de IR',      subtitle:'Por que a isenção importa e quando compensa mais que o Tesouro.', body:t('edu_lciLcaBody') },
+    { id:'juros_compostos', icon:'📐', name:'Juros Compostos',          color:'#ff6a00', title:'O Poder dos Juros Compostos',               subtitle:'A força que transforma disciplina em patrimônio ao longo do tempo.', body:t('edu_jurosCompostosBody') },
   ];
 
   const current = allTopics.find(top => top.id === _eduTopic) || allTopics[0];
@@ -4039,7 +4065,7 @@ function renderEdu() {
     html += `<div class="card" style="background:color-mix(in srgb,var(--buy) 10%,var(--bg-2));border-color:color-mix(in srgb,var(--buy) 40%,transparent);padding:var(--s-4);display:flex;align-items:center;gap:var(--s-4)">
       <span style="font-size:28px">🎉</span>
       <div style="flex:1">
-        <div style="font-weight:700;color:var(--buy);margin-bottom:4px">Curso concluído! Todos os 13 tópicos completos.</div>
+        <div style="font-weight:700;color:var(--buy);margin-bottom:4px">Curso concluído! Todos os 16 tópicos completos.</div>
         <button onclick="resetCourseProgress()" style="background:none;border:none;color:var(--ink-4);font-size:12px;cursor:pointer;padding:0;text-decoration:underline">Recomeçar curso</button>
       </div>
     </div>`;
