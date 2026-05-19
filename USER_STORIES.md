@@ -2397,8 +2397,148 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ---
 
+---
+
+## Epic 37 — Simular, Primeiros Passos & Mobile Profile (Sprint 17)
+
+> Melhorar a qualidade do Simular com filtragem inteligente, restaurar o acesso a Primeiros Passos no desktop, expandir o conteúdo educacional com renda fixa e juros compostos, e corrigir o perfil do usuário no mobile.
+
+---
+
+### US-165 — Simular: Filtrar Apenas Ações com Sinal de Compra ou Neutro
+**As a** usuário na view Simular (Pattern Finder),
+**I want** que a lista de ativos disponíveis para simulação mostre apenas ações com sinal de Compra ou Aguardar,
+**so that** eu não perca tempo simulando padrões em ativos já em tendência de venda.
+
+**Acceptance Criteria:**
+- O seletor de ativos no Simular exibe apenas ações cujo `signal` é `'buy'` ou `'neutral'` (exclui `'sell'`).
+- Se nenhum ativo varrido tiver sinal compra/neutro, exibe mensagem: `"Nenhum ativo elegível — execute uma varredura ou aguarde sinais de compra/neutro."`.
+- A filtragem ocorre sobre `state.analyzed[state.market]`; se o array estiver vazio, o seletor mantém o comportamento atual (todos os ativos do universo).
+- A ordem no seletor é: sinais de Compra primeiro, depois Neutro, ambos ordenados por RSI crescente (RSI mais baixo = mais interessante para compra).
+- Não há um toggle para ver ativos de Venda — o foco do Simular é exclusivamente em oportunidades de entrada.
+
+**Sprint:** 17 · **Effort:** 1h
+
+---
+
+### US-166 — Simular: Nota Explicativa dos Critérios Usados
+**As a** usuário no Simular,
+**I want** ver uma nota clara explicando quais critérios o Simular usa para encontrar e classificar padrões gráficos,
+**so that** eu entenda a lógica por trás das sugestões e use a ferramenta com mais confiança.
+
+**Acceptance Criteria:**
+- Uma nota fixa aparece no topo da view Simular, abaixo do título e acima do seletor de ativos.
+- Conteúdo da nota (em português):
+  - Indica que o Simular usa dados da última varredura.
+  - Lista os critérios de seleção: sinal técnico (Compra ou Aguardar), RSI, MACD e ADX.
+  - Explica o score de correspondência de padrão (quanto maior, mais próximo o ativo está do padrão histórico).
+  - Inclui aviso: `"Padrões gráficos são indicadores, não garantias. Use sempre Stop de Proteção."`.
+- A nota usa estilo de card discreto (`card` com texto em `var(--ink-3)`, sem cor de destaque).
+- A nota não aparece quando não há dados de varredura (o aviso de "execute uma varredura" já cobre esse caso).
+
+**Sprint:** 17 · **Effort:** 1h
+
+---
+
+### US-167 — Primeiros Passos: Botão Visível no Desktop (Início)
+**As a** usuário em desktop,
+**I want** ver o botão "Primeiros Passos" na tela Início,
+**so that** eu possa acessar o curso introdutório sem precisar usar o menu de navegação superior.
+
+**Acceptance Criteria:**
+- O botão `📘 Primeiros Passos` está visível no `#sinaisControls` (scan-header) em viewport ≥ 721 px.
+- O botão não fica oculto por regras CSS que escondam `.scan-controls` ou `.btn-ghost` em desktop.
+- Em mobile (≤ 720 px) o botão também permanece visível dentro dos controles.
+- Clicar no botão chama `showEducationView()` corretamente.
+- Testado com Playwright em 1280 × 800 px: botão presente e clicável antes de qualquer varredura.
+
+**Sprint:** 17 · **Effort:** 30min
+
+---
+
+### US-168 — Primeiros Passos: Módulo Tesouro Direto
+**As a** investidor iniciante,
+**I want** aprender sobre Tesouro Direto dentro do app,
+**so that** eu entenda a alternativa mais segura de renda fixa antes de arriscar em ações.
+
+**Acceptance Criteria:**
+- Um novo tópico `tesouro` é adicionado ao menu lateral de Primeiros Passos.
+- Conteúdo mínimo do módulo (em português, tom acessível como os demais módulos do curso):
+  - O que é o Tesouro Direto e por que existe (dívida do governo federal).
+  - Tipos principais: Tesouro Selic, Tesouro IPCA+, Tesouro Prefixado — diferenças práticas.
+  - Como funciona a marcação a mercado (por que o preço oscila mesmo sendo "renda fixa").
+  - Tributação: tabela regressiva de IR (22,5% → 15%) e o IOF nos primeiros 30 dias.
+  - Quando faz sentido usar Tesouro vs. ações.
+  - Exemplo numérico: R$ 10.000 em Tesouro Selic por 2 anos vs. poupança vs. IPCA+.
+- O módulo tem um botão "Marcar como concluído" com persistência em `localStorage`.
+- Total de tópicos do curso atualizado (contador `X/N` no botão do menu).
+
+**Sprint:** 17 · **Effort:** 2h
+
+---
+
+### US-169 — Primeiros Passos: Módulo LCI e LCA
+**As a** investidor iniciante,
+**I want** entender o que são LCI e LCA e por que elas são isentas de IR,
+**so that** eu saiba quando elas são mais vantajosas que CDBs ou Tesouro Direto.
+
+**Acceptance Criteria:**
+- Um novo tópico `lci_lca` é adicionado ao menu de Primeiros Passos.
+- Conteúdo mínimo (em português):
+  - O que são LCI (Letra de Crédito Imobiliário) e LCA (Letra de Crédito do Agronegócio).
+  - Por que são isentas de IR para pessoa física (e o limite de isenção anual).
+  - Cobertura pelo FGC (Fundo Garantidor de Créditos) até R$ 250.000 por instituição.
+  - Comparação prática: LCI de 88% CDI isenta vs. CDB de 110% CDI tributado — quem ganha?
+  - Liquidez: a maioria tem prazo mínimo (carência) — diferença de Tesouro Selic.
+  - Riscos: concentração em banco emissor, liquidez restrita antes do vencimento.
+  - Quando LCI/LCA faz sentido: investidor em faixa de IR alta e horizonte ≥ 90 dias.
+- Botão "Marcar como concluído" com persistência.
+
+**Sprint:** 17 · **Effort:** 2h
+
+---
+
+### US-170 — Primeiros Passos: Módulo Poder dos Juros Compostos
+**As a** investidor iniciante,
+**I want** entender visualmente o poder dos juros compostos ao longo do tempo,
+**so that** eu me motive a começar a investir cedo e a manter consistência.
+
+**Acceptance Criteria:**
+- Um novo tópico `juros_compostos` é adicionado ao menu de Primeiros Passos.
+- Conteúdo mínimo (em português):
+  - Diferença entre juros simples e compostos com exemplo numérico lado a lado.
+  - Fórmula `M = C × (1 + i)^t` explicada em linguagem acessível.
+  - Tabela de crescimento de R$ 1.000 a 12% a.a. em 5, 10, 20 e 30 anos.
+  - O efeito do aporte mensal: R$ 200/mês por 20 anos a 12% a.a. — quanto vira?
+  - Comparação: começar aos 20 vs. aos 30 vs. aos 40 — mesmo aporte, diferença astronômica.
+  - A "regra dos 72": tempo para dobrar o capital = 72 / taxa anual.
+  - Aviso: a taxa de 12% a.a. é plausível na bolsa brasileira historicamente, mas não garantida.
+- Botão "Marcar como concluído" com persistência.
+
+**Sprint:** 17 · **Effort:** 2h
+
+---
+
+### US-171 — Mobile: Perfil do Usuário Visível no Appbar
+**As a** usuário logado em smartphone,
+**I want** ver meu avatar/iniciais e menu de perfil no appbar,
+**so that** eu saiba que estou logado e possa acessar configurações de conta sem precisar ir ao desktop.
+
+**Acceptance Criteria:**
+- O `#userMenu` (avatar + dropdown) é visível no appbar em viewport ≤ 720 px.
+- O avatar exibe a inicial do e-mail do usuário (ex: `T` para `tupa@gmail.com`).
+- Tapping no avatar abre o dropdown com as opções: Alterar senha, Exportar dados, Sair, Excluir conta.
+- O dropdown é posicionado abaixo do avatar e não ultrapassa a borda direita da tela.
+- O `#signInBtn` ("Entrar") permanece visível em mobile quando o usuário não está logado.
+- Testado em viewport 375 × 812 px: avatar presente, clicável, dropdown abre corretamente.
+- O `#tierChip` (badge Free/Pro/Admin) pode ficar oculto em mobile para economizar espaço — somente o avatar é obrigatório.
+
+**Sprint:** 17 · **Effort:** 1h
+
+---
+
 *End of User Stories — v2.0*
-*B3 stocks · português · 164 stories across 36 epics*
+*B3 stocks · português · 171 stories across 37 epics*
 
 | Sprint | Epics | Stories | Theme |
 |--------|-------|---------|-------|
@@ -2419,3 +2559,4 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 | 14 | 34 | US-147–152 | Mobile UX & Open Access |
 | 15 | 35 | US-153–161 | Qualidade & Português Completo |
 | 16 | 36 | US-162–164 | Watchlist P&L, Lista Redesign & DARF Fix |
+| 17 | 37 | US-165–171 | Simular, Primeiros Passos & Mobile Profile |
