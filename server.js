@@ -44,6 +44,27 @@ const {
   serverCalcRSI, serverCalcMACD, generateWhy, extractCloses,
 } = scan;
 
+// ─── FEATURE FLAGS ──────────────────────────────────────────────────────
+const FLAGS_PATH = path.join(DIR, 'data', 'feature-flags.json');
+const DEFAULT_FLAGS = {
+  correlation:    { free: true,  pro: true },
+  patternFinder:  { free: true,  pro: true },
+  simulator:      { free: true,  pro: true },
+  darfReport:     { free: true,  pro: true },
+  portfolio:      { free: true,  pro: true },
+  trackedPicks:   { free: true,  pro: true },
+};
+
+function loadFlags() {
+  try { return { ...DEFAULT_FLAGS, ...JSON.parse(fs.readFileSync(FLAGS_PATH, 'utf8')) }; }
+  catch { return { ...DEFAULT_FLAGS }; }
+}
+function saveFlags(flags) {
+  fs.mkdirSync(path.join(DIR, 'data'), { recursive: true });
+  fs.writeFileSync(FLAGS_PATH, JSON.stringify(flags, null, 2));
+}
+let featureFlags = loadFlags();
+
 // ─── STRIPE ─────────────────────────────────────────────────────────────
 let stripe;
 try {
@@ -401,6 +422,25 @@ async function handleRequest(req, res) {
       }
       saveUsers(users);
       return sendJSON(res, 200, { ok: true, email: targetEmail, tier: targetUser.tier, subscriptionEnd: targetUser.subscriptionEnd });
+    }
+
+    // ─── FEATURE FLAGS ───────────────────────────────────────────
+    if (pathname === '/api/feature-flags' && req.method === 'GET') {
+      return sendJSON(res, 200, featureFlags);
+    }
+
+    if (pathname === '/api/admin/feature-flags' && req.method === 'POST') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
+      const body = await readBody(req);
+      for (const [key, val] of Object.entries(body)) {
+        if (featureFlags[key] && typeof val === 'object') {
+          featureFlags[key] = { ...featureFlags[key], ...val };
+        }
+      }
+      saveFlags(featureFlags);
+      return sendJSON(res, 200, { ok: true, flags: featureFlags });
     }
 
     // ─── STRIPE ──────────────────────────────────────────────────

@@ -232,9 +232,9 @@
     </div>
     <div style="margin-bottom:12px">
       <input class="search-input" id="portfolioTicker" placeholder="TICKER" style="width:100px">
-      <input class="search-input" id="portfolioShares" placeholder="SHARES" type="number" style="width:80px">
-      <input class="search-input" id="portfolioPrice" placeholder="ENTRY $" type="number" step="0.01" style="width:100px">
-      <button class="btn primary" onclick="addPortfolioPosition()" style="margin-left:4px" id="portfolioModalAdd">ADD</button>
+      <input class="search-input" id="portfolioShares" placeholder="Qtd" type="number" style="width:80px">
+      <input class="search-input" id="portfolioPrice" placeholder="Preço de entrada" type="number" step="0.01" style="width:100px">
+      <button class="btn primary" onclick="addPortfolioPosition()" style="margin-left:4px" id="portfolioModalAdd">Adicionar</button>
     </div>
     <div id="portfolioTable"></div>
     <div style="margin-top:12px;display:flex;gap:8px">
@@ -445,7 +445,7 @@ async function submitChangePassword() {
   if (pw !== confirm) { errEl.textContent = 'Passwords do not match'; errEl.style.display='block'; return; }
   errEl.style.display = 'none';
   const data = await apiPost('/api/auth/change-password', { oldPassword: old, newPassword: pw });
-  if (data.ok) { alert('Password changed!'); renderDashboard(); }
+  if (data.ok) { showToast('Senha alterada com sucesso!', true, 3000); renderDashboard(); }
   else { errEl.textContent = data.error || 'Failed'; errEl.style.display='block'; }
 }
 
@@ -587,7 +587,7 @@ async function exportMyData() {
   if (!token) return;
   try {
     const res = await fetch('/api/auth/data-export', { headers: { 'Authorization': 'Bearer ' + token } });
-    if (!res.ok) { alert('Export failed: ' + res.status); return; }
+    if (!res.ok) { showToast('Falha ao exportar: ' + res.status, false, 3000); return; }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -595,7 +595,7 @@ async function exportMyData() {
     a.download = 'momentum-data-export.json';
     a.click();
     URL.revokeObjectURL(url);
-  } catch (e) { alert('Export error: ' + e.message); }
+  } catch (e) { showToast('Erro ao exportar: ' + e.message, false, 3000); }
 }
 
 async function deleteMyAccount() {
@@ -607,9 +607,9 @@ async function deleteMyAccount() {
   try {
     const res = await fetch('/api/auth/account', { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
     const data = await res.json();
-    if (res.ok) { alert('Account deleted. Goodbye!'); logout(); }
-    else alert(data.error || 'Failed to delete account.');
-  } catch (e) { alert('Error: ' + e.message); }
+    if (res.ok) { showToast('Conta excluída.', false, 3000); logout(); }
+    else showToast(data.error || 'Falha ao excluir conta.', false, 3000);
+  } catch (e) { showToast('Erro: ' + e.message, false, 3000); }
 }
 
 function acceptCookies() {
@@ -619,7 +619,7 @@ function acceptCookies() {
 }
 
 function showPrivacyNote() {
-  alert('MOMENTUM stores your session token and preferences in your browser\'s localStorage. No third-party tracking cookies are used. Your portfolio positions and watchlist are saved to our server when you are signed in, and permanently removed when you delete your account (LGPD Art. 18). You can export or delete your data at any time from the account menu.');
+  showToast('O MOMENTUM salva your session token and preferences in your browser\'s sua sessão e preferências localmente. Nenhum cookie de rastreamento de terceiros é usado. Suas posições e watchlist são salvas no servidor e removidas permanentemente ao excluir a conta (LGPD Art. 18). Exporte ou delete seus dados a qualquer momento no menu da conta.', true, 8000);
 }
 
 async function upgradeToPro() {
@@ -754,7 +754,7 @@ async function setAdmin(email) {
   if (!confirm('Make ' + email + ' an admin?')) return;
   const result = await apiPost('/api/admin/set-admin', { email, admin: true });
   if (result.ok) showAdminView();
-  else alert(result.error || 'Failed to set admin');
+  else showToast(result.error || 'Falha ao definir admin', false, 3000);
 }
 
 async function setUserTier(email, tier) {
@@ -764,7 +764,7 @@ async function setUserTier(email, tier) {
   if (!confirm(msg)) return;
   const result = await apiPost('/api/admin/set-tier', { email, tier });
   if (result.ok) showAdminView();
-  else alert(result.error || 'Failed to update tier');
+  else showToast(result.error || 'Falha ao atualizar plano', false, 3000);
 }
 
 // ─── API ────────────────────────────────────────────────────────────────
@@ -867,6 +867,41 @@ async function loadUniverse(market) {
   return stocks;
 }
 
+// ─── TECHNICAL INDICATORS ────────────────────────────────────────────────
+function calcSMA(c,p){const v=[];for(let i=0;i<c.length;i++){if(i<p-1){v.push(null);continue}let s=0;for(let j=i-p+1;j<=i;j++)s+=c[j].c;v.push(s/p)}return v}
+function calcRSI(c,p){const v=[null];if(c.length<2)return v;let g=0,l=0;for(let i=1;i<=p&&i<c.length;i++){const d=c[i].c-c[i-1].c;if(d>0)g+=d;else l-=d}v.push(g+l===0?50:100-100/(1+g/(l||0.001)));for(let i=p+1;i<c.length;i++){const d=c[i].c-c[i-1].c;g=(g*(p-1)+(d>0?d:0))/p;l=(l*(p-1)+(d<0?-d:0))/p;v.push(l===0?100:100-100/(1+g/l))}return v}
+function calcMACD(c){const e12=[],e26=[];let s12=0,s26=0;for(let i=0;i<c.length;i++){if(i<12)s12+=c[i].c;if(i<26)s26+=c[i].c;if(i===11)e12.push(s12/12);else if(i>11)e12.push(c[i].c*(2/13)+e12[e12.length-1]*(11/13));else e12.push(null);if(i===25)e26.push(s26/26);else if(i>25)e26.push(c[i].c*(2/27)+e26[e26.length-1]*(25/27));else e26.push(null)}const m=[];for(let i=0;i<c.length;i++){m.push(e12[i]!==null&&e26[i]!==null?e12[i]-e26[i]:null)}return m}
+function calcADX(c,p){const dx=[];for(let i=p;i<c.length;i++){const up=c[i].h-c[i-1].h,dn=c[i-1].l-c[i].l;const tr=Math.max(c[i].h-c[i].l,Math.abs(c[i].h-c[i-1].c),Math.abs(c[i].l-c[i-1].c));const pDM=up>dn&&up>0?up:0,mDM=dn>up&&dn>0?dn:0;const dP=pDM/(tr||1)*100,dM=mDM/(tr||1)*100;dx.push(Math.abs(dP-dM)/(dP+dM||1)*100)}const adx=[];for(let i=0;i<c.length;i++){if(i<p+p-1)adx.push(null);else{let s=0;for(let j=i-p+1;j<=i;j++)s+=dx[j-p]||0;adx.push(s/p)}}return adx}
+function calcBB(c,p,mult){const sma=calcSMA(c,p),u=[],l=[];for(let i=0;i<c.length;i++){if(sma[i]===null){u.push(null);l.push(null);continue}let sq=0,cnt=0;for(let j=i-p+1;j<=i;j++){sq+=(c[j].c-sma[i])**2;cnt++}const std=Math.sqrt(sq/cnt);u.push(sma[i]+mult*std);l.push(sma[i]-mult*std)}return{upper:u,lower:l,mid:sma}}
+function calcATR(c,p){const a=[];for(let i=0;i<c.length;i++){if(i<p){a.push(null);continue}let s=0;for(let j=i-p+1;j<=i;j++)s+=Math.max(c[j].h-c[j].l,Math.abs(c[j].h-c[j-1].c),Math.abs(c[j].l-c[j-1].c));a.push(s/p)}return a}
+
+function pickSignal(rsi,macd,adx,above50){
+  let s=0;if(rsi>45&&rsi<65)s++;if(macd>0)s++;if(adx>22)s+=0.5;if(above50)s++;if(rsi<35)s+=0.5;if(rsi>70||rsi<25)s-=0.5;
+  return s>=2.5?'buy':s>=1?'neutral':'sell';
+}
+
+function analyze(ticker, name, sector, candles) {
+  const c = candles, price = c[c.length-1].c;
+  const s9=calcSMA(c,9), s20=calcSMA(c,20), s50=calcSMA(c,50), s200=calcSMA(c,200);
+  const sma9=s9[s9.length-1]||price, sma20=s20[s20.length-1]||price, sma50=s50[s50.length-1]||price, sma200=s200[s200.length-1]||price;
+  const rsiA=calcRSI(c,14), rsi=parseFloat(rsiA[rsiA.length-1]?.toFixed(1))||50;
+  const macdA=calcMACD(c), macd=parseFloat(macdA[macdA.length-1]?.toFixed(2))||0;
+  const adxA=calcADX(c,14), adx=parseFloat(adxA[adxA.length-1]?.toFixed(1))||20;
+  const bb=calcBB(c,14,2), bbM=bb.mid[bb.mid.length-1]||price, bbU=bb.upper[bb.upper.length-1]||price, bbL=bb.lower[bb.lower.length-1]||price;
+  const atrA=calcATR(c,14), atr=parseFloat(atrA[atrA.length-1]?.toFixed(2))||1;
+  const volAvg=c.slice(-20).reduce((s,cc)=>s+cc.v,0)/20, volCur=c[c.length-1].v, volRatio=parseFloat((volCur/(volAvg||1)).toFixed(2));
+  const recent=c.slice(-15), sup1=parseFloat((Math.min(...recent.map(x=>x.l))*0.995).toFixed(2)), sup2=parseFloat((sup1*0.97).toFixed(2));
+  const res1=parseFloat((Math.max(...recent.map(x=>x.h))*1.005).toFixed(2)), res2=parseFloat((res1*1.03).toFixed(2));
+  const rsiD=rsi>55?'bull':rsi<40?'bear':'neutral', macdD=macd>0?'bull':'bear', adxD=adx>25?'bull':'neutral';
+  const pA9=price>sma9, pA20=price>sma20, pA50=price>sma50, pA200=price>sma200;
+  const signal=pickSignal(rsi,macd,adx,pA50);
+  const masAbove=[pA9,pA20,pA50,pA200].filter(Boolean).length;
+  const maAlign=masAbove>=3?'ALTA ALINHADA':masAbove===0?'BAIXA ALINHADA':masAbove>=2?'PARCIAL ALTA':'PARCIAL BAIXA';
+  const tp = parseFloat((price * 1.15).toFixed(2));
+  const sl = parseFloat((price * 0.93).toFixed(2));
+  return { ticker, name, sector, candles:c, price, sma9,sma20,sma50,sma200,maAlign,masAbove, rsi,macd,adx, bbU,bbM,bbL,atr, volAvg,volCur,volRatio, sup1,sup2,res1,res2, signal, rsiDir:rsiD,macdDir:macdD,adxDir:adxD, tp, sl, pA9,pA20,pA50,pA200 };
+}
+
 function drawChart(canvas, candles, extra) {
   const ctx=canvas.getContext('2d'), dpr=window.devicePixelRatio||1, rect=canvas.getBoundingClientRect();
   const W=rect.width||canvas.offsetWidth||canvas.parentElement?.offsetWidth||800, H=rect.height||300;
@@ -962,7 +997,7 @@ async function scanMarket(market) {
 async function scanAll() {
   if (!authUser) { showAuthModal(); return; }
   const btn = document.getElementById('refreshBtn');
-  if (btn) { btn.innerHTML = '⟳ SCANNING...'; btn.disabled = true; }
+  if (btn) { btn.innerHTML = '⟳ Varrendo...'; btn.disabled = true; }
   await scanMarket(state.market);
   updateScanHed(state.analyzed[state.market] || []);
   renderDashboard();
@@ -982,7 +1017,7 @@ async function scanAll() {
   if (statusEl2) statusEl2.textContent = t('status_ready');
   const updateEl = document.getElementById('updateTime');
   if (updateEl) updateEl.textContent = new Date().toISOString().replace('T',' ').slice(0,19)+' UTC';
-  if (btn) { btn.innerHTML = '⟳ SCAN'; btn.disabled = false; }
+  if (btn) { btn.innerHTML = '⟳ Varrer'; btn.disabled = false; }
   autoFetchFxRates(false);
 }
 
@@ -1204,7 +1239,7 @@ function openStockDetail(ticker, idx) {
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-3);margin-bottom:var(--s-4)">
         <div style="background:var(--buy-soft);border-radius:var(--r);padding:var(--s-4);text-align:center">
-          <div style="font-size:11px;color:var(--ink-3);margin-bottom:4px">Take Profit</div>
+          <div style="font-size:11px;color:var(--ink-3);margin-bottom:4px">Alvo de Lucro</div>
           <div style="font-family:var(--font-mono);font-size:18px;color:var(--buy);font-weight:600">${getCurrencySymbol(d.ticker)}${d.tp.toFixed(2)}</div>
         </div>
         <div style="background:var(--bg-3);border-radius:var(--r);padding:var(--s-4);text-align:center">
@@ -1212,7 +1247,7 @@ function openStockDetail(ticker, idx) {
           <div style="font-family:var(--font-mono);font-size:18px;color:var(--ink);font-weight:600">${getCurrencySymbol(d.ticker)}${d.price.toFixed(2)}</div>
         </div>
         <div style="background:var(--sell-soft);border-radius:var(--r);padding:var(--s-4);text-align:center">
-          <div style="font-size:11px;color:var(--ink-3);margin-bottom:4px">Stop Loss</div>
+          <div style="font-size:11px;color:var(--ink-3);margin-bottom:4px">Stop de Proteção</div>
           <div style="font-family:var(--font-mono);font-size:18px;color:var(--sell);font-weight:600">${getCurrencySymbol(d.ticker)}${d.sl.toFixed(2)}</div>
         </div>
       </div>
@@ -2080,24 +2115,6 @@ function showPortfolioView() {
     if (sidebar) sidebar.style.display = 'none';
     const container = document.getElementById('dashboard');
     container.style.display = 'block';
-    if (!authUser || (authUser.tier !== 'pro' && authUser.tier !== 'admin')) {
-      container.innerHTML = `<div class="shell" style="padding-top:var(--s-7);padding-bottom:var(--s-8)">
-        <div class="kicker">💼 Carteira</div>
-        <h1 class="hed1" style="margin-top:8px">Sua <span style="color:var(--primary)">carteira</span>.</h1>
-        <div class="pro-lock" style="margin-top:var(--s-7)">
-          <div class="star">⭐</div>
-          <h2>${t('proGate_title')}</h2>
-          <p>${t('proGate_myStocksDesc')}</p>
-          <ul>
-            <li>Carteira ilimitada com posições de qualquer mercado</li>
-            <li>P&amp;L em tempo real por posição e total</li>
-            <li>Relatório mensal de lucros para DARF</li>
-          </ul>
-          <button class="btn-magenta" onclick="upgradeToPro()" style="font-size:16px;padding:14px 28px">⭐ ${t('proGate_goPro')}</button>
-        </div>
-      </div>`;
-      return;
-    }
     renderPortfolioView();
   } else renderDashboard();
 }
@@ -2407,7 +2424,7 @@ function renderPortfolioView() {
     html += '<td>' + tradeTypeBadge + '</td>';
     html += '<td style="font-weight:600;font-size:10px;' + (rowProfit > 0 ? 'color:var(--buy)' : rowProfit < 0 ? 'color:var(--sell)' : 'color:var(--ink-3)') + '">' + monthProfitStr + '</td>';
     html += '<td>' + (p.status === 'holding' ? '<span style="cursor:pointer;color:var(--sell);font-size:11px;font-weight:700" onclick="sellPortfolioItem(' + i + ')" title="Sell">' + t('portfolio_sell') + '</span>' : '') + '</td>';
-    html += '<td><span style="cursor:pointer;color:var(--primary);font-size:13px" onclick="editPortfolioPosition(' + i + ')" title="Edit">✎</span></td>';
+    html += '<td><span style="cursor:pointer;color:var(--primary);font-size:13px" onclick="editPortfolioPosition(' + i + ')" title="Editar">✎</span></td>';
     html += '<td><span style="cursor:pointer;color:var(--sell);font-size:14px" onclick="removePortfolioItem(' + i + ')" title="Remove">✕</span></td>';
     html += '</tr>';
   });
@@ -3092,7 +3109,7 @@ function downloadTaxCSV() {
     csv += p.ticker + ',' + p.quantity + ',' + p.buyPrice.toFixed(2) + ',' + p.sellPrice.toFixed(2) + ',' + (profit >= 0 ? '+' : '') + profit.toFixed(2) + ',' + (p.buyDate || '') + ',' + (p.sellDate || '') + '\n';
   });
   csv += '\nUNREALIZED GAINS/LOSSES\n';
-  csv += 'Ticker,Qty,Buy Price,Current Price,Unrealized P&L,Buy Date\n';
+  csv += 'Ticker,Qtd,Preço de Compra,Preço Atual,P&L Não Realizado,Data de Compra\n';
   holdingItems.forEach(p => {
     const cp = getPortfolioPrice(p.ticker);
     const price = cp || p.buyPrice;
@@ -4393,13 +4410,13 @@ init();
     <span class="bn-icon">🏠</span>
     <span class="bn-label">Início</span>
   </button>
-  <button class="bn-item" onclick="scanAll()" data-view="scan">
-    <span class="bn-icon">⚡</span>
-    <span class="bn-label">Varrer</span>
-  </button>
   <button class="bn-item" onclick="showTrackedView()" data-view="tracked">
     <span class="bn-icon">⭐</span>
     <span class="bn-label">Rastrear</span>
+  </button>
+  <button class="bn-item" onclick="showSimulatorView()" data-view="simulator">
+    <span class="bn-icon">🔬</span>
+    <span class="bn-label">Simular</span>
   </button>
   <button class="bn-item" onclick="showEducationView()" data-view="learn">
     <span class="bn-icon">📘</span>
