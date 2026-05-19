@@ -1320,29 +1320,34 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Context:** Opus audit identified silent data loss paths: `loadUsers` returns `[]` on corrupt JSON (wiping the user DB on next save); `saveUsers` failure returns HTTP 200 to client; Yahoo fetch calls have no timeout (hung upstream stalls Node). No health check endpoint, no graceful shutdown, no structured logging.
 
 ### US-99 — Request Timeouts on External Fetch Calls
+**Status: ✅ Complete**
 **As an** operator, **I want** all Yahoo Finance and brapi.dev fetch calls to time out after 8 seconds, **so that** a hung upstream never stalls the Node event loop.
 - Wrap `yahooFetch` and brapi fetch calls with `AbortController` + `setTimeout(abort, 8000)`.
 - On timeout, return `null` (same as current network error path) and log `[fetch] timeout: <url>`.
 **Sprint:** 8 · **Effort:** 2h
 
 ### US-100 — Health Check Endpoint
+**Status: ✅ Complete**
 **As an** operator, **I want** `GET /api/health` to return a structured status, **so that** Docker/load balancers can probe liveness without loading the full app.
 - Returns `{ status: 'ok', uptime: seconds, users: count, version: '5.1' }`.
 - No auth required. Responds in < 5ms.
 **Sprint:** 8 · **Effort:** 30min
 
 ### US-101 — Graceful Shutdown on SIGTERM
+**Status: ✅ Complete**
 **As an** operator, **I want** the server to finish in-flight requests before exiting, **so that** Docker restarts don't drop active scans or corrupt mid-write data.
 - Register `process.on('SIGTERM', ...)` to stop accepting new connections and wait up to 10s for active requests to finish before exiting.
 **Sprint:** 8 · **Effort:** 1h
 
 ### US-102 — Fix loadUsers Silent Data Loss on Corrupt JSON
+**Status: ✅ Complete**
 **As an** operator, **I want** `loadUsers` to refuse to start rather than silently overwrite the user DB with an empty array, **so that** a corrupted `users.json` doesn't result in all users being deleted.
 - If `JSON.parse` throws, log `[FATAL] users.json is corrupt — refusing to start. Restore from backup.` and call `process.exit(1)`.
 - If file is missing (first run), continue with empty array as before.
 **Sprint:** 8 · **Effort:** 30min · **Priority:** HIGH
 
 ### US-103 — Surface saveUsers Failures to API Callers
+**Status: ✅ Complete**
 **As a** user, **I want** the server to return an error when it can't persist my changes (e.g. disk full), **so that** I'm not misled into thinking my password change succeeded when it didn't.
 - Wrap `saveUsers` in try/catch; if write fails, throw so the calling route handler can return `500`.
 - All callers (`change-password`, `profile`, `reset-password`, `signup`, etc.) return `500` instead of `200` on save failure.

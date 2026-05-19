@@ -439,6 +439,11 @@ async function handleRequest(req, res) {
       } catch (e) { return sendError(res, 400, 'Webhook error: ' + e.message); }
     }
 
+    // ─── HEALTH CHECK ────────────────────────────────────────────
+    if (pathname === '/api/health') {
+      return sendJSON(res, 200, { status: 'ok', uptime: Math.floor(process.uptime()), users: users.length, version: '5.1' });
+    }
+
     // ─── SCAN LIMIT ──────────────────────────────────────────────
     if (pathname === '/api/limit') {
       const authUser = getAuthUser(req);
@@ -562,4 +567,17 @@ server.listen(PORT, HOST, () => {
   console.log(`📁  Data: ${auth.DB_PATH}`);
   console.log(`🔒  Auth rate limit: ${AUTH_MAX} attempts per ${AUTH_WINDOW_MS / 60000} min per IP`);
   console.log(`💾  Yahoo cache TTL: ${CACHE_TTL_MS / 1000}s\n`);
+});
+
+// ─── GRACEFUL SHUTDOWN ───────────────────────────────────────────────────
+process.on('SIGTERM', () => {
+  console.log('[shutdown] SIGTERM received — closing server');
+  server.close(() => {
+    console.log('[shutdown] All connections closed. Exiting.');
+    process.exit(0);
+  });
+  setTimeout(() => {
+    console.error('[shutdown] Forced exit after 10s timeout');
+    process.exit(1);
+  }, 10_000);
 });
