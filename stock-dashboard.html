@@ -299,6 +299,7 @@ let _portfolioMonthFilter = 'all';
 let _portfolioSaveTimer = null;
 let _trackedSaveTimer = null;
 let _signalFilter = 'buy';
+let _scanAbort = null;
 let _taxReportMonth = '';
 let _newsSentimentFilter = 'all';
 let _marketPulseNews = [];
@@ -793,12 +794,17 @@ async function setUserTier(email, tier) {
 }
 
 // ─── API ────────────────────────────────────────────────────────────────
-async function api(path) { const token = getToken(); const r = await fetch(path, { headers: token ? {'Authorization':'Bearer '+token} : {} }); return r.json(); }
+async function api(path, signal) {
+  const token = getToken();
+  const r = await fetch(path, { headers: token ? {'Authorization':'Bearer '+token} : {}, ...(signal ? { signal } : {}) });
+  if (!r.ok) { const err = new Error('HTTP ' + r.status); err.status = r.status; throw err; }
+  return r.json();
+}
 async function apiPost(path, data) { const token = getToken(); const headers = {'Content-Type':'application/json'}; if (token) headers['Authorization'] = 'Bearer ' + token; const r = await fetch(path, { method:'POST', body:JSON.stringify(data), headers }); return r.json(); }
 
 // ─── YAHOO DATA ────────────────────────────────────────────────────────
-async function fetchHistory(ticker) {
-  const data = await api('/api/history/' + ticker + '?lang=' + _lang);
+async function fetchHistory(ticker, signal) {
+  const data = await api('/api/history/' + ticker + '?lang=' + _lang, signal);
   const result = data.chart.result[0];
   const ts = result.timestamp, q = result.indicators.quote[0];
   const cdl = [];
@@ -860,7 +866,18 @@ function analyzeSentiment(title, summary) {
   return { label: 'neutral', score };
 }
 
-function setNewsSentimentFilter(f) { _newsSentimentFilter = f; renderNewsSentiment(); }
+function setState(key, value) {
+  switch (key) {
+    case '_signalFilter':          _signalFilter = value; renderDashboard(); break;
+    case '_portfolioMonthFilter':  _portfolioMonthFilter = value; renderPortfolioView(); break;
+    case '_lang':                  _lang = value; localStorage.setItem('jerry_lang', value); applyLang(); renderDashboard(); break;
+    case '_eduTopic':              _eduTopic = value; renderEdu(); break;
+    case '_taxReportMonth':        _taxReportMonth = value; generateTaxReport(); break;
+    case '_newsSentimentFilter':   _newsSentimentFilter = value; renderNewsSentiment(); break;
+  }
+}
+
+function setNewsSentimentFilter(f) { setState('_newsSentimentFilter', f); }
 
 async function fetchNews(ticker) {
   try { return await api('/api/news/' + ticker); } catch { return []; }
@@ -917,15 +934,20 @@ function drawChart(canvas, candles, extra) {
 
 // ─── SCAN LOGIC ─────────────────────────────────────────────────────────
 async function scanMarket(market) {
+  if (_scanAbort) _scanAbort.abort();
+  _scanAbort = new AbortController();
+  const signal = _scanAbort.signal;
+
   const statusEl = document.getElementById('scanStatus');
   if (statusEl) statusEl.textContent = t('status_scanning') + ' ' + market.toUpperCase();
   const stocks = await loadUniverse(market);
   const results = [];
   let completed = 0;
+  let _scanErrShown = false;
   updateScanProgress(0, stocks[0]?.n || stocks[0]?.t || '');
   return new Promise(resolve => {
     function next(idx) {
-      if (idx >= stocks.length) {
+      if (signal.aborted || idx >= stocks.length) {
         state.analyzed[market] = results;
         resolve(results);
         return;
@@ -933,7 +955,8 @@ async function scanMarket(market) {
       const s = stocks[idx];
       const pct = Math.round((idx / stocks.length) * 100);
       updateScanProgress(pct, s.n || s.t);
-      fetchHistory(s.t).then(({ candles: c, why: serverWhy }) => {
+      fetchHistory(s.t, signal).then(({ candles: c, why: serverWhy }) => {
+        if (signal.aborted) return;
         if (c.length > 100) {
           const a = analyze(s.t, s.n, s.s||'', c);
           if (serverWhy) a.why = serverWhy;
@@ -942,9 +965,19 @@ async function scanMarket(market) {
           }
           results.push(a);
         }
-      }).catch(() => {}).finally(() => {
+      }).catch(e => {
+        if (signal.aborted || e.name === 'AbortError') return;
+        if (!_scanErrShown) {
+          _scanErrShown = true;
+          const msg = e.status === 429
+            ? (_lang === 'pt' ? 'Limite de varredura atingido — aguarde' : 'Scan limit reached — please wait')
+            : (_lang === 'pt' ? 'Erro de rede — tente novamente' : 'Network error — please try again');
+          showToast(msg, false, 5000);
+        }
+      }).finally(() => {
         completed++;
         if (statusEl) statusEl.textContent = `${t('status_scanning')} ${market.toUpperCase()} (${completed}/${stocks.length})`;
+        if (signal.aborted) { state.analyzed[market] = results; resolve(results); return; }
         setTimeout(() => next(idx + 1), 80);
       });
     }
@@ -981,6 +1014,7 @@ async function scanAll() {
 
 
 function switchMarket(market) {
+  if (_scanAbort) { _scanAbort.abort(); _scanAbort = null; }
   state.market = market;
   _signalFilter = 'buy';
   state.showTracked = false;
@@ -1351,7 +1385,7 @@ async function syncPortfolioFromServer() {
 }
 
 async function savePortfolio() {
-  localStorage.setItem('jerry_portfolio', JSON.stringify(state.portfolio));
+  localStorage.setItem('jerry_portfolio', JSON.stringify({ _schemaVersion: 2, positions: state.portfolio }));
   updatePortfolioSidebar();
   if (authUser) {
     clearTimeout(_portfolioSaveTimer);
@@ -1361,16 +1395,28 @@ async function savePortfolio() {
 
 function loadPortfolio() {
   try {
-    const d = localStorage.getItem('jerry_portfolio');
-    if (d) {
-      state.portfolio = JSON.parse(d);
-      // Migrate old format (entry/shares) to new format (buyPrice/quantity)
-      state.portfolio = state.portfolio.map(p => {
-        if (p.buyPrice === undefined && p.entry !== undefined) {
-          return { ticker: p.ticker, quantity: p.shares || p.quantity || 1, buyPrice: p.entry || p.buyPrice || 0, sellPrice: p.sellPrice || null, buyDate: p.date || p.buyDate || new Date().toISOString().slice(0,10), sellDate: p.sellDate || null, status: p.status || 'holding' };
-        }
-        return p;
-      });
+    const raw = localStorage.getItem('jerry_portfolio');
+    if (raw) {
+      const saved = JSON.parse(raw);
+      let positions, version;
+      if (Array.isArray(saved)) {
+        // v1: legacy flat array
+        positions = saved; version = 1;
+      } else {
+        positions = saved.positions || []; version = saved._schemaVersion || 1;
+      }
+      // Migrate v1 → v2: normalize old field names + ensure tradeType
+      if (version < 2) {
+        positions = positions.map(p => {
+          if (p.buyPrice === undefined && p.entry !== undefined) {
+            p = { ticker: p.ticker, quantity: p.shares || p.quantity || 1, buyPrice: p.entry || 0, sellPrice: p.sellPrice || null, buyDate: p.date || p.buyDate || new Date().toISOString().slice(0,10), sellDate: p.sellDate || null, status: p.status || 'holding' };
+          }
+          if (!p.tradeType) p.tradeType = 'swing';
+          return p;
+        });
+        localStorage.setItem('jerry_portfolio', JSON.stringify({ _schemaVersion: 2, positions }));
+      }
+      state.portfolio = positions;
     }
   } catch {}
   updatePortfolioSidebar();
@@ -2457,15 +2503,9 @@ function confirmSell(index) {
   updatePortfolioSidebar();
 }
 
-function filterPortfolioMonths(range) {
-  _portfolioMonthFilter = range;
-  renderPortfolioView();
-}
+function filterPortfolioMonths(range) { setState('_portfolioMonthFilter', range); }
 
-function setSignalFilter(f) {
-  _signalFilter = f;
-  renderDashboard();
-}
+function setSignalFilter(f) { setState('_signalFilter', f); }
 
 function removePortfolioItem(index) {
   if (!confirm('Remove ' + state.portfolio[index].ticker + ' from portfolio?')) return;
@@ -2868,8 +2908,7 @@ function generateTaxReport() {
 }
 
 function updateTaxReportMonth() {
-  _taxReportMonth = document.getElementById('taxMonthSelect').value;
-  generateTaxReport();
+  setState('_taxReportMonth', document.getElementById('taxMonthSelect').value);
 }
 
 function downloadTaxCSV() {
@@ -3169,11 +3208,7 @@ function changeChartPeriod(idx, period) {
 }
 
 function switchLang(l) {
-  _lang = l;
-  localStorage.setItem('jerry_lang', l);
-  applyLang();
-  renderDashboard();
-  // Update lang-btn active state
+  setState('_lang', l);
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.id === 'lang' + _lang.charAt(0).toUpperCase() + _lang.slice(1)));
 }
 
@@ -3943,8 +3978,7 @@ function renderEdu() {
 }
 
 function switchEduTopic(id) {
-  _eduTopic = id;
-  renderEdu();
+  setState('_eduTopic', id);
   const dash = document.getElementById('dashboard');
   if (dash) dash.scrollTop = 0;
   window.scrollTo(0, 0);
@@ -4060,9 +4094,6 @@ async function init() {
 
   // UI first — everything async happens in background
   initTheme();
-  // Load saved portfolio, tracked picks & signals
-  try { const p = localStorage.getItem('jerry_portfolio'); if (p) state.portfolio = JSON.parse(p); } catch {}
-  // Signal history removed
     const savedLang = localStorage.getItem('jerry_lang');
   if (savedLang) { _lang = savedLang; const _ls = document.getElementById('langSelect'); if (_ls) _ls.value = savedLang; }
   // Auto-detect browser language if no preference saved

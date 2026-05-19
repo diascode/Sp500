@@ -1393,6 +1393,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Context:** 45 ad-hoc re-render call sites with inconsistent pairing; scan requests have no abort mechanism (stale results land on new state); scan errors are silently swallowed (`catch(() => {})`); portfolio data has no schema version (migrations are fragile one-shot code).
 
 ### US-108 — AbortController for In-Flight Scans
+**Status: ✅ Complete**
 **As a** user, **I want** switching markets to cancel the previous scan immediately, **so that** I don't see results from the wrong market or waste server quota.
 - Store `_scanAbort = new AbortController()` before each scan; pass `signal` to each `fetchHistory` call.
 - `switchMarket()` calls `_scanAbort.abort()` before starting new scan.
@@ -1400,6 +1401,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 10 · **Effort:** 2h
 
 ### US-109 — Surface Scan Errors to User
+**Status: ✅ Complete**
 **As a** user, **I want** to see a message when a scan fails, **so that** I know why I'm seeing zero results instead of assuming the market has no signals.
 - Replace `catch(() => {})` in `scanMarket` with `catch(e => { if (!aborted) showToast(...) }`.
 - Network error → `"Erro de rede — tente novamente"` toast.
@@ -1407,6 +1409,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 10 · **Effort:** 2h
 
 ### US-110 — Portfolio Schema Versioning
+**Status: ✅ Complete**
 **As a** developer, **I want** localStorage portfolio data to carry a schema version, **so that** future migrations are safe and detectable.
 - Add `_schemaVersion: 2` to the root of saved portfolio JSON.
 - `loadPortfolio` checks version; runs appropriate migration chain; saves back with new version.
@@ -1414,6 +1417,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 10 · **Effort:** 2h
 
 ### US-111 — Setter Pattern for Module Globals
+**Status: ✅ Complete**
 **As a** developer, **I want** state mutations to go through setters, **so that** re-renders are automatic and can't be forgotten.
 - Create `setState(key, value)` that updates the global, calls the relevant renderer, and optionally persists.
 - Migrate the 6 most-mutated globals first: `_signalFilter`, `_portfolioMonthFilter`, `_lang`, `_eduTopic`, `_taxReportMonth`, `_newsSentimentFilter`.
