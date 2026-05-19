@@ -2329,8 +2329,76 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ---
 
+---
+
+## Epic 36 — Watchlist P&L, Lista Redesign & DARF Fix (Sprint 16)
+
+> Completar o acompanhamento de performance pessoal: P&L por ativo na watchlist, Lista com sinais técnicos e ações inline funcionando, e relatório DARF acessível de verdade.
+
+---
+
+### US-162 — Acompanhados: Colunas de P&L por Posição
+**As a** usuário que acompanha ações,
+**I want** ver o preço em que adicionei o ativo à watchlist, o preço atual e meu P&L (% e R$),
+**so that** eu possa saber se minhas teses de acompanhamento estão funcionando sem precisar abrir o detalhe de cada ativo.
+
+**Acceptance Criteria:**
+- A tabela de Acompanhados exibe as seguintes colunas: `#` · `TICKER` · `PREÇO ENTRADA` · `PREÇO ATUAL` · `P&L %` · `P&L R$` · `SINAL` · `RSI` · `ALVO (TP)` · `POTENCIAL` · (remover).
+- `PREÇO ENTRADA` = o preço (`price`) registrado no momento em que o usuário adicionou o ativo à watchlist. Se não foi salvo, exibe `—`.
+- `PREÇO ATUAL` = preço live do ativo (após varredura) ou `—` se não varrido.
+- `P&L %` = `(preço atual − preço entrada) / preço entrada × 100`, exibido em verde se positivo, vermelho se negativo. Exibe `—` se preço de entrada ausente.
+- `P&L R$` = `(preço atual − preço entrada) × quantidade implícita de 1 ação` (watchlist não tem quantidade). Exibe variação absoluta por ação.
+- O preço no momento do rastreamento é salvo em `pick.addedPrice` quando `trackPickFromBtn` ou `listaTrack` é chamado.
+- A barra de totais no topo inclui `P&L MÉDIO %` dos ativos com preço de entrada registrado.
+- Em ≤ 480 px, colunas `P&L R$` e `ALVO (TP)` são ocultadas para manter a tabela legível.
+
+**Sprint:** 16 · **Effort:** 2h
+
+---
+
+### US-163 — Lista: Remover VAR %, Adicionar Sinais, Corrigir Ações Inline
+**As a** usuário na view Lista,
+**I want** ver sinais técnicos (RSI, MACD, Sinal) em vez de apenas variação percentual, e poder adicionar/remover da watchlist e adicionar à carteira diretamente na linha,
+**so that** a Lista seja uma tela de triagem completa, não apenas um catálogo de preços.
+
+**Acceptance Criteria:**
+
+**Colunas:**
+- Remover coluna `VAR %` da Lista.
+- Adicionar coluna `RSI` (valor numérico, ex: `54.2`, com cor: verde se < 40, vermelho se > 70, neutro caso contrário).
+- Manter coluna `SINAL` com badges de Compra/Aguardar/Venda.
+- Ordem final de colunas: `TICKER` · `NOME` · `SETOR` · `PREÇO` · `RSI` · `SINAL` · (ações).
+
+**Botões de ação (coluna final):**
+- **⭐ / ✓**: botão de watchlist — adiciona ou remove o ativo dos Acompanhados. Estado visual imediato (⭐ = não rastreado, ✓ verde = rastreado). Chama `listaTrack()` corretamente com `event.stopPropagation()`.
+- **📊**: botão de carteira — abre o modal de adicionar posição pré-preenchido com ticker e preço atual. Usa `openPortfolioModal(ticker, price)`. Não há mais botão "PORTFOLIO MANAGER" na Lista.
+- Ambos os botões têm `event.stopPropagation()` para não abrir o detalhe do ativo acidentalmente.
+- O bug em que clicar em ⭐ não tinha efeito (evento não propagado ou `listaTrack` não chamado) é corrigido e verificado manualmente.
+
+**Em ≤ 480 px:** coluna SETOR é ocultada; botões colapsam para ícones apenas.
+
+**Sprint:** 16 · **Effort:** 2h
+
+---
+
+### US-164 — DARF: Corrigir Link "Ver Relatório" e Acesso à Seção
+**As a** usuário com posições vendidas na Carteira,
+**I want** que o clique em "Ver relatório" no card DARF efetivamente me leve à seção de cálculo de impostos,
+**so that** eu possa visualizar e exportar meu DARF sem precisar rolar manualmente a página.
+
+**Acceptance Criteria:**
+- Clicar no card "Relatório de IR (DARF)" na view Carteira exibe a seção DARF (cálculo de imposto) na mesma tela, seja por scroll suave até `#darfAnchor` ou por expansão condicional da seção.
+- O elemento `#darfAnchor` existe e está posicionado ANTES do bloco de cálculo do DARF (swing + daytrade). A âncora foi confirmada como presente no DOM renderizado (não só no HTML estático).
+- Se o usuário não tem posições vendidas (a seção DARF não é renderizada), o card mostra uma mensagem explicativa: `"Registre uma venda na sua carteira para gerar o relatório DARF."` em vez de fingir que o relatório existe.
+- O scroll funciona em desktop e mobile (iOS Safari smooth-scroll fallback se necessário).
+- Testado manualmente: usuário com pelo menos 1 posição vendida clica no card → página rola e a seção DARF fica visível.
+
+**Sprint:** 16 · **Effort:** 1h
+
+---
+
 *End of User Stories — v2.0*
-*B3 stocks · português · 161 stories across 35 epics*
+*B3 stocks · português · 164 stories across 36 epics*
 
 | Sprint | Epics | Stories | Theme |
 |--------|-------|---------|-------|
@@ -2350,3 +2418,4 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 | 13 | 33 | US-143–146 | Início View Modes & Admin Access |
 | 14 | 34 | US-147–152 | Mobile UX & Open Access |
 | 15 | 35 | US-153–161 | Qualidade & Português Completo |
+| 16 | 36 | US-162–164 | Watchlist P&L, Lista Redesign & DARF Fix |
