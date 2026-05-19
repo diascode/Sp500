@@ -33,7 +33,7 @@
         <!-- Font size -->
         <button class="btn-ghost font-size-btn" id="fontSizeBtn" onclick="cycleFontSize()" title="Tamanho da fonte">A</button>
         <!-- Scan CTA (hidden, used for progress display) -->
-        <button class="btn-primary appbar-scan" id="scanBtn" onclick="scanAll()" style="display:none">⚡ Varrer</button>
+        <button class="btn-primary appbar-scan" id="scanBtn" onclick="scanAll()">⚡ Varrer</button>
         <!-- Auth: signed out -->
         <button class="btn-ghost" id="signInBtn" onclick="showAuthModal()" style="display:none">Entrar</button>
         <!-- Auth: signed in -->
@@ -109,6 +109,7 @@
       <button class="chip" data-signal="all" onclick="filterSignal('all')">Todos</button>
     </div>
     <button class="btn-primary" onclick="scanAll()">⚡ Varrer agora</button>
+    <button class="btn-ghost" onclick="showEducationView()" style="border:1px solid var(--line)">📘 Primeiros Passos</button>
   </div>
 </div>
 
@@ -619,7 +620,7 @@ function acceptCookies() {
 }
 
 function showPrivacyNote() {
-  showToast('O MOMENTUM salva your session token and preferences in your browser\'s sua sessão e preferências localmente. Nenhum cookie de rastreamento de terceiros é usado. Suas posições e watchlist são salvas no servidor e removidas permanentemente ao excluir a conta (LGPD Art. 18). Exporte ou delete seus dados a qualquer momento no menu da conta.', true, 8000);
+  showToast('O MOMENTUM salva sua sessão e preferências localmente. Nenhum cookie de rastreamento de terceiros é usado. Suas posições e watchlist são salvas no servidor e removidas permanentemente ao excluir a conta (LGPD Art. 18). Exporte ou delete seus dados a qualquer momento no menu da conta.', true, 8000);
 }
 
 async function upgradeToPro() {
@@ -976,12 +977,9 @@ async function scanMarket(market) {
         }
       }).catch(e => {
         if (signal.aborted || e.name === 'AbortError') return;
-        if (!_scanErrShown) {
+        if (!_scanErrShown && e.status === 429) {
           _scanErrShown = true;
-          const msg = e.status === 429
-            ? (_lang === 'pt' ? 'Limite de varredura atingido — aguarde' : 'Scan limit reached — please wait')
-            : (_lang === 'pt' ? 'Erro de rede — tente novamente' : 'Network error — please try again');
-          showToast(msg, false, 5000);
+          showToast('Limite de varredura atingido — aguarde alguns minutos', false, 5000);
         }
       }).finally(() => {
         completed++;
@@ -1517,7 +1515,7 @@ function addPortfolioPosition() {
 
 function renderPortfolioTable() {
   const el = document.getElementById('portfolioTable');
-  if (state.portfolio.length === 0) { el.innerHTML = '<div style="color:var(--ink-3);font-size:11px">No positions yet.</div>'; return; }
+  if (state.portfolio.length === 0) { el.innerHTML = '<div style="color:var(--ink-3);font-size:11px">Sem posições ainda.</div>'; return; }
   el.innerHTML = state.portfolio.map((p,i) => {
     const currPrice = getPortfolioPrice(p.ticker);
     const currentVal = p.status === 'sold' && p.sellPrice ? p.sellPrice : (currPrice || p.buyPrice);
@@ -2021,75 +2019,73 @@ function renderTrackedPicks() {
 
   if (state.trackedPicks.length === 0) {
     html += '<div class="card" style="text-align:center;padding:56px 24px;margin-top:var(--s-6)">';
-    html += '<div style="font-size:48px;margin-bottom:16px">📋</div>';
+    html += '<div style="font-size:48px;margin-bottom:16px">⭐</div>';
     html += '<h3 class="hed3">Nada por aqui ainda</h3>';
-    html += '<p style="color:var(--ink-3);font-size:14px;margin-top:8px">Use ⭐ Acompanhar em qualquer ação pra adicionar à sua watchlist.</p>';
+    html += '<p style="color:var(--ink-3);font-size:14px;margin-top:8px">Use ⭐ em qualquer ação pra adicionar à sua watchlist.</p>';
     html += '</div></div>';
     container.innerHTML = html;
     return;
   }
 
-  const activeCount = state.trackedPicks.filter(p => p.status !== 'tp' && p.status !== 'sl').length;
-  html += `<p class="dek" style="margin-top:8px">${state.trackedPicks.length} ${state.trackedPicks.length === 1 ? 'ação acompanhada' : 'ações acompanhadas'} · ${activeCount} ativas.</p>`;
-  html += '<div class="grid-2" style="margin-top:var(--s-6)">';
-
-  state.trackedPicks.forEach((pick, i) => {
-    const check = checkTrackedStatus(pick);
-    if ((check.status === 'tp' || check.status === 'sl') && pick.status !== check.status) {
-      pick.status = check.status; pick.hitPrice = check.price;
-      pick.checkedAt = new Date().toISOString().slice(0, 10);
-      saveTrackedPicks();
-    }
+  // Build rows with live data
+  const rows = state.trackedPicks.map((pick, i) => {
     let d = null;
-    for (const m of ['brasil', 'us', 'europe', 'emerging']) {
-      const found = (state.analyzed[m] || []).find(s => s.ticker === pick.ticker);
-      if (found) { d = found; break; }
+    for (const m of ['brasil','us','europe','emerging']) {
+      const f = (state.analyzed[m]||[]).find(s => s.ticker === pick.ticker);
+      if (f) { d = f; break; }
     }
-    if (d) {
-      html += buildFeedCard(d, 9000 + i);
-    } else {
-      const sym = getCurrencySymbol(pick.ticker);
-      const priceStr = check.price !== null ? sym + check.price.toFixed(2) : '—';
-      const pnlStr = check.pnl !== null ? (check.pnl >= 0 ? '+' : '') + check.pnl.toFixed(2) + '%' : '—';
-      const sig = pick.status === 'tp' ? 'buy' : pick.status === 'sl' ? 'sell' : 'hold';
-      const sigLabel = pick.status === 'tp' ? '✅ TP' : pick.status === 'sl' ? '❌ SL' : '🔵 Ativo';
-      html += `<div class="feed-card">
-        <div class="card-top">
-          <div class="stock-logo-wrap">${pick.ticker.slice(0,2)}</div>
-          <div class="card-top-info"><span class="ticker-text">${pick.ticker}</span><span class="flag-text">${sym === 'R$' ? '🇧🇷' : '🇺🇸'}</span></div>
-          <span class="signal-pill ${sig}">${sigLabel}</span>
-        </div>
-        <div class="price-block">
-          <span class="price-main">${priceStr}</span>
-          <span class="price-chg ${check.pnl !== null && check.pnl >= 0 ? 'up' : 'down'}">${pnlStr}</span>
-        </div>
-        <p class="why-text">Entrada: <strong>${sym}${pick.entryPrice.toFixed(2)}</strong> · TP: <strong style="color:var(--buy)">${sym}${pick.tp.toFixed(2)}</strong> · SL: <strong style="color:var(--sell)">${sym}${pick.sl.toFixed(2)}</strong></p>
-        <div class="card-actions">
-          <button class="btn-default flex-1" onclick="untrackPick(${i})">Remover ✕</button>
-        </div>
-      </div>`;
-    }
+    const price = d?.price ?? null;
+    const sym = getCurrencySymbol(pick.ticker);
+    const priceStr = price !== null ? sym + price.toFixed(2) : '—';
+    const signal = d?.signal || null;
+    const rsi = d?.rsi ?? null;
+    const tp = d?.tp ?? pick.tp ?? null;
+    const potential = (price && tp) ? ((tp - price) / price * 100) : null;
+    return { pick, i, d, price, sym, priceStr, signal, rsi, tp, potential };
   });
 
+  // Totals
+  const buyRows = rows.filter(r => r.signal === 'buy');
+  const avgPotential = buyRows.length > 0
+    ? buyRows.reduce((s, r) => s + (r.potential || 0), 0) / buyRows.length
+    : null;
+
+  // Summary bar
+  html += '<div style="display:flex;gap:var(--s-4);flex-wrap:wrap;margin-top:var(--s-3);margin-bottom:var(--s-5);padding:var(--s-3) var(--s-4);background:var(--bg-2);border-radius:var(--r);border:1px solid var(--line)">';
+  html += '<div><span style="color:var(--ink-3);font-size:11px">TOTAL</span><br><strong style="font-size:18px">' + state.trackedPicks.length + '</strong></div>';
+  html += '<div><span style="color:var(--ink-3);font-size:11px">COMPRA</span><br><strong style="font-size:18px;color:var(--buy)">' + buyRows.length + '</strong></div>';
+  if (avgPotential !== null) html += '<div><span style="color:var(--ink-3);font-size:11px">POTENCIAL MÉDIO</span><br><strong style="font-size:18px;color:var(--buy)">+' + avgPotential.toFixed(1) + '%</strong></div>';
   html += '</div>';
-  html += `<div style="margin-top:var(--s-5);display:flex;gap:var(--s-3);flex-wrap:wrap">
-    <button class="btn-default" onclick="refreshTracked()">${t('tracked_refreshPrices')}</button>
-    <button class="btn-default" style="color:var(--sell)" onclick="clearTracked()">${t('tracked_clearAll')}</button>
-  </div>`;
-  html += '</div>';
+
+  // Table
+  html += '<div class="card-flush" style="overflow-x:auto"><table class="tracked-table"><thead><tr>';
+  html += '<th>#</th><th>TICKER</th><th>PREÇO</th><th>SINAL</th><th>RSI</th><th>ALVO (TP)</th><th>POTENCIAL</th><th></th>';
+  html += '</tr></thead><tbody>';
+
+  rows.forEach(({ pick, i, priceStr, signal, rsi, tp, sym, potential }) => {
+    const sigLabel = signal === 'buy' ? '<span class="signal-pill buy">Compra</span>'
+      : signal === 'sell' ? '<span class="signal-pill sell">Venda</span>'
+      : signal === 'neutral' ? '<span style="font-size:10px;font-weight:600;color:var(--hold)">Aguardar</span>'
+      : '<span style="color:var(--ink-4)">—</span>';
+    const rsiStr = rsi !== null ? rsi.toFixed(0) : '—';
+    const tpStr = tp ? sym + tp.toFixed(2) : '—';
+    const potStr = potential !== null
+      ? '<span style="color:' + (potential >= 0 ? 'var(--buy)' : 'var(--sell)') + '">' + (potential >= 0 ? '+' : '') + potential.toFixed(1) + '%</span>'
+      : '—';
+    html += '<tr style="cursor:pointer" onclick="openStockDetailByTicker(\'' + pick.ticker + '\')">';
+    html += '<td style="color:var(--ink-3)">' + (i + 1) + '</td>';
+    html += '<td class="tkr">' + pick.ticker + '</td>';
+    html += '<td style="font-family:var(--font-mono)">' + priceStr + '</td>';
+    html += '<td>' + sigLabel + '</td>';
+    html += '<td style="font-family:var(--font-mono)">' + rsiStr + '</td>';
+    html += '<td style="font-family:var(--font-mono)">' + tpStr + '</td>';
+    html += '<td style="font-family:var(--font-mono)">' + potStr + '</td>';
+    html += '<td onclick="event.stopPropagation()"><span style="cursor:pointer;color:var(--sell);font-size:14px" onclick="listaTrack(\'' + pick.ticker + '\',0,0,0)" title="Remover">✕</span></td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div></div>';
   container.innerHTML = html;
-
-  state.trackedPicks.forEach((pick, i) => {
-    let d = null;
-    for (const m of ['brasil', 'us', 'europe', 'emerging']) {
-      const found = (state.analyzed[m] || []).find(s => s.ticker === pick.ticker);
-      if (found) { d = found; break; }
-    }
-    if (d && d.candles) {
-      const canvas = document.getElementById(`spark-${9000 + i}`);
-      if (canvas) drawFeedSparkline(canvas, d.candles, d.signal === 'neutral' ? 'hold' : d.signal);
-    }
-  });
 }
 
 // ─── PORTFOLIO / MY STOCKS VIEW ──────────────────────────────────────
@@ -2535,12 +2531,12 @@ function renderPortfolioView() {
   }
   
   // Tax tip card (glow border)
-  html += '<div class="card-glow" style="margin-bottom:var(--s-5)">';
+  html += '<div class="card-glow" style="margin-bottom:var(--s-5);cursor:pointer" onclick="document.getElementById(\'darfAnchor\')?.scrollIntoView({behavior:\'smooth\'})">';
   html += '<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">';
   html += '<div style="width:48px;height:48px;border-radius:12px;background:color-mix(in srgb,var(--magenta) 18%,transparent);color:var(--magenta);display:grid;place-items:center;font-size:22px;flex-shrink:0">💰</div>';
   html += '<div style="flex:1;min-width:0">';
   html += '<h4 style="font-family:var(--font-display);font-size:18px;font-weight:700;margin:0 0 6px">Relatório de IR (DARF)</h4>';
-  html += '<p style="margin:0;color:var(--ink-3);font-size:14px;line-height:1.5">Calcula automaticamente seu imposto sobre ganhos, gera DARF mensal e exporta tudo em CSV pra você não passar nervoso em abril.</p>';
+  html += '<p style="margin:0;color:var(--ink-3);font-size:14px;line-height:1.5">Calcula automaticamente seu imposto sobre ganhos, gera DARF mensal e exporta tudo em CSV pra você não passar nervoso em abril. <strong style="color:var(--primary)">↓ Ver relatório</strong></p>';
   html += '</div>';
   html += '</div></div>';
 
@@ -2699,7 +2695,7 @@ function editPortfolioPosition(index) {
   html += '<input class="search-input" id="editTicker" value="' + p.ticker + '" style="width:100%;font-size:13px;margin-bottom:10px">';
   html += '<label style="display:block;font-size:10px;color:var(--ink-3);margin-bottom:4px;font-family:var(--font-mono)">QUANTITY</label>';
   html += '<input class="search-input" id="editQty" type="number" step="1" value="' + p.quantity + '" style="width:100%;font-size:13px;margin-bottom:10px">';
-  html += '<label style="display:block;font-size:10px;color:var(--ink-3);margin-bottom:4px;font-family:var(--font-mono)">BUY PRICE ($)</label>';
+  html += '<label style="display:block;font-size:10px;color:var(--ink-3);margin-bottom:4px;font-family:var(--font-mono)">PREÇO DE COMPRA</label>';
   html += '<input class="search-input" id="editBuyPrice" type="number" step="0.01" value="' + p.buyPrice.toFixed(2) + '" style="width:100%;font-size:13px;margin-bottom:10px">';
   html += '<label style="display:block;font-size:10px;color:var(--ink-3);margin-bottom:4px;font-family:var(--font-mono)">' + t('portfolio_sellPriceOptional') + '</label>';
   html += '<input class="search-input" id="editSellPrice" type="number" step="0.01" value="' + (p.sellPrice ? p.sellPrice.toFixed(2) : '') + '" style="width:100%;font-size:13px;margin-bottom:10px">';
@@ -2982,7 +2978,7 @@ function generateTaxReport() {
     const swingItems = brlSold.filter(p => (p.tradeType || 'swing') === 'swing');
     const dtItems    = brlSold.filter(p => p.tradeType === 'daytrade');
 
-    html += '<div style="padding:14px;border-top:2px solid rgba(200,90,23,0.4)">';
+    html += '<div id="darfAnchor" style="padding:14px;border-top:2px solid rgba(200,90,23,0.4)">';
     html += '<h3 style="font-family:var(--font-mono);font-size:12px;color:var(--primary);margin-bottom:12px">' + t('darf_title') + '</h3>';
 
     // Loss carryforward controls
@@ -3259,7 +3255,7 @@ async function renderUniverseView() {
   }
   html += `</div>
     <div style="overflow-x:auto"><table class="tracked-table" id="univTable"><thead><tr>
-      <th>#</th><th>TICKER</th><th>NAME</th><th>SECTOR</th>${market==='emerging'?'<th>REGION</th>':''}<th>PRICE</th><th>SIGNAL</th><th></th>
+      <th>#</th><th>TICKER</th><th>NOME</th><th>SETOR</th>${market==='emerging'?'<th>REGIÃO</th>':''}<th>PREÇO</th><th>SINAL</th><th></th>
     </tr></thead><tbody id="univBody">`;
   state._univFilter = { sector: null, region: null, search: '' };
   function renderRows() {
@@ -3276,11 +3272,11 @@ async function renderUniverseView() {
     filtered.forEach((s, i) => {
       const found = analyzed.find(a => a.ticker === s.t);
       const price = found ? getCurrencySymbol(s.t) + found.price.toFixed(2) : '—';
-      const signal = found ? `<span class="card-signal ${found.signal}">${found.signal.toUpperCase()}</span>` : '<span style="color:var(--ink-3);font-size:10px">not scanned</span>';
+      const signal = found ? `<span class="card-signal ${found.signal}">${found.signal.toUpperCase()}</span>` : '<span style="color:var(--ink-3);font-size:10px">não varrido</span>';
       const tracked = state.trackedPicks.find(p => p.ticker === s.t && p.status === 'active');
-      const trackBtn = tracked ? '<span style="color:var(--buy);font-size:10px">📌</span>' : `<button class="btn" onclick="trackFromUniv('${s.t}','${market}',${found?.price||0})" style="font-size:8px;padding:2px 6px">+ TRACK</button>`;
+      const trackBtn = tracked ? '<span style="color:var(--buy);font-size:10px">📌</span>' : `<button class="btn" onclick="trackFromUniv('${s.t}','${market}',${found?.price||0})" style="font-size:8px;padding:2px 6px">+ Rastrear</button>`;
       const inPortfolio = state.portfolio.find(p => p.ticker === s.t && p.status === 'holding');
-      const portfolioBtn = inPortfolio ? '<span style="color:var(--buy);font-size:10px">✅</span>' : `<button class="btn" onclick="addToMyStocksFromUniv('${s.t}',${found?.price||0})" style="font-size:8px;padding:2px 6px;margin-left:4px">+ MY STOCKS</button>`;
+      const portfolioBtn = inPortfolio ? '<span style="color:var(--buy);font-size:10px">✅</span>' : `<button class="btn" onclick="addToMyStocksFromUniv('${s.t}',${found?.price||0})" style="font-size:8px;padding:2px 6px;margin-left:4px">+ Carteira</button>`;
       rows += `<tr class="univ-row" data-sector="${s.s||''}" data-region="${s.r||''}">
         <td style="color:var(--ink-3)">${i+1}</td>
         <td class="tkr">${marketFlag} ${s.t}</td>
@@ -3298,7 +3294,7 @@ async function renderUniverseView() {
     const holdC = analyzed.filter(a => a.signal === 'neutral').length;
     const sellC = analyzed.filter(a => a.signal === 'sell').length;
     const summaryEl = document.getElementById('univSummary');
-    if (summaryEl) summaryEl.innerHTML = `🟢 Buy: <strong style="color:var(--buy)">${buyC}</strong> ◈ Hold: <strong style="color:var(--hold)">${holdC}</strong> 🔴 Sell: <strong style="color:var(--sell)">${sellC}</strong> 📊 Scanned: <strong>${analyzed.length}</strong> / ${stocks.length} | Showing: <strong>${filtered.length}</strong>`;
+    if (summaryEl) summaryEl.innerHTML = `🟢 Compra: <strong style="color:var(--buy)">${buyC}</strong> ◈ Aguardar: <strong style="color:var(--hold)">${holdC}</strong> 🔴 Venda: <strong style="color:var(--sell)">${sellC}</strong> 📊 Varridos: <strong>${analyzed.length}</strong> / ${stocks.length} | Exibindo: <strong>${filtered.length}</strong>`;
   }
   window._univRenderRows = renderRows;
   html += '</tbody></table></div></div>';
@@ -3954,24 +3950,6 @@ function showEducationView() {
     const _cs = document.getElementById('calendarSection'); if (_cs) _cs.style.display = 'none';
     const d = document.getElementById('dashboard');
     d.style.display = 'block';
-    if (!authUser || (authUser.tier !== 'pro' && authUser.tier !== 'admin')) {
-      d.innerHTML = `<div class="shell" style="padding-top:var(--s-7);padding-bottom:var(--s-8)">
-        <div class="kicker">📘 ${_lang === 'pt' ? 'Primeiros Passos' : 'First Steps'}</div>
-        <h1 class="hed1" style="margin-top:8px">Trade não é sorte — é <span style="color:var(--primary)">leitura</span>.</h1>
-        <div class="pro-lock" style="margin-top:var(--s-7)">
-          <div class="star">📘</div>
-          <h2>${t('proGate_title')}</h2>
-          <p>${t('proGate_educationDesc')}</p>
-          <ul>
-            <li>RSI, MACD, ADX e Bandas de Bollinger explicados do zero</li>
-            <li>Padrões de candle com exemplos reais do mercado brasileiro</li>
-            <li>DARF e IR sobre ações — sem complicação</li>
-          </ul>
-          <button class="btn-primary" onclick="showAuthModal()" style="font-size:16px;padding:14px 28px">🔑 ${t('signIn')} para acessar</button>
-        </div>
-      </div>`;
-      return;
-    }
     renderEdu();
   } catch(e) { console.error('Education error:', e); }
 }
@@ -4284,10 +4262,10 @@ async function init() {
     fetch('/api/auth/verify-email?token=' + encodeURIComponent(verifyToken))
       .then(r => r.json())
       .then(data => {
-        if (data.ok) showToast('Email verified! You can now sign in.', true, 4000);
-        else showToast('Verification link expired. Sign in and request a new one.', false, 5000);
+        if (data.ok) showToast('Email verificado! Você já pode entrar.', true, 4000);
+        else showToast('Link de verificação expirado. Entre e solicite um novo.', false, 5000);
       })
-      .catch(() => showToast('Could not verify email. Please try again.', false, 4000));
+      .catch(() => showToast('Não foi possível verificar o email. Tente novamente.', false, 4000));
   }
 
   // UI first — everything async happens in background

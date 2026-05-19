@@ -1338,6 +1338,22 @@ body[data-fontsize="large"] { font-size:17px; }
   .bottom-nav { display:flex; }
   body { padding-bottom:70px; }
   .tier-chip { display:none; }
+  /* US-153: hide appbar scan btn text on very small screens to avoid overflow */
+  .appbar-scan { font-size:12px;padding:6px 10px; }
+}
+
+/* US-153: prevent education/portfolio content from overflowing on mobile */
+.shell { overflow-x:hidden; }
+.card-flush { overflow-x:auto;max-width:100%; }
+.dashboard { overflow-x:hidden;max-width:100%; }
+/* Edu rich content word wrapping */
+#dashboard [style*="font-family:monospace"],
+#dashboard [style*="font-family: monospace"] { word-break:break-word;overflow-wrap:break-word;white-space:pre-wrap;max-width:100%; }
+/* US-153: scan controls wrap on small screens */
+@media (max-width:480px) {
+  .scan-controls { flex-direction:column;align-items:stretch; }
+  .scan-controls .btn-ghost { width:100%;text-align:center; }
+  .scan-controls .btn-primary { width:100%; }
 }
 @media (max-width:600px) { .appbar-inner { padding:0 var(--s-4); } }
 

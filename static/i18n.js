@@ -1,5 +1,5 @@
 // Momentum — i18n strings and language helpers.
-var _lang = 'en';
+var _lang = 'pt';
 var LANGS = {
   en: {
     mission: 'Educational tool. Technical analysis across <strong>US &middot; Europe &middot; Emerging Markets</strong>. Filters high-scoring signals. Each scan fetches live market data &mdash; RSI, MACD, ADX, moving averages, Bollinger Bands, pattern detection.',
