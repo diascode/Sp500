@@ -30,8 +30,8 @@
     <nav class="appbar-nav" id="appbarNav">
       <button class="nav-pill active" onclick="switchMarket(state.market)" data-view="home">Início</button>
       <button class="nav-pill" onclick="scanAll()" data-view="scan">Scanner</button>
+      <button class="nav-pill" id="learnNavBtn" onclick="showEducationView()" data-view="learn">📘 PRIMEIROS PASSOS</button>
       <button class="nav-pill" onclick="showTrackedView()" data-view="tracked">Acompanhados</button>
-      <button class="nav-pill" onclick="showEducationView()" data-view="learn">Aprender</button>
       <button class="nav-pill" onclick="showSimulatorView()" data-view="simulator">Simular</button>
       <button class="nav-pill" onclick="showPortfolioView()" data-view="portfolio">Carteira</button>
     </nav>
@@ -325,7 +325,15 @@ async function checkAuth() {
   if (!token) { authUser = null; updateAuthUI(); return; }
   try {
     const data = await apiGet('/api/auth/me');
-    if (data.id) { authUser = data; updateAuthUI(); }
+    if (data.id) {
+      authUser = data; updateAuthUI();
+      // US-80: first-time Pro login lands on course
+      const isPro = authUser.tier === 'pro' || authUser.tier === 'admin';
+      if (isPro && !localStorage.getItem('jerry_course_started')) {
+        localStorage.setItem('jerry_course_started', '1');
+        showEducationView();
+      }
+    }
     else { setToken(null); authUser = null; updateAuthUI(); }
   } catch { authUser = null; updateAuthUI(); }
 }
@@ -395,6 +403,7 @@ async function updateAuthUI() {
     // Language toggle: show for all logged-in users
     const langToggleEl = document.getElementById('langToggle');
     if (langToggleEl) langToggleEl.style.display = 'flex';
+    updateCourseNavBtn();
   } else {
     signInBtn.style.display = 'inline-block';
     userMenu.style.display = 'none';
@@ -3443,7 +3452,7 @@ function changeFontSize(d) {
   document.body.style.zoom = s;
 }
 
-let _eduTopic = 'rsi';
+let _eduTopic = 'strategy';
 
 // ─── PATTERN FINDER ───────────────────────────────────────────────────────
 let _simPattern = null;  // null = all patterns
@@ -3875,7 +3884,7 @@ function showEducationView() {
     d.style.display = 'block';
     if (!authUser || (authUser.tier !== 'pro' && authUser.tier !== 'admin')) {
       d.innerHTML = `<div class="shell" style="padding-top:var(--s-7);padding-bottom:var(--s-8)">
-        <div class="kicker">🎓 Aprender</div>
+        <div class="kicker">📘 ${_lang === 'pt' ? 'Primeiros Passos' : 'First Steps'}</div>
         <h1 class="hed1" style="margin-top:8px">Trade não é sorte — é <span style="color:var(--primary)">leitura</span>.</h1>
         <div class="pro-lock" style="margin-top:var(--s-7)">
           <div class="star">📘</div>
@@ -3895,74 +3904,134 @@ function showEducationView() {
   } catch(e) { console.error('Education error:', e); }
 }
 
+// ─── COURSE HELPERS ─────────────────────────────────────────────────────
+function loadCourseProgress() {
+  try { return JSON.parse(localStorage.getItem('jerry_course_progress') || '[]'); } catch { return []; }
+}
+function saveCourseProgress(arr) { localStorage.setItem('jerry_course_progress', JSON.stringify(arr)); }
+
+function toggleTopicComplete(id) {
+  const prog = loadCourseProgress();
+  const idx = prog.indexOf(id);
+  if (idx >= 0) prog.splice(idx, 1); else prog.push(id);
+  saveCourseProgress(prog);
+  updateCourseNavBtn();
+  if (prog.length === 13 && idx < 0) showToast('🎉 Curso concluído! Parabéns!', true, 6000);
+  renderEdu();
+}
+
+function resetCourseProgress() {
+  if (!confirm('Recomeçar o curso? Seu progresso será apagado.')) return;
+  localStorage.removeItem('jerry_course_progress');
+  localStorage.removeItem('jerry_course_started');
+  updateCourseNavBtn();
+  renderEdu();
+}
+
+function updateCourseNavBtn() {
+  const btn = document.getElementById('learnNavBtn');
+  if (!btn) return;
+  const prog = loadCourseProgress();
+  const label = _lang === 'pt' ? 'PRIMEIROS PASSOS' : 'FIRST STEPS';
+  if (prog.length === 0) {
+    btn.textContent = '📘 ' + label;
+  } else {
+    btn.innerHTML = `📘 ${label} <span class="course-nav-pill">${prog.length}/13</span>`;
+  }
+}
+
 function renderEdu() {
   const container = document.getElementById('dashboard');
   container.style.display = 'block';
 
+  const prog = loadCourseProgress();
+  const total = 13;
+  const pct = Math.round(prog.length / total * 100);
+  const isComplete = prog.length >= total;
+
+  const COURSE_MODULES = [
+    { icon:'🌱', name:'Fundamentos',      topics:['strategy','why','diversify'] },
+    { icon:'🌎', name:'O Mercado',        topics:['brazilstats','sectors','realcases'] },
+    { icon:'📊', name:'Análise Técnica',  topics:['rsi','macd','adx','sma','bb','patterns'] },
+    { icon:'🇧🇷', name:'Impostos',        topics:['darf'] },
+  ];
+
   const allTopics = [
-    { id:'strategy', icon:'🧩', name:t('edu_strategyName'), color:'#4caf50', title:t('edu_strategyTitle'), subtitle:t('edu_strategySubtitle'), body:t('edu_strategyBody') },
-    { id:'why',      icon:'🌱', name:t('edu_whyName'),      color:'#22d3ee', title:t('edu_whyTitle'),      subtitle:t('edu_whySubtitle'),      body:t('edu_whyBody') },
-    { id:'diversify',icon:'🌐', name:t('edu_diversifyName'),color:'#ff6a00', title:t('edu_diversifyTitle'), subtitle:t('edu_diversifySubtitle'), body:t('edu_diversifyBody') },
-    { id:'realcases',icon:'📈', name:t('edu_realcasesName'),color:'#c85a17', title:t('edu_realcasesTitle'), subtitle:t('edu_realcasesSubtitle'), body:t('edu_realcasesBody') },
-    { id:'brazilstats',icon:'🇧🇷',name:t('edu_brazilstatsName'),color:'#e8a846',title:t('edu_brazilstatsTitle'),subtitle:t('edu_brazilstatsSubtitle'),body:t('edu_brazilstatsBody') },
-    { id:'sectors',  icon:'🏭', name:t('edu_sectorsName'),  color:'#9c27b0', title:t('edu_sectorTitle'),    subtitle:t('edu_sectorSubtitle'),   body:t('edu_sectorBody') },
-    { id:'rsi',      icon:'📈', name:'RSI',                 color:'#22d3ee', title:t('edu_rsiTitle'),       subtitle:t('edu_rsiSubtitle'),      body:t('edu_rsiBody') },
-    { id:'macd',     icon:'🔄', name:'MACD',                color:'#4caf50', title:t('edu_macdTitle'),      subtitle:t('edu_macdSubtitle'),     body:t('edu_macdBody') },
-    { id:'adx',      icon:'📊', name:'ADX',                 color:'#e8a846', title:t('edu_adxTitle'),       subtitle:t('edu_adxSubtitle'),      body:t('edu_adxBody') },
-    { id:'sma',      icon:'〰️', name:'SMA Crossovers',      color:'#ff6a00', title:t('edu_smaTitle'),       subtitle:t('edu_smaSubtitle'),      body:t('edu_smaBody') },
-    { id:'bb',       icon:'📉', name:'Bollinger',           color:'#c85a17', title:t('edu_bollingerTitle'), subtitle:t('edu_bollingerSubtitle'),body:t('edu_bollingerBody') },
-    { id:'patterns', icon:'📐', name:t('edu_patternsTab'),  color:'#4caf50', title:t('edu_patternsTitle'),  subtitle:t('edu_patternsSubtitle'), body:t('edu_patternsBody') },
-    { id:'darf',     icon:'🇧🇷', name:'DARF',               color:'#e8a846', title:t('edu_darfTitle'),      subtitle:t('edu_darfSubtitle'),     body:t('edu_darfBody') },
+    { id:'strategy',   icon:'🧩', name:t('edu_strategyName'),   color:'#4caf50', title:t('edu_strategyTitle'),   subtitle:t('edu_strategySubtitle'),   body:t('edu_strategyBody') },
+    { id:'why',        icon:'🌱', name:t('edu_whyName'),        color:'#22d3ee', title:t('edu_whyTitle'),        subtitle:t('edu_whySubtitle'),        body:t('edu_whyBody') },
+    { id:'diversify',  icon:'🌐', name:t('edu_diversifyName'),  color:'#ff6a00', title:t('edu_diversifyTitle'),  subtitle:t('edu_diversifySubtitle'),  body:t('edu_diversifyBody') },
+    { id:'brazilstats',icon:'🇧🇷', name:t('edu_brazilstatsName'),color:'#e8a846',title:t('edu_brazilstatsTitle'),subtitle:t('edu_brazilstatsSubtitle'),body:t('edu_brazilstatsBody') },
+    { id:'sectors',    icon:'🏭', name:t('edu_sectorsName'),    color:'#9c27b0', title:t('edu_sectorTitle'),     subtitle:t('edu_sectorSubtitle'),     body:t('edu_sectorBody') },
+    { id:'realcases',  icon:'📈', name:t('edu_realcasesName'),  color:'#c85a17', title:t('edu_realcasesTitle'),  subtitle:t('edu_realcasesSubtitle'),  body:t('edu_realcasesBody') },
+    { id:'rsi',        icon:'📈', name:'RSI',                   color:'#22d3ee', title:t('edu_rsiTitle'),        subtitle:t('edu_rsiSubtitle'),        body:t('edu_rsiBody') },
+    { id:'macd',       icon:'🔄', name:'MACD',                  color:'#4caf50', title:t('edu_macdTitle'),       subtitle:t('edu_macdSubtitle'),       body:t('edu_macdBody') },
+    { id:'adx',        icon:'📊', name:'ADX',                   color:'#e8a846', title:t('edu_adxTitle'),        subtitle:t('edu_adxSubtitle'),        body:t('edu_adxBody') },
+    { id:'sma',        icon:'〰️', name:'SMA',                   color:'#ff6a00', title:t('edu_smaTitle'),        subtitle:t('edu_smaSubtitle'),        body:t('edu_smaBody') },
+    { id:'bb',         icon:'📉', name:'Bollinger',             color:'#c85a17', title:t('edu_bollingerTitle'),  subtitle:t('edu_bollingerSubtitle'),  body:t('edu_bollingerBody') },
+    { id:'patterns',   icon:'📐', name:t('edu_patternsTab'),    color:'#4caf50', title:t('edu_patternsTitle'),   subtitle:t('edu_patternsSubtitle'),   body:t('edu_patternsBody') },
+    { id:'darf',       icon:'🇧🇷', name:'DARF',                 color:'#e8a846', title:t('edu_darfTitle'),       subtitle:t('edu_darfSubtitle'),       body:t('edu_darfBody') },
   ];
-  const lessons = [
-    { id:'strategy', emoji:'🧩', level:'iniciante' },
-    { id:'rsi',      emoji:'📈', level:'iniciante' },
-    { id:'macd',     emoji:'🔄', level:'intermediário' },
-    { id:'bb',       emoji:'📉', level:'intermediário' },
-    { id:'patterns', emoji:'📐', level:'intermediário' },
-    { id:'darf',     emoji:'🇧🇷', level:'avançado' },
-  ];
+
   const current = allTopics.find(top => top.id === _eduTopic) || allTopics[0];
+  const allIds = COURSE_MODULES.flatMap(m => m.topics);
+  const isDone = prog.includes(current.id);
+  const nextIncomplete = !isComplete ? allIds.find(id => !prog.includes(id) && id !== current.id) : null;
 
   let html = '<div class="shell" style="padding-top:var(--s-7);padding-bottom:var(--s-8)">';
-  html += '<div class="kicker">🎓 Aprender</div>';
-  html += '<h1 class="hed1" style="margin-top:8px">Trade não é sorte — é <span style="color:var(--primary)">leitura</span>.</h1>';
-  html += '<p class="dek" style="margin-top:8px">Aulas curtas, na linguagem que você fala. Sem fórmula mágica, sem promessa de ficar rico — só os fundamentos pra você entender o que tá lendo na tela.</p>';
 
-  // Onboarding hero
-  html += '<div class="onboard-hero" style="margin-top:var(--s-7);margin-bottom:var(--s-6)">';
-  html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><span style="font-size:28px">👋</span><span style="font-family:var(--font-mono);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--bg)">Primeira vez aqui?</span></div>';
-  html += '<h2 style="font-family:var(--font-display);font-size:clamp(28px,5vw,40px);font-weight:700;margin:0;color:var(--bg);letter-spacing:-0.02em;text-wrap:balance">Comece com R$ 100 simulados.</h2>';
-  html += '<p style="font-size:16px;margin:12px 0 0;color:rgba(0,0,0,0.7);line-height:1.5;max-width:52ch">O Momentum é um simulador. Você aprende a operar com dinheiro de mentira antes de arriscar o seu de verdade — sem perder nada nesse meio tempo.</p>';
-  html += '<div style="margin-top:20px"><button class="btn-default" style="background:var(--bg);color:var(--ink);border-color:transparent;font-weight:600">Fazer tour guiado →</button></div>';
-  html += '</div>';
+  // ── Header
+  html += `<div class="kicker">📘 ${_lang === 'pt' ? 'Primeiros Passos' : 'First Steps'}</div>`;
+  html += `<h1 class="hed1" style="margin-top:8px">Trade não é sorte — é <span style="color:var(--primary)">leitura</span>.</h1>`;
 
-  // 6 lesson cards
-  html += '<div class="grid-2" style="margin-bottom:var(--s-7)">';
-  lessons.forEach((l, i) => {
-    const top = allTopics.find(a => a.id === l.id) || allTopics[0];
-    const isActive = _eduTopic === l.id;
-    const levelClass = l.level === 'iniciante' ? 'chip-primary' : l.level === 'avançado' ? 'chip-magenta' : '';
-    const readMin = [4, 5, 6, 5, 8, 7][i];
-    html += `<article class="lesson-card" onclick="switchEduTopic('${l.id}')" style="${isActive ? 'border-color:var(--primary)' : ''}">
-      <div class="ic">${l.emoji}</div>
-      <h4>${top.title}</h4>
-      <p>${top.subtitle}</p>
-      <div class="meta">
-        <span>Aula ${i + 1} · ${readMin} min</span>
-        <span class="chip ${levelClass}">${l.level}</span>
+  // ── Progress area (US-83)
+  html += `<div style="margin-top:var(--s-5);margin-bottom:var(--s-2)">`;
+  if (isComplete) {
+    html += `<div class="card" style="background:color-mix(in srgb,var(--buy) 10%,var(--bg-2));border-color:color-mix(in srgb,var(--buy) 40%,transparent);padding:var(--s-4);display:flex;align-items:center;gap:var(--s-4)">
+      <span style="font-size:28px">🎉</span>
+      <div style="flex:1">
+        <div style="font-weight:700;color:var(--buy);margin-bottom:4px">Curso concluído! Todos os 13 tópicos completos.</div>
+        <button onclick="resetCourseProgress()" style="background:none;border:none;color:var(--ink-4);font-size:12px;cursor:pointer;padding:0;text-decoration:underline">Recomeçar curso</button>
       </div>
-    </article>`;
-  });
-  html += '</div>';
+    </div>`;
+  } else {
+    html += `<div style="display:flex;align-items:center;gap:var(--s-3)">`;
+    html += `<div class="course-prog-wrap"><div class="course-prog-fill" style="width:${pct}%"></div></div>`;
+    html += `<span style="font-size:12px;color:var(--ink-3);white-space:nowrap;font-family:var(--font-mono)">${pct}% · ${prog.length}/${total}</span>`;
+    if (prog.length > 0) html += `<button onclick="resetCourseProgress()" style="background:none;border:none;color:var(--ink-4);font-size:11px;cursor:pointer;padding:0;white-space:nowrap;text-decoration:underline">Recomeçar</button>`;
+    html += `</div>`;
+  }
+  html += `</div>`;
 
-  // Detail content for active topic
-  html += '<div class="card" id="eduDetail" style="margin-bottom:var(--s-5)">';
-  html += `<div class="kicker" style="margin-bottom:var(--s-4)">${current.icon} ${current.name}</div>`;
+  // ── Two-column course layout (US-81)
+  html += `<div class="course-layout">`;
+
+  // Sidebar
+  html += `<aside class="course-sidebar">`;
+  COURSE_MODULES.forEach(mod => {
+    html += `<div class="course-module"><div class="course-module-hdr">${mod.icon} ${mod.name}</div>`;
+    mod.topics.forEach(tid => {
+      const top = allTopics.find(a => a.id === tid);
+      if (!top) return;
+      const done = prog.includes(tid);
+      const active = _eduTopic === tid;
+      html += `<button class="course-topic-btn${active ? ' active' : ''}${done ? ' done' : ''}" onclick="switchEduTopic('${tid}')">
+        <span class="topic-check">${done ? '✅' : '○'}</span>
+        <span>${top.icon} ${top.name}</span>
+      </button>`;
+    });
+    html += `</div>`;
+  });
+  html += `</aside>`;
+
+  // Content panel
+  html += `<div>`;
+  html += `<div class="card" style="margin-bottom:var(--s-4)">`;
+  html += `<div class="kicker" style="margin-bottom:var(--s-3)">${current.icon} ${current.name}</div>`;
   html += `<h3 class="hed3" style="color:${current.color};margin-bottom:var(--s-2)">${current.title}</h3>`;
   html += `<p style="font-size:13px;color:var(--ink-3);margin-bottom:var(--s-4)">${current.subtitle}</p>`;
   html += `<div style="font-size:13px;color:var(--ink-2);line-height:1.8">${current.body}</div>`;
 
+  // Patterns visual block
   if (current.id === 'patterns') {
     html += `<div style="margin-top:var(--s-5);border-top:1px solid var(--line);padding-top:var(--s-4)">`;
     ['bull', 'bear', 'neutral'].forEach(dir => {
@@ -3992,23 +4061,30 @@ function renderEdu() {
     html += '</div>';
   }
 
-  // More topics chips
-  html += `<div style="margin-top:var(--s-5);padding-top:var(--s-4);border-top:1px solid var(--line)">`;
-  html += `<div style="font-size:10px;color:var(--ink-4);margin-bottom:var(--s-3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.1em">Mais tópicos</div>`;
-  html += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
-  allTopics.forEach(top => {
-    const isAct = top.id === _eduTopic;
-    html += `<button class="chip" onclick="switchEduTopic('${top.id}')" style="${isAct ? 'background:var(--primary);color:var(--primary-ink);border-color:var(--primary)' : 'cursor:pointer'}">${top.icon} ${top.name}</button>`;
-  });
-  html += '</div></div>';
-  html += '</div>'; // end #eduDetail
-  html += '</div>'; // end .shell
+  // ── Bottom bar: mark complete + next topic (US-82, US-85)
+  html += `<div style="margin-top:var(--s-5);padding-top:var(--s-4);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--s-3)">`;
+  html += `<button class="${isDone ? 'btn-ghost' : 'btn-primary'}" onclick="toggleTopicComplete('${current.id}')">
+    ${isDone ? '✅ Concluído — Desfazer' : 'Marcar como concluído'}
+  </button>`;
+  if (nextIncomplete) {
+    const nextTop = allTopics.find(a => a.id === nextIncomplete);
+    html += `<button class="btn-ghost" onclick="switchEduTopic('${nextIncomplete}')">→ Próximo: ${nextTop ? nextTop.icon + ' ' + nextTop.name : ''}</button>`;
+  }
+  html += `</div>`;
+
+  html += `</div>`; // end card
+  html += `</div>`; // end content col
+  html += `</div>`; // end course-layout
+  html += `</div>`; // end shell
   container.innerHTML = html;
 }
 
 function switchEduTopic(id) {
   _eduTopic = id;
   renderEdu();
+  const dash = document.getElementById('dashboard');
+  if (dash) dash.scrollTop = 0;
+  window.scrollTo(0, 0);
 }
 
 // ─── THEME ───// ─── THEME ───// ─── EXPORT ──────────────────────────────────────────────────────────────
