@@ -58,6 +58,22 @@ const MIME = {
   '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml',
 };
 
+// ─── PUBLIC RATE LIMITER ────────────────────────────────────────────────
+const _publicRateLimits = new Map();
+function checkPublicRateLimit(ip, endpoint, maxPerMin) {
+  const key = `${ip}:${endpoint}`;
+  const now = Date.now();
+  const entry = _publicRateLimits.get(key);
+  if (!entry || now > entry.resetAt) {
+    _publicRateLimits.set(key, { count: 1, resetAt: now + 60_000 });
+    return true;
+  }
+  if (entry.count >= maxPerMin) return false;
+  entry.count++;
+  return true;
+}
+setInterval(() => { const now = Date.now(); for (const [k, v] of _publicRateLimits) if (v.resetAt < now) _publicRateLimits.delete(k); }, 5 * 60_000);
+
 // ─── HTTP HELPERS ──────────────────────────────────────────────────────
 function sendJSON(res, code, data) {
   const origin = ENV.APP_URL || 'http://localhost:8080';
@@ -90,6 +106,7 @@ async function handleRequest(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.resend.com https://query1.finance.yahoo.com https://brapi.dev");
 
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
@@ -171,6 +188,7 @@ async function handleRequest(req, res) {
       if (!verifyPassword(body.oldPassword, user.password)) return sendError(res, 400, 'Current password is incorrect');
       if (!body.newPassword || body.newPassword.length < 6) return sendError(res, 400, 'New password must be at least 6 characters');
       user.password = hashPassword(body.newPassword);
+      user.passwordChangedAt = new Date().toISOString();
       saveUsers(users);
       return sendJSON(res, 200, { ok: true });
     }
@@ -205,6 +223,7 @@ async function handleRequest(req, res) {
       const user = findUser(entry.email);
       if (!user) return sendError(res, 404, 'User not found');
       user.password = hashPassword(password);
+      user.passwordChangedAt = new Date().toISOString();
       saveUsers(users);
       _resetTokens.delete(token);
       return sendJSON(res, 200, { ok: true });
@@ -271,6 +290,7 @@ async function handleRequest(req, res) {
 
     // ─── B3 TICKER AUTOCOMPLETE ──────────────────────────────────
     if (pathname === '/api/tickers/b3' && req.method === 'GET') {
+      if (!checkPublicRateLimit(clientIp, 'tickers_b3', 120)) return sendError(res, 429, 'Too many requests');
       const q = (url.searchParams.get('q') || '').toUpperCase().trim();
       if (!q || q.length < 1) return sendJSON(res, 200, []);
       const results = UNIVERSES.brasil
@@ -471,6 +491,7 @@ async function handleRequest(req, res) {
 
     const newsMatch = pathname.match(/^\/api\/news\/([A-Za-z0-9.]+)$/);
     if (newsMatch) {
+      if (!checkPublicRateLimit(clientIp, 'news', 60)) return sendError(res, 429, 'Too many requests');
       try {
         const news = await yahooNews(newsMatch[1]);
         return sendJSON(res, 200, news);
@@ -502,25 +523,27 @@ async function handleRequest(req, res) {
       return sendJSON(res, 200, results);
     }
 
-    if (pathname === '/api/calendar') return sendJSON(res, 200, generateCalendar());
+    if (pathname === '/api/calendar') {
+      if (!checkPublicRateLimit(clientIp, 'calendar', 60)) return sendError(res, 429, 'Too many requests');
+      return sendJSON(res, 200, generateCalendar());
+    }
 
     // ─── STATIC FILES ────────────────────────────────────────────
+    // US-94: allowlist — only serve known HTML files or /static/ assets
+    const ALLOWED_HTML = new Set(['/stock-dashboard.html', '/legend.html', '/docs.html']);
     let uri = pathname === '/' ? '/stock-dashboard.html' : pathname;
+    if (!ALLOWED_HTML.has(uri) && !uri.startsWith('/static/')) return sendError(res, 403, 'Forbidden');
+
     let fpath = path.join(DIR, uri);
-    if (!fpath.startsWith(DIR)) return sendError(res, 403, 'Forbidden');
+    // US-95: fix path traversal — resolved path must be inside DIR
+    if (fpath !== DIR && !fpath.startsWith(DIR + path.sep)) return sendError(res, 403, 'Forbidden');
+
     try {
       const content = fs.readFileSync(fpath);
       const ext = path.extname(fpath);
       res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
       res.end(content);
-    } catch {
-      const fallback = path.join(DIR, 'stock-dashboard.html');
-      try {
-        const content = fs.readFileSync(fallback);
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
-        res.end(content);
-      } catch { sendError(res, 404, 'Not Found'); }
-    }
+    } catch { sendError(res, 404, 'Not Found'); }
   } catch (err) {
     console.error('Server error:', err);
     sendError(res, 500, 'Internal server error');

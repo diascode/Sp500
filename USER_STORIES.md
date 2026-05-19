@@ -1277,6 +1277,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Context:** Opus audit identified four critical security issues: (1) `.env`/`users.json`/`.git` are reachable via the static file route, leaking `JWT_SECRET`, `RESEND_API_KEY`, and all user PII; (2) path traversal protection uses `startsWith(DIR)` instead of `startsWith(DIR + sep)`; (3) JWT tokens remain valid after password change; (4) unauthenticated endpoints have no rate limiting.
 
 ### US-94 — Block Sensitive Files from Static Route
+**Status: ✅ Complete**
 **As an** operator, **I want** `.env`, `users.json`, `.git/`, and `Dockerfile` to be unreachable via HTTP, **so that** secrets and PII are never exposed.
 - Static file handler rejects requests whose resolved path matches a blocklist: `['.env', 'users.json', '.git', 'Dockerfile', 'package.json']` or any path outside of `/static/` and known HTML files.
 - `GET /.env` returns 403. `GET /data/users.json` returns 403. `GET /.git/config` returns 403.
@@ -1284,11 +1285,13 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 7 · **Effort:** 1h · **Priority:** CRITICAL
 
 ### US-95 — Fix Path Traversal in Static File Serving
+**Status: ✅ Complete**
 **As an** operator, **I want** the path traversal check to use `path.sep`, **so that** sibling-directory collision attacks are prevented.
 - Change `fpath.startsWith(DIR)` → `fpath === DIR || fpath.startsWith(DIR + path.sep)`.
 **Sprint:** 7 · **Effort:** 15min · **Priority:** CRITICAL
 
 ### US-96 — Rate Limit Unauthenticated API Endpoints
+**Status: ✅ Complete**
 **As an** operator, **I want** `/api/news`, `/api/calendar`, and `/api/tickers/b3` to have IP-based rate limiting, **so that** they can't be used to DoS the server or proxy-spam third parties.
 - `/api/news` and `/api/calendar`: 60 requests/min per IP.
 - `/api/tickers/b3`: 120 requests/min per IP (autocomplete — higher tolerance).
@@ -1296,6 +1299,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 7 · **Effort:** 2h
 
 ### US-97 — Invalidate JWT on Password Change
+**Status: ✅ Complete**
 **As a** user who changes their password after a suspected compromise, **I want** all existing sessions to be invalidated, **so that** an attacker with a stolen token is locked out immediately.
 - Add `passwordChangedAt: ISO-string` to user record on every password change (change-password + reset-password endpoints).
 - `verifyToken` rejects tokens issued before `passwordChangedAt`.
@@ -1303,6 +1307,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 7 · **Effort:** 2h
 
 ### US-98 — Add Content-Security-Policy Header
+**Status: ✅ Complete**
 **As an** operator, **I want** a CSP header, **so that** injected scripts from a stored XSS cannot execute.
 - Add `Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.resend.com https://query1.finance.yahoo.com https://brapi.dev` (once US-91 removes indicators from inline, `'unsafe-inline'` can be dropped from `script-src`).
 - No visual or functional regression.
