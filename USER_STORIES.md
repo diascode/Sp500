@@ -45,6 +45,7 @@ See [Epic 30 — Design Foundation](#epic-30--design-foundation-sprint-d) for th
 20. [Epic 19 — Mobile Responsiveness (Sprint 2)](#epic-19--mobile-responsiveness-sprint-2)
 21. [Epic 20 — Closed Beta (Sprint 2)](#epic-20--closed-beta-sprint-2)
 22. [Epic 30 — Design Foundation (Sprint D)](#epic-30--design-foundation-sprint-d)
+23. [Epic 32 — Design System Migration (Sprint 12)](#epic-32--design-system-migration-sprint-12)
 
 ---
 
@@ -1789,6 +1790,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Context:** User feedback from live session: (1) the legacy market-tabs bar shows 9 items at once causing horizontal scroll and visual noise; (2) US and Emerging markets are not relevant for the target audience (Brazilian retail investors); (3) the "Scanner" nav-pill duplicates the scan button already on Início; (4) the market-tabs bar stays visible when the user navigates to non-scanner views; (5) the 📘 emoji on Primeiros Passos nav looks cluttered; (6) the Calendário Econômico lives in a legacy sidebar card that doesn't match the design system; (7) the candlestick chart is ~330px wide on desktop instead of filling the card; (8) the profile dropdown overflows the viewport horizontally; (9) general padding/margin inconsistencies throughout.
 
 ### US-129 — Remove US and Emerging Markets (Brasil Focus)
+**Status: ✅ Complete**
 **As a** Brazilian investor, **I want** the app to show only Brasil (B3) and Europe markets, **so that** the interface stays focused on what's relevant to me.
 - Remove `🇺🇸 US` and `🌍 Emerging` buttons from the market-tabs bar.
 - Remove US and Emerging region-filter buttons from the scan-header segmented control.
@@ -1797,6 +1799,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 11 · **Effort:** 1h · **Priority:** HIGH
 
 ### US-130 — Remove Scanner Nav Pill from Top Nav
+**Status: ✅ Complete**
 **As a** user, **I want** the top nav to not have a redundant "Scanner" button, **so that** navigation is clean and unambiguous.
 - Remove `<button class="nav-pill" … data-view="scan">Scanner</button>` from the AppBar nav.
 - Scan is initiated via the scan button on Início — no second entry point needed.
@@ -1804,6 +1807,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 11 · **Effort:** 15min
 
 ### US-131 — Hide Market-Tabs Bar When Not on Scanner View
+**Status: ✅ Complete**
 **As a** user, **I want** the market-tabs row to disappear when I navigate to Acompanhados, Carteira, Primeiros Passos, or Simular, **so that** I don't see irrelevant market buttons while I'm in a different section.
 - `showTrackedView()`, `showPortfolioView()`, `showEducationView()`, `showSimulatorView()` each call `document.getElementById('marketTabs').style.display = 'none'`.
 - `switchMarket()` (Início) restores `marketTabs` to `display: 'flex'`.
@@ -1811,6 +1815,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 11 · **Effort:** 1h
 
 ### US-132 — Remove Emoji from Primeiros Passos Nav Button
+**Status: ✅ Complete**
 **As a** user, **I want** the Primeiros Passos nav button to show only text (with the progress pill), **so that** the nav bar looks consistent with the other text-only pills.
 - Remove the `📘` emoji from the nav-pill label in the HTML and from `updateCourseNavBtn()`.
 - Progress pill `<span class="course-nav-pill">N/13</span>` is kept when progress > 0.
@@ -1818,6 +1823,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 11 · **Effort:** 15min
 
 ### US-133 — Fix Candlestick Chart Width in Detail View
+**Status: ✅ Complete**
 **As a** user, **I want** the candlestick chart to fill the full width of the detail card on desktop, **so that** I can actually read the price action without squinting.
 - Add CSS: `.chart-container canvas { width: 100%; height: 320px; display: block; }`.
 - The existing `drawChart()` already reads `rect.width || canvas.offsetWidth || canvas.parentElement?.offsetWidth || 800` — once the CSS sets the width, the chart renders correctly.
@@ -1825,12 +1831,14 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 11 · **Effort:** 30min · **Priority:** HIGH
 
 ### US-134 — Fix Profile Dropdown Viewport Overflow
+**Status: ✅ Complete**
 **As a** user on a narrower viewport, **I want** the profile dropdown to stay within the screen, **so that** I don't have to scroll right to see "Sair" or "Exportar dados".
 - Change `.user-dropdown` CSS: add `max-width: min(280px, calc(100vw - 32px))` and `right: 0; left: auto`.
 - On mobile (< 480px), pin the dropdown to `right: var(--s-3)` relative to the viewport using `position: fixed` with `top` derived from the AppBar height.
 **Sprint:** 11 · **Effort:** 30min
 
 ### US-135 — Revamp Calendário Econômico into Design-System Card
+**Status: ✅ Complete**
 **As a** user, **I want** the economic calendar to look like the rest of the app and appear in a natural position on Início, **so that** it doesn't feel like a legacy sidebar afterthought.
 - Move `#calendarContent` out of `#legacySidebar` and into the Início view, rendered as a `.card` section between the market pulse news and the stock grid.
 - Restyle each event row: date chip (`eyebrow` typography), event name (`dek`), impact dot (green/yellow/red for low/medium/high).
@@ -1839,6 +1847,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 **Sprint:** 11 · **Effort:** 2h
 
 ### US-136 — Global Padding & Margin Audit
+**Status: ✅ Complete**
 **As a** user, **I want** consistent spacing between all cards and sections, **so that** the app feels polished and intentional.
 - Audit and fix: card gaps in the scanner results grid, detail view inner padding, nav-pill spacing, market-tabs padding, and the gap between AppBar and page content.
 - All spacing uses design-token values (`--s-*`) — no magic pixel values.
@@ -1847,8 +1856,481 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ---
 
-*End of User Stories — v1.7*
-*140 B3 + Europe stocks · 2 languages · 136 stories across 31 epics*
+## Epic 32 — Design System Migration (Sprint 12)
+
+**Goal:** Eliminate all legacy CSS variables (`--bg-card`, `--border`, `--text-dim`, `--green-bull`, `--red-bear`, `--text-primary`, `--bg-term`, `--accent-amber`) from the codebase and replace every affected view with the Sprint D design tokens. 180 occurrences were found in the audit. Views most affected: Carteira position table, Diário de Operações, Pro upgrade modal, legacy sidebar.
+
+---
+
+### US-137 — Carteira Position Table Redesign
+**Status: ✅ Complete**
+
+**As a** investor, **I want** the Carteira (portfolio) table to feel visually consistent with the rest of the app, **so that** it is easy to read and does not look broken against the current dark/light themes.
+
+**Problem:** `renderPortfolioView()` builds a 15-column dense HTML `<table>` that uses `var(--bg-card)`, `var(--border)`, `var(--text-dim)`, `var(--green-bull)`, `var(--red-bear)`, `var(--accent-amber)`, and `var(--text-primary)`. These variables are undefined in the Sprint D design system, so the table renders with incorrect colours — rows merge into the background, gains/losses are invisible.
+
+**Acceptance Criteria:**
+- Replace all 7 legacy variables inside `renderPortfolioView()` with their Sprint D equivalents:
+  - `var(--bg-card)` → `var(--bg-2)`
+  - `var(--border)` → `var(--line)`
+  - `var(--text-dim)` → `var(--ink-3)`
+  - `var(--green-bull)` → `var(--buy)`
+  - `var(--red-bear)` → `var(--sell)`
+  - `var(--accent-amber)` → `var(--primary)` (or `var(--warn)` if defined, else `#f59e0b`)
+  - `var(--text-primary)` → `var(--ink)`
+- Table uses `font-family: var(--font-mono)` for numeric columns (quantity, price, P&L).
+- Alternating row background uses `var(--bg-2)` / `var(--bg)` — no hardcoded hex.
+- Positive P&L cells: `color: var(--buy)`, negative: `color: var(--sell)`.
+- Column headers use `var(--ink-3)` and `font-size: var(--font-xs)`.
+- Table is horizontally scrollable on mobile (375px) without breaking layout.
+- All four themes (brasil / day / pop / calmo) render correctly.
+- No regression in portfolio totals or action buttons (Vender, Histórico).
+**Sprint:** 12 · **Effort:** 3h
+
+---
+
+### US-138 — Diário de Operações (Tax Report) Redesign
+**Status: ✅ Complete**
+
+**As a** investor, **I want** the Diário de Operações / DARF report to use the same visual design as the rest of the app, **so that** it looks professional and is easy to read.
+
+**Problem:** `generateTaxReport()` wraps the report in the new shell (`.card`, `.hed2`) but all internal rows, headers, and badges still reference `var(--bg-card)`, `var(--border)`, `var(--text-dim)`, `var(--text-primary)`, `var(--green-bull)`, `var(--red-bear)`. Column headers mix English labels (e.g., "Avg Cost") with Portuguese copy. Button styles use old classes.
+
+**Acceptance Criteria:**
+- Apply the same variable mapping as US-137 to all legacy vars inside `generateTaxReport()`.
+- All column headers are in Portuguese (e.g., "Custo Médio", "Preço de Venda", "Resultado", "IR Devido").
+- Month-section headings use `.hed3` + `var(--ink)`.
+- "Lucro" rows: `color: var(--buy)`, "Prejuízo" rows: `color: var(--sell)`.
+- DARF due-amount chip uses `var(--primary)` background with `var(--ink)` text.
+- "Exportar CSV" and "Imprimir" buttons use `.btn-primary` / `.btn-ghost` classes.
+- Empty state (no operations) shows an illustrated empty state card using `.kicker` + `var(--ink-3)`.
+- All four themes render correctly.
+**Sprint:** 12 · **Effort:** 3h
+
+---
+
+### US-139 — Pro Upgrade Modal — Design System Migration
+**Status: ✅ Complete**
+
+**As a** free-tier user, **I want** the upgrade prompt to look polished and on-brand, **so that** it builds trust before I enter payment details.
+
+**Problem:** The Pro upgrade modal (static HTML block, lines ~142–154) uses `var(--bg-card)`, `var(--border)`, `var(--text-dim)`, `var(--text-primary)` throughout. On Sprint D themes the modal background is transparent / wrong colour.
+
+**Acceptance Criteria:**
+- Replace all legacy variables in the upgrade modal HTML with Sprint D equivalents (same mapping as US-137).
+- Modal backdrop: `rgba(0,0,0,0.6)`.
+- Modal card: `background: var(--bg-2)`, `border: 1px solid var(--line)`, `border-radius: var(--r-xl)`.
+- Title uses `.hed2`, subtitle uses `.kicker` with `color: var(--ink-3)`.
+- Feature list bullets use `color: var(--buy)` for the checkmark icon.
+- CTA button "Assinar Pro" uses `.btn-primary` with full-width on mobile.
+- "Cancelar" link uses `color: var(--ink-3)`, `text-decoration: underline`.
+- Modal is dismissible via Escape key and backdrop click.
+**Sprint:** 12 · **Effort:** 1.5h
+
+---
+
+### US-140 — Legacy Sidebar & Settings Panel — Design System Migration
+**Status: ✅ Complete**
+
+**As a** user, **I want** the sidebar and settings panel to use the current design system, **so that** they don't feel out of place compared to the rest of the app.
+
+**Problem:** The legacy sidebar HTML (lines ~163–173) and settings/profile panel use `var(--text-dim)` throughout for labels, separators, and icons. Some items have hardcoded `background: #1e1e1e` and `border: 1px solid #333`.
+
+**Acceptance Criteria:**
+- Replace `var(--text-dim)` → `var(--ink-3)` in sidebar and settings panel.
+- Remove all hardcoded hex colours — use design tokens only.
+- Sidebar background: `var(--bg-2)`, separator lines: `1px solid var(--line)`.
+- Active item highlight: `background: var(--primary)` at 15% opacity, `color: var(--primary)`.
+- Avatar/profile icon area uses `var(--bg-2)` background with `var(--line)` border.
+- Tier badge ("Pro", "Free") uses `.kicker` class with `background: var(--primary)` / `var(--bg-2)`.
+**Sprint:** 12 · **Effort:** 1.5h
+
+---
+
+### US-141 — Global CSS Token Migration (Full Sweep)
+**Status: ✅ Complete**
+
+**As a** developer, **I want** zero legacy CSS variable references remaining in the codebase, **so that** all four Sprint D themes render correctly everywhere and future design changes only require updating token values.
+
+**Problem:** After US-137–140 address the four largest problem areas, ~80–100 legacy variable references will still exist scattered across: `renderTrackedPicks()` fallback cards, `renderSimulator()` edge cases, `renderNews()` date chips, the correlation matrix table, and various inline `style=` attributes throughout the HTML.
+
+**Acceptance Criteria:**
+- Run a full `grep` for all 8 legacy variable names in `stock-dashboard.html`; count must be 0 after this story.
+  - `var(--bg-card)`, `var(--border)`, `var(--text-dim)`, `var(--green-bull)`, `var(--red-bear)`, `var(--text-primary)`, `var(--bg-term)`, `var(--accent-amber)`
+- Each replacement follows the canonical mapping:
+  - `--bg-card` → `--bg-2`
+  - `--border` → `--line`
+  - `--text-dim` → `--ink-3`
+  - `--green-bull` → `--buy`
+  - `--red-bear` → `--sell`
+  - `--text-primary` → `--ink`
+  - `--bg-term` → `--bg`
+  - `--accent-amber` → `--primary`
+- All four themes (brasil / day / pop / calmo) pass a visual smoke-test: no transparent backgrounds, no invisible text, no missing borders.
+- `renderTrackedPicks()` fallback card uses `.card` wrapper and `.hed3` / `.kicker` typography.
+- Correlation matrix: header row `background: var(--bg-2)`, cell borders `1px solid var(--line)`.
+- `renderNews()` date chips: `color: var(--ink-3)`, `background: var(--bg-2)`.
+- No hardcoded hex or RGB colour values remain in generated HTML strings (except SVG icon paths and theme-definition blocks).
+**Sprint:** 12 · **Effort:** 4h
+
+---
+
+### US-142 — Calendário Econômico — Full View Revamp
+**Status: ✅ Complete**
+
+**As a** trader, **I want** the economic calendar to be visually consistent with the app's current design and placed logically in the navigation, **so that** I can quickly scan upcoming events without switching context.
+
+**Problem (from user audit):** The calendar is placed at the very bottom of the page (not in the navigation flow), its event cards use old CSS variables, column headers and impact labels are not localised to Portuguese, and the layout does not match the card/grid system used elsewhere.
+
+**Acceptance Criteria:**
+- Move the calendar to a dedicated nav section accessible from the bottom nav bar (mobile) or the left nav (desktop) — it must not require scrolling past all other content.
+- Event cards use `.card` wrapper: `background: var(--bg-2)`, `border: 1px solid var(--line)`, `border-radius: var(--r-lg)`.
+- Impact indicator:
+  - Alto (🔴): `color: var(--sell)` dot
+  - Médio (🟡): `color: var(--primary)` dot
+  - Baixo (⚪): `color: var(--ink-3)` dot
+- Date-group headers use `.hed3` + `var(--ink)`.
+- Event name uses `var(--ink)`, country flag is displayed as emoji.
+- Forecast / Previous / Actual columns: monospace font (`var(--font-mono)`), aligned right.
+- "Actual vs Forecast" delta: green (`var(--buy)`) if better-than-expected, red (`var(--sell)`) if worse.
+- Filter pill row (All / Alto / Médio / Baixo) uses the standard `.pill` component.
+- Mobile: single-column stacked layout; desktop: table-style grid.
+- No legacy CSS variable references in calendar rendering code.
+**Sprint:** 12 · **Effort:** 3h
+
+---
+
+## Epic 33 — Início View Modes & Admin Access (Sprint 13)
+
+**Goal:** Give users three distinct home views to choose from on the Início screen, and ensure admin accounts bypass all Pro gates without any upgrade prompts.
+
+---
+
+### US-143 — Admin Bypasses All Pro Gates
+**Status: ✅ Complete**
+**As an** admin, **I want** to access every feature without any upgrade prompt or Pro gate, **so that** I can test and demonstrate all functionality.
+
+**Acceptance Criteria:**
+- `isPro` helper returns `true` for `tier === 'admin'` everywhere (already true in most places — audit and fix any remaining `tier === 'pro'`-only checks).
+- The "Padrões" and "Simular" tab buttons in the market-tabs bar show for both `pro` **and** `admin` (currently admin-only at lines 408–410).
+- `showSimulateView()` and `showEducationView()` admit admin without a gate (already done — confirm).
+- No upgrade modal, no `pro-lock` card, no "Virar Pro" CTA is shown to admin.
+- Portfolio position limit (max 3) does not apply to admin.
+**Sprint:** 13 · **Effort:** 30min
+
+---
+
+### US-144 — Início Home View Mode Switcher
+**Status: ✅ Complete**
+**As a** user, **I want** to choose what I see on the Início screen — scan signals, all stocks list, or candlestick patterns — **so that** the home screen shows the information most relevant to what I'm doing right now.
+
+**Acceptance Criteria:**
+- A segmented control appears in the scan-header area with three options: `⚡ Sinais` (default), `📋 Lista`, `🕯 Padrões`.
+- Selecting a mode updates `state.homeMode` (new state key) and re-renders the home content area.
+- The selected mode is persisted in `localStorage` under `'momentum_home_mode'` and restored on page load.
+- Switching mode does NOT trigger a scan — it only changes the display.
+- On mobile, the segmented control wraps or stacks cleanly.
+- `renderDashboard()` dispatches to the correct renderer based on `state.homeMode`.
+**Sprint:** 13 · **Effort:** 1h
+
+---
+
+### US-145 — Lista de Ações (All Stocks Table on Início)
+**Status: ✅ Complete**
+**As a** user, **I want** to see all B3 stocks in a clean table on the home screen, **so that** I can browse the full universe without going to a separate view.
+
+**Acceptance Criteria:**
+- When `state.homeMode === 'lista'`, `renderDashboard()` renders a sortable table of all B3 stocks using `state.universeCache['brasil']`.
+- Table columns: Ticker, Nome, Setor, Preço atual, Variação %, Sinal (buy/hold/sell badge).
+- Layout mirrors the Carteira positions table: `.card-flush` + `.tracked-table` with `--font-mono` numbers.
+- Ticker column is clickable — opens the stock detail view (`openStockDetail()`).
+- "Sinal" column shows only if the stock has been scanned (from `state.analyzed['brasil']`); otherwise shows `—`.
+- Variação % uses `var(--buy)` for positive, `var(--sell)` for negative.
+- Table is sorted by ticker name by default; clicking column headers re-sorts.
+- A search/filter input above the table filters by ticker or name in real time.
+- Shows stock count: "X de Y ações".
+**Sprint:** 13 · **Effort:** 2.5h
+
+---
+
+### US-146 — Padrões de Candle (Pattern Finder on Início)
+**Status: ✅ Complete**
+**As a** user, **I want** to see the candlestick pattern scanner directly on the home screen, **so that** I don't have to navigate to a separate tab to find pattern matches.
+
+**Acceptance Criteria:**
+- When `state.homeMode === 'padroes'`, `renderDashboard()` calls `renderPatternFinder()` inline (no separate navigation step).
+- No Pro/login gate — any user who can see the home screen can browse pattern results.
+- The "← Voltar" back button inside `renderPatternFinder()` is replaced by switching `state.homeMode` back to `'sinais'` and re-rendering.
+- Direction filter (Todos / Alta / Baixa / Neutro) works the same as in the current standalone view.
+- Prompts the user to run a scan first if no data is available yet.
+**Sprint:** 13 · **Effort:** 1h
+
+---
+
+---
+
+## Epic 34 — Mobile UX & Open Access (Sprint 14)
+
+**Goal:** Fix mobile usability pain points, remove all Pro paywalls so every feature is available to free users, add an admin-controlled feature-flag panel so tier restrictions can be toggled without code changes, and clean up redundant Pro-upgrade UI elements.
+
+---
+
+### US-147 — Mobile Period Buttons: Size & Active State
+**As a** mobile user,
+**I want** chart period buttons (1D / 1M / 3M / 6M / 1A / 5A) to be large enough to tap and clearly show which period is active,
+**so that** I can switch timeframes without squinting or mis-tapping.
+
+**Acceptance Criteria:**
+- `.chart-period-btn` minimum height is `36px`, font-size `13px`, padding `6px 14px` on all screen sizes.
+- Active period button (`.active-period`) uses `background: var(--primary)`, `color: var(--primary-ink)`, `border-color: var(--primary)` — visually distinct from inactive buttons at a glance.
+- The same styles apply to simulator pattern-view period buttons (those currently use `font-size:8px;padding:3px 6px` inline — remove those inline overrides and use the class).
+- On screens ≤ 480 px the buttons wrap naturally without horizontal scroll.
+
+**Sprint:** 14 · **Effort:** 1h
+
+---
+
+### US-148 — Mobile Segmented Controls & Touch Targets
+**As a** mobile user,
+**I want** all segmented controls (home mode, region filter, signal filter) to have comfortable touch targets and a clear active highlight,
+**so that** I can navigate the app confidently on a phone screen.
+
+**Acceptance Criteria:**
+- `.seg-btn` minimum height is `36px` on all screens; on ≤ 480 px, font-size is at least `13px`.
+- Active `.seg-btn` uses `background: var(--primary)`, `color: var(--primary-ink)` — same pattern as period buttons so the language is consistent throughout the app.
+- Market-tabs `.btn.active-market` already uses this pattern; verify and align so all active states look identical.
+- Scan-header controls stack vertically on screens ≤ 600 px with full-width "⚡ Varrer agora" button.
+
+**Sprint:** 14 · **Effort:** 1h
+
+---
+
+### US-149 — All Features Free (Remove Hard Pro Gates)
+**As a** free user,
+**I want** access to all app features without hitting paywalls,
+**so that** I can use the full product during the open-access phase.
+
+**Acceptance Criteria:**
+- Correlation matrix is always shown (remove `correlationProLock` element and the isPro show/hide logic).
+- Pattern Finder nav button (🔍 PADRÕES in market tabs) is always visible regardless of tier.
+- Simulator nav button (Simular in top nav) is always visible regardless of tier.
+- The portfolio add-position limit (currently 3 for free users) is removed.
+- The tracked-picks soft limit (currently 5 for free) is removed from the UI gate — feature flags (US-150) now control limits, not hard-coded tier checks.
+- `proUpsell` banner is permanently hidden and its HTML removed.
+- `goProBtn` ("⭐ Virar Pro") is removed from the user dropdown.
+
+**Sprint:** 14 · **Effort:** 2h
+
+---
+
+### US-150 — Admin Feature-Flag Panel
+**As an** admin,
+**I want** a feature-flag control panel inside the admin view,
+**so that** I can enable or disable specific features per tier without touching code.
+
+**Acceptance Criteria:**
+- Admin panel has a new "⚙️ Feature Flags" section rendered as a table: rows = features, columns = Free / Pro.
+- Each cell is a toggle (checkbox or switch) that the admin can flip.
+- Feature list (minimum): Correlation Matrix, Pattern Finder, Simulator, DARF Report, Portfolio, Tracked Picks.
+- Flags are persisted server-side in `data/feature-flags.json` via a `POST /api/admin/feature-flags` endpoint (admin-only, JWT-gated).
+- On app load, flags are fetched from `GET /api/feature-flags` (public endpoint, returns current state).
+- A helper `featureEnabled(featureKey)` function is used everywhere a feature is gated, replacing direct tier checks.
+- Default state for all flags is **enabled for all tiers** (open access, consistent with US-149).
+
+**Sprint:** 14 · **Effort:** 4h
+
+---
+
+### US-151 — Remove Pro Upgrade Badges from UI
+**As a** user,
+**I want** the UI to be free of "Pro · R$ 9/mês" upgrade prompts,
+**so that** the interface feels clean and uncluttered during the open-access phase.
+
+**Acceptance Criteria:**
+- The "Pro · R$ 9/mês" button on the Relatório de IR (DARF) card in the portfolio view is removed.
+- The `correlationProLock` div (shows upgrade CTA when correlation is locked) is removed entirely.
+- The `proUpsell` banner HTML block is deleted (not just hidden).
+- Any remaining `onclick="upgradeToPro()"` buttons visible to non-admin users are removed.
+- The `upgradeToPro()` JS function is kept (admin may still need to manually promote users) but no longer triggered from visible UI.
+
+**Sprint:** 14 · **Effort:** 1h
+
+---
+
+### US-152 — Lista: Quick Track & Portfolio Actions
+**As a** user browsing the Lista view,
+**I want** to track a stock or add it to my portfolio directly from the list row,
+**so that** I don't have to open the detail modal for a simple action.
+
+**Acceptance Criteria:**
+- Each Lista row has two compact action buttons at the far right: **+ Rastrear** and **+ Carteira**.
+- **+ Rastrear**: toggles tracking for the stock. If already tracked, shows "✓ Rastreado" in muted style. Clicking again un-tracks. Respects feature-flag limits (US-150).
+- **+ Carteira**: opens the existing add-to-portfolio modal pre-filled with the ticker. Uses the same flow as the stock detail modal.
+- Action buttons do not trigger `openStockDetailByTicker()` — they use `event.stopPropagation()`.
+- On screens ≤ 480 px, buttons collapse to icon-only (⭐ and 📊) to keep the table scannable.
+
+**Sprint:** 14 · **Effort:** 2h
+
+---
+
+## Epic 35 — Qualidade & Português Completo (Sprint 15)
+
+> Corrigir regressões visuais no mobile, completar a tradução para português em toda a UI, melhorar as views de Acompanhados e Lista, e garantir acesso irrestrito ao DARF.
+
+---
+
+### US-153 — Mobile Layout: Conteúdo Cortado e Bottom Nav Incorreto
+**As a** usuário em smartphone,
+**I want** que toda a interface caiba na tela sem cortes e que o bottom nav exiba os itens corretos,
+**so that** eu possa navegar e ler conteúdo sem scrollar horizontalmente.
+
+**Acceptance Criteria:**
+- Nenhum elemento é cortado à direita em viewport de 375 px (iPhone SE / padrão).
+- Bottom nav exibe exatamente: Início · Rastrear · Simular · Aulas · Carteira — "Varrer" não aparece.
+- A seção de Aulas (Educação) não transborda horizontalmente; textos longos fazem wrap dentro do padding seguro.
+- `max-width: 100%; overflow-x: hidden;` aplicado em `.shell`, `.edu-section` e containers-pai relevantes.
+- Testado com Playwright em 375 × 812 px — zero scroll horizontal detectado.
+
+**Sprint:** 15 · **Effort:** 2h
+
+---
+
+### US-154 — Tradução Completa: Remover Todo Texto em Inglês
+**As a** usuário brasileiro,
+**I want** que 100 % do texto visível ao usuário esteja em português,
+**so that** a experiência seja totalmente nativa sem termos estranhos.
+
+**Acceptance Criteria (lista exaustiva dos strings pendentes):**
+- Status bar (rodapé): `SCAN: IDLE` → `VARREDURA: AGUARDANDO`; `MARKET:` → `MERCADO:`; `DATA: READY` → `DADOS: PRONTOS`.
+- Footer versão: `MOMENTUM · v5.0 · live from market data` → `MOMENTUM · v5.0 · dados ao vivo do mercado`.
+- Aviso paper trading: todo o parágrafo em inglês (`⚠ PAPER TRADING — EDUCATIONAL PURPOSES ONLY. MOMENTUM is a technical analysis simulator…`) traduzido para português.
+- Aviso da carteira: `⚠️ NOT a tax filing document. P&L figures are personal estimates…` traduzido integralmente.
+- Cabeçalhos da tabela de carteira: `#`, `TICKER`, `QTD` (já PT), `BUY PRICE` → `COMPRA`, `CURRENT/SELL` → `ATUAL/VENDA`, `COST BASIS` → `CUSTO`, `VALUE NOW` → `VALOR ATUAL`, `P&L %`, `P&L $`, `SITUAÇÃO` (já PT), `TRADE TYPE` → `TIPO`, `MONTH PROFIT` → `LUCRO MÊS`.
+- Resumo da carteira: `COST BASIS:` → `CUSTO TOTAL:`, `VALUE NOW:` → `VALOR ATUAL:`, `P&L:`, `TOTAL REALIZED:` → `REALIZADO:`, `TOTAL UNREALIZED:` → `NÃO REALIZADO:`.
+- Label `ADD POSITION` → `ADICIONAR POSIÇÃO`.
+- Label `ECONOMIC CALENDAR` → `CALENDÁRIO ECONÔMICO`.
+- Seção Aulas (Educação): todos os títulos, parágrafos e seções do conteúdo de educação traduzidos (`YOUR STRATEGY` → `SUA ESTRATÉGIA`, `Building Your Investment Strategy` → `Construindo Sua Estratégia de Investimento`, todos os parágrafos de corpo de texto).
+- `title="Remove"` → `title="Remover"` nos botões de carteira.
+- Qualquer `alert()` remanescente em inglês substituído por `showToast()` em português.
+
+**Sprint:** 15 · **Effort:** 3h
+
+---
+
+### US-155 — Lista: Substituir "Portfolio Manager" por "Adicionar à Carteira"
+**As a** usuário na view Lista,
+**I want** adicionar um ativo diretamente à minha carteira sem sair da lista,
+**so that** o fluxo seja rápido e sem fricção.
+
+**Acceptance Criteria:**
+- O botão "Portfolio Manager" (ou equivalente em inglês) é removido da view Lista.
+- Cada linha da Lista tem um botão compacto **"+ Carteira"** na coluna de ações.
+- Clicar em "+ Carteira" abre o modal de adicionar posição pré-preenchido com o ticker da linha.
+- O botão usa `event.stopPropagation()` — não abre o detalhe do ativo.
+- Em ≤ 480 px o botão colapsa para ícone `📊` sem texto.
+
+**Sprint:** 15 · **Effort:** 2h
+
+---
+
+### US-156 — Lista: Corrigir Botão "Adicionar à Lista" (Rastrear)
+**As a** usuário na view Lista,
+**I want** que clicar no ícone de estrela/rastrear realmente adicione o ativo à minha lista de Acompanhados,
+**so that** eu possa monitorar ações de interesse sem abrir o modal de detalhe.
+
+**Acceptance Criteria:**
+- O botão de estrela (⭐) em cada linha da Lista chama `toggleTracked(ticker)` (ou equivalente) corretamente.
+- Após clicar, o estado visual muda imediatamente (estrela preenchida se rastreado, contornada se não).
+- O ativo aparece na view Rastrear/Acompanhados sem necessidade de reload.
+- O bug onde o click não tinha efeito (evento não propagado / função não conectada) está corrigido e coberto por teste manual em desktop e mobile.
+
+**Sprint:** 15 · **Effort:** 1h
+
+---
+
+### US-157 — DARF: Remover Pro Gate Remanescente do Card de Relatório
+**As a** usuário free,
+**I want** acessar o Relatório de IR (DARF) diretamente pelo card na view Carteira,
+**so that** eu possa gerar e exportar meu relatório sem ser bloqueado por paywall.
+
+**Acceptance Criteria:**
+- O card "Relatório de IR (DARF)" na view Carteira não exibe badge "Pro · R$ 9/mês" nem CTA de upgrade.
+- Clicar no card abre a seção DARF (`showDarfSection()` ou equivalente) para qualquer usuário logado.
+- Qualquer verificação de tier (`authUser.tier !== 'pro'`) que bloqueia o DARF é removida.
+- O botão de download CSV do DARF funciona e gera arquivo com dados em português.
+- Testado como usuário free: card visível, clicável, relatório gerado sem erro.
+
+**Sprint:** 15 · **Effort:** 1h
+
+---
+
+### US-158 — Botão "Varrer" Global no Appbar (Acessível de Qualquer View)
+**As a** usuário,
+**I want** acionar a varredura de mercado de qualquer tela,
+**so that** eu não precise navegar até a view Sinais para iniciar uma nova varredura.
+
+**Acceptance Criteria:**
+- O botão "⚡ Varrer" é exibido permanentemente no appbar (row 1, lado direito, antes do menu do usuário) em desktop e tablet.
+- Em mobile, o botão aparece como ícone `⚡` sem texto no appbar para não sobrepor o nome da marca.
+- Clicar no botão chama `scanAll()` independentemente da view ativa.
+- O botão "Varrer agora" que existia apenas dentro de Sinais é removido ou mantido como atalho secundário — não é a única rota.
+- Estado visual: enquanto varrendo, botão exibe `⟳ Varrendo...` e fica desabilitado; ao terminar, volta para `⚡ Varrer`.
+
+**Sprint:** 15 · **Effort:** 2h
+
+---
+
+### US-159 — Suprimir Mensagens de Erro 502 Durante Varredura
+**As a** usuário,
+**I want** que erros temporários de rede durante a varredura não exibam mensagens de erro vermelhas na tela,
+**so that** a experiência de varredura seja limpa mesmo quando alguns tickers falham.
+
+**Acceptance Criteria:**
+- Erros 502/503/timeout em `/api/history/:ticker` são capturados silenciosamente — o ticker é ignorado sem exibir toast ou alerta.
+- O progresso da varredura continua normalmente para os demais tickers.
+- Um contador discreto no status bar mostra `X tickers ignorados` apenas ao final (não em tempo real).
+- Nenhum `console.error` de rede aparece como mensagem visível ao usuário.
+- Se **todos** os tickers falharem, exibe um toast único: `Varredura falhou — verifique sua conexão.`
+
+**Sprint:** 15 · **Effort:** 1h
+
+---
+
+### US-160 — Acompanhados: View de Lista com Totais e Potencial de Lucro
+**As a** usuário na view Rastrear/Acompanhados,
+**I want** ver meus ativos rastreados como uma lista estruturada com preço atual, sinal e potencial de lucro,
+**so that** eu tenha uma visão consolidada do meu watchlist sem precisar abrir cada ativo individualmente.
+
+**Acceptance Criteria:**
+- A view Acompanhados exibe uma tabela/lista com colunas: Ticker · Nome · Preço · Sinal · RSI · Alvo (TP) · Potencial % · Ação.
+- Rodapé da lista exibe totais: quantidade de ativos rastreados, quantos estão em sinal de compra, e o potencial médio de valorização dos sinais de compra.
+- Cada linha tem botão "Ver detalhe" que abre o modal de detalhe do ativo.
+- Botão de remover (✕) remove o ativo dos Acompanhados com confirmação visual (toast, não `confirm()`).
+- Se a lista estiver vazia, exibe estado vazio: `Você ainda não acompanha nenhum ativo. Explore os Sinais e clique ⭐ para adicionar.`
+- Layout responsivo: em ≤ 480 px, colunas Alvo e Potencial % são ocultadas para caber em tela.
+
+**Sprint:** 15 · **Effort:** 3h
+
+---
+
+### US-161 — Restaurar Botão "Primeiros Passos" na View Início
+**As a** usuário novo,
+**I want** ver o botão "Primeiros Passos" na tela inicial,
+**so that** eu possa acessar rapidamente o curso introdutório de investimentos.
+
+**Acceptance Criteria:**
+- O botão "Primeiros Passos" (ou card de entrada para o curso) está visível na view Início para todos os usuários.
+- Clicar navega para a view de Educação (`showEducationView()`), abrindo diretamente o módulo introdutório.
+- O botão é exibido tanto em desktop quanto em mobile (375 px).
+- O botão não some após login — persiste independentemente do estado de autenticação.
+- Posicionamento: abaixo do hero/scan-header, antes do grid de sinais, em destaque visual consistente com o design system.
+
+**Sprint:** 15 · **Effort:** 1h
+
+---
+
+*End of User Stories — v2.0*
+*B3 stocks · português · 161 stories across 35 epics*
 
 | Sprint | Epics | Stories | Theme |
 |--------|-------|---------|-------|
@@ -1864,3 +2346,7 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 | 9 | 28 | US-104–107 | Server-Side Portfolio Storage |
 | 10 | 29 | US-108–111 | Frontend State & Reliability |
 | 11 | 31 | US-129–136 | UI Polish & Brasil Focus |
+| 12 | 32 | US-137–142 | Design System Migration & UI Audit |
+| 13 | 33 | US-143–146 | Início View Modes & Admin Access |
+| 14 | 34 | US-147–152 | Mobile UX & Open Access |
+| 15 | 35 | US-153–161 | Qualidade & Português Completo |
