@@ -2615,8 +2615,80 @@ O botão `📊` atual chama `openPortfolioModal()` que abre o modal de adicionar
 
 ---
 
-*End of User Stories — v2.1*
-*B3 stocks · português · 175 stories across 38 epics*
+---
+
+## Epic 39 — Sprint 19: Acompanhados — Colunas de Acompanhamento e Indicadores
+
+### US-176 — Redesign da Tabela Acompanhados: Colunas de Preço, P&L e Indicadores Técnicos
+**As a** usuário na view Acompanhados,
+**I want** que a tabela mostre colunas de variação diária, resultado desde que comecei a acompanhar e indicadores técnicos (MACD e ADX) com seus valores numéricos,
+**so that** posso acompanhar a performance e o momentum de cada ação sem precisar abrir o detalhe individual.
+
+---
+
+#### Colunas Removidas
+| Coluna atual | Motivo da remoção |
+|---|---|
+| **POTENCIAL** | Mostra distância até o TP — útil no scan, mas sem significado como KPI de acompanhamento. Substituída por P&L real. |
+
+#### Colunas Mantidas
+| Coluna | Dado | Observação |
+|---|---|---|
+| **#** | Índice sequencial | — |
+| **TICKER** | `pick.ticker` | — |
+| **PREÇO** | `d.price` | Preço atual do último scan |
+| **SINAL** | `d.signal` | Compra / Aguardar / Venda |
+| **RSI** | `d.rsi` | Valor numérico |
+| **ALVO (TP)** | `d.tp ?? pick.tp` | Alvo de preço |
+| **Ações** | botão ✕ | Remover da watchlist |
+
+#### Colunas Novas
+| Coluna | Dado | Formato | Cor |
+|---|---|---|---|
+| **VAR %** | `d.changePercent` | `+1,23%` / `-0,45%` | Verde se ≥ 0, vermelho se < 0 |
+| **P&L %** | `(d.price - pick.entryPrice) / pick.entryPrice × 100` | `+8,40%` / `-3,10%` | Verde se ≥ 0, vermelho se < 0. `—` se `entryPrice = 0` |
+| **MACD** | `d.macd` | `+0.32` / `-0.18` (2 casas decimais, sinal explícito) | Verde se > 0, vermelho se < 0 |
+| **ADX** | `d.adx` | `28.4` (1 casa decimal) | `> 25` → cor de destaque (`var(--primary)`); `≤ 25` → `var(--ink-3)` (tendência fraca) |
+
+**Ordem das colunas no redesign:**
+`# | TICKER | PREÇO | VAR% | P&L% | SINAL | RSI | MACD | ADX | ALVO (TP) | [✕]`
+
+---
+
+#### Summary Bar (barra de totais acima da tabela)
+
+| Métrica atual | Alteração |
+|---|---|
+| TOTAL | mantida |
+| COMPRA | mantida |
+| POTENCIAL MÉDIO | **removida** |
+| — | **nova: RESULTADO** — média de P&L % de todas as posições com preço disponível. Formato: `+4,2%` ou `-1,8%`. Verde/vermelho conforme sinal. Se nenhuma posição tiver preço, ocultar. |
+
+---
+
+**Acceptance Criteria:**
+- A coluna POTENCIAL é removida da tabela e do cálculo de `avgPotential`.
+- A coluna VAR % exibe `d.changePercent` formatado com sinal e 2 casas; mostra `—` quando dado indisponível (ação não analisada no último scan).
+- A coluna P&L % calcula `(price - pick.entryPrice) / pick.entryPrice × 100` com sinal e 2 casas; mostra `—` quando `pick.entryPrice === 0` ou preço atual não disponível.
+- A coluna MACD exibe `d.macd` com sinal explícito (`+`/`-`) e 2 casas decimais; verde se > 0, vermelho se < 0; `—` se dado indisponível.
+- A coluna ADX exibe `d.adx` com 1 casa decimal; cor de destaque se `> 25` (tendência forte), cinza se `≤ 25`; `—` se dado indisponível.
+- Na summary bar: "POTENCIAL MÉDIO" é substituído por "RESULTADO" (média de P&L % das posições com preço).
+- Todas as colunas novas têm `font-family: var(--font-mono)` para alinhamento numérico.
+- A tabela é horizontalmente rolável em mobile (overflow-x: auto já existente via `.card-flush`).
+- Ações sem dados de scan exibem `—` em VAR%, P&L%, MACD e ADX sem quebrar o layout.
+
+**Dados disponíveis no objeto `d` (resultado de `analyzeStock()`):**
+- `d.macd` — número (positivo = bull, negativo = bear), calculado em `calcMACD()` — disponível após varredura
+- `d.adx` — número 0–100, calculado em `calcADX(c, 14)` — disponível após varredura
+- `d.changePercent` — variação diária % — disponível após varredura
+- `pick.entryPrice` — preço na hora em que o usuário clicou ⭐, salvo em `trackPick()`
+
+**Sprint:** 19 · **Effort:** 2h
+
+---
+
+*End of User Stories — v2.2*
+*B3 stocks · português · 176 stories across 39 epics*
 
 | Sprint | Epics | Stories | Theme |
 |--------|-------|---------|-------|
@@ -2639,3 +2711,4 @@ O botão `📊` atual chama `openPortfolioModal()` que abre o modal de adicionar
 | 16 | 36 | US-162–164 | Watchlist P&L, Lista Redesign & DARF Fix |
 | 17 | 37 | US-165–172 | Simular, Primeiros Passos & Mobile Profile |
 | 18 | 38 | US-173–175 | Lista Interatividade: Acompanhar + Carteira |
+| 19 | 39 | US-176 | Acompanhados: Colunas de Acompanhamento e Indicadores |
