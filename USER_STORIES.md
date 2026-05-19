@@ -2440,17 +2440,18 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ---
 
-### US-167 — Primeiros Passos: Botão Visível no Desktop (Início)
-**As a** usuário em desktop,
-**I want** ver o botão "Primeiros Passos" na tela Início,
-**so that** eu possa acessar o curso introdutório sem precisar usar o menu de navegação superior.
+### US-167 — Primeiros Passos: Mover para Nav ao Lado de Carteira
+**As a** usuário em desktop e mobile,
+**I want** acessar Primeiros Passos pelo menu de navegação principal, ao lado de Carteira,
+**so that** o curso seja uma destino de primeiro nível — não um botão secundário enterrado na tela Início.
 
 **Acceptance Criteria:**
-- O botão `📘 Primeiros Passos` está visível no `#sinaisControls` (scan-header) em viewport ≥ 721 px.
-- O botão não fica oculto por regras CSS que escondam `.scan-controls` ou `.btn-ghost` em desktop.
-- Em mobile (≤ 720 px) o botão também permanece visível dentro dos controles.
-- Clicar no botão chama `showEducationView()` corretamente.
-- Testado com Playwright em 1280 × 800 px: botão presente e clicável antes de qualquer varredura.
+- **Desktop (appbar-row2):** o nav pill `📘 Primeiros Passos` é adicionado após `Carteira` na barra de navegação superior. Ordem final: Início · Acompanhados · Simular · Carteira · Primeiros Passos.
+- **Mobile (bottom-nav):** o item `📘 Aulas` já existente continua apontando para `showEducationView()` — nenhuma mudança necessária no bottom nav.
+- O botão `📘 Primeiros Passos` que foi adicionado ao `#sinaisControls` (scan-header) em US-161/US-167 anterior é **removido** dali para evitar duplicação.
+- `data-view="learn"` é usado no nav pill para que o estado ativo seja sincronizado com os demais itens de nav.
+- Clicar no pill chama `showEducationView()`.
+- Testado em 1280 × 800 px: pill visível na row 2 do appbar, ativo quando a view de educação está aberta.
 
 **Sprint:** 17 · **Effort:** 30min
 
@@ -2537,8 +2538,23 @@ Resend's `onboarding@resend.dev` test address can only guarantee delivery to the
 
 ---
 
+### US-172 — Remover Botão "Varrer agora" da Tela Início
+**As a** usuário na tela Início,
+**I want** que o botão "⚡ Varrer agora" não apareça mais nos controles do scan-header,
+**so that** a interface fique mais limpa e o acesso à varredura fique centralizado no botão `⚡ Varrer` fixo do appbar.
+
+**Acceptance Criteria:**
+- O botão `⚡ Varrer agora` dentro do `#sinaisControls` é removido do HTML.
+- O botão `⚡ Varrer` no appbar (appbar-row1, sempre visível após login) é o único ponto de entrada para varredura.
+- Os chips de filtro (Compra / Aguardar / Venda / Todos) permanecem visíveis no `#sinaisControls` pois são controles de exibição, não de ação.
+- Nenhuma regressão: `scanAll()` continua funcionando pelo botão do appbar.
+
+**Sprint:** 17 · **Effort:** 15min
+
+---
+
 *End of User Stories — v2.0*
-*B3 stocks · português · 171 stories across 37 epics*
+*B3 stocks · português · 172 stories across 37 epics*
 
 | Sprint | Epics | Stories | Theme |
 |--------|-------|---------|-------|
