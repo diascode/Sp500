@@ -1167,10 +1167,10 @@ function filterSignal(signal) {
 
 function openStockDetail(ticker, idx) {
   const results = state.analyzed[state.market] || [];
-  const d = idx !== undefined ? results[idx] : results.find(r => r.ticker === ticker);
+  const d = results.find(r => r.ticker === ticker) || (idx !== undefined ? results[idx] : null);
   if (!d) return;
   state.detailStock = d;
-  state.detailIdx = idx || 0;
+  state.detailIdx = idx !== undefined ? idx : 0;
   const container = document.getElementById('dashboard');
   document.getElementById('resultsGrid').style.display = 'none';
   document.getElementById('scanHeader').style.display = 'none';
