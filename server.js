@@ -47,6 +47,7 @@ const {
 // ─── FEATURE FLAGS ──────────────────────────────────────────────────────
 const FLAGS_PATH = path.join(DIR, 'data', 'feature-flags.json');
 const DEFAULT_FLAGS = {
+  cpf_required:   true,
   correlation:    { free: true,  pro: true },
   patternFinder:  { free: true,  pro: true },
   simulator:      { free: true,  pro: true },
@@ -147,7 +148,7 @@ async function handleRequest(req, res) {
       const { email, password } = body;
       if (!email || !password || password.length < 6) return sendError(res, 400, 'Email and password (min 6 chars) required');
       const cpfDigits = (body.cpf || '').replace(/\D/g, '');
-      if (!cpfDigits) return sendError(res, 400, 'CPF é obrigatório para cadastro');
+      if (featureFlags.cpf_required !== false && !cpfDigits) return sendError(res, 400, 'CPF é obrigatório para cadastro');
       if (!validateCPF(cpfDigits)) return sendError(res, 400, 'CPF inválido');
       if (users.some(u => u.cpf === cpfDigits)) return sendError(res, 409, 'CPF já cadastrado');
       if (findUser(email)) return sendError(res, 409, 'Email already registered');
@@ -435,7 +436,9 @@ async function handleRequest(req, res) {
       if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
       const body = await readBody(req);
       for (const [key, val] of Object.entries(body)) {
-        if (featureFlags[key] && typeof val === 'object') {
+        if (typeof val === 'boolean') {
+          featureFlags[key] = val;   // top-level boolean flags like cpf_required
+        } else if (featureFlags[key] && typeof val === 'object') {
           featureFlags[key] = { ...featureFlags[key], ...val };
         }
       }

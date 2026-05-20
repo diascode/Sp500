@@ -271,6 +271,7 @@ let _marketPulseNews = [];
 
 // ─── FEATURE FLAGS ───────────────────────────────────────────────────────
 let _featureFlags = {
+  cpf_required:  true,
   correlation:   { free: true, pro: true },
   patternFinder: { free: true, pro: true },
   simulator:     { free: true, pro: true },
@@ -284,6 +285,11 @@ async function loadFeatureFlags() {
     const data = await fetch('/api/feature-flags').then(r => r.json());
     if (data && typeof data === 'object') _featureFlags = { ..._featureFlags, ...data };
   } catch {}
+  // Show/hide CPF field on signup form based on flag
+  const cpfWrapper = document.getElementById('authCpfRow');
+  if (cpfWrapper && authMode === 'signup') {
+    cpfWrapper.style.display = _featureFlags.cpf_required !== false ? 'block' : 'none';
+  }
 }
 
 function featureEnabled(key) {
@@ -541,7 +547,7 @@ function toggleAuthMode() {
   document.getElementById('authToggleText').textContent = isSignup ? t('auth_haveAccount') : t('auth_noAccount');
   document.getElementById('authToggleBtn').textContent = isSignup ? t('signIn') : t('auth_signUp');
   document.getElementById('authPassword').autocomplete = isSignup ? 'new-password' : 'current-password';
-  document.getElementById('authCpfRow').style.display = isSignup ? 'block' : 'none';
+  document.getElementById('authCpfRow').style.display = (isSignup && _featureFlags.cpf_required !== false) ? 'block' : 'none';
   document.getElementById('forgotLinkSection').style.display = isSignup ? 'none' : 'block';
   document.getElementById('authError').style.display = 'none';
 }
@@ -552,7 +558,7 @@ async function submitAuth() {
   const errEl = document.getElementById('authError');
   if (!email || !password) { errEl.textContent = t('auth_fillFields'); errEl.style.display = 'block'; return; }
   if (password.length < 6) { errEl.textContent = t('auth_fillFields'); errEl.style.display = 'block'; return; }
-  if (authMode === 'signup') {
+  if (authMode === 'signup' && _featureFlags.cpf_required !== false) {
     const cpfVal = document.getElementById('authCpf').value.trim();
     if (!cpfVal) { errEl.textContent = t('auth_cpfRequired'); errEl.style.display = 'block'; return; }
     if (!validateCPFClient(cpfVal)) { errEl.textContent = t('profile_cpfInvalid'); errEl.style.display = 'block'; return; }
@@ -561,7 +567,7 @@ async function submitAuth() {
   const btn = document.getElementById('authSubmitBtn');
   btn.textContent = authMode === 'login' ? t('auth_signingIn') : t('auth_creating');
   btn.disabled = true;
-  const cpf = authMode === 'signup' ? document.getElementById('authCpf').value.trim() : undefined;
+  const cpf = (authMode === 'signup' && _featureFlags.cpf_required !== false) ? document.getElementById('authCpf').value.trim() : undefined;
   try {
     const data = await apiAuth('/api/auth/' + authMode, { email, password, ...(cpf ? { cpf } : {}) });
     if (data.token) {
@@ -735,6 +741,12 @@ async function showAdminView() {
   html += '<div class="kicker" style="margin-top:var(--s-6);margin-bottom:var(--s-3)">⚙️ Feature Flags</div>';
   html += '<div class="card-flush" style="overflow-x:auto;margin-bottom:var(--s-5)">';
   html += '<table class="tracked-table"><thead><tr><th>FEATURE</th><th style="text-align:center;width:100px">FREE</th><th style="text-align:center;width:100px">PRO</th></tr></thead><tbody>';
+  // cpf_required — top-level boolean, single toggle spanning both tier columns
+  html += `<tr>
+    <td>📋 Exigir CPF no cadastro</td>
+    <td style="text-align:center"><input type="checkbox" ${flags.cpf_required !== false ? 'checked' : ''} onchange="toggleFeatureFlagBool('cpf_required',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--primary)"></td>
+    <td style="text-align:center;color:var(--ink-4)">—</td>
+  </tr>`;
   for (const [key, label] of Object.entries(FEATURE_LABELS)) {
     const f = flags[key] || { free: true, pro: true };
     html += `<tr>
@@ -754,6 +766,16 @@ async function toggleFeatureFlag(key, tier, enabled) {
   if (result.ok) {
     _featureFlags = { ..._featureFlags, ...result.flags };
     showToast(`${key} → ${tier}: ${enabled ? 'ON' : 'OFF'}`, true, 2000);
+  } else {
+    showToast('Erro ao salvar flag', false, 2000);
+  }
+}
+
+async function toggleFeatureFlagBool(key, enabled) {
+  const result = await apiPost('/api/admin/feature-flags', { [key]: enabled });
+  if (result.ok) {
+    _featureFlags = { ..._featureFlags, ...result.flags };
+    showToast('Flag atualizada', true, 2000);
   } else {
     showToast('Erro ao salvar flag', false, 2000);
   }
