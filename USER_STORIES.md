@@ -2721,6 +2721,41 @@ Atualmente o CPF é validado e obrigatório em `server.js` no endpoint `/api/aut
 
 ---
 
+## Epic 42 — Mobile UX: Paleta de Cores
+
+### US-190 — Seletor de Paleta de Cores no Menu do Usuário (Mobile)
+**As a** usuário em dispositivo mobile,
+**I want** poder trocar a paleta de cores do app diretamente pelo menu do meu perfil,
+**so that** tenha acesso à personalização visual sem depender do botão "Brasil/Dia/Pop/Calmo" que foi ocultado no appbar em telas pequenas.
+
+**Context:**
+O botão `#themeBtn` foi ocultado em mobile (≤720px) via CSS no Sprint 17 (US-171) para liberar espaço no appbar e mostrar o avatar do usuário. Com isso, usuários mobile perderam o acesso às 4 paletas existentes (`brasil`, `day`, `pop`, `calmo`). A função `toggleTheme()` (linha ~4254) e a lógica de persistência via `localStorage('jerry_theme')` já existem e funcionam — falta apenas expor o controle em um local acessível no mobile.
+
+**Solução proposta: seletor visual no dropdown do avatar (`#userMenu`)**
+O dropdown do usuário (`#userMenu`) já está visível e funcional em mobile (US-171). Adicionar uma linha de chips de paleta no final do dropdown é a solução de menor custo e melhor UX — o usuário acessa pelo avatar, vê as 4 opções visuais e toca para aplicar imediatamente.
+
+**UX do seletor:**
+- Label: "Tema:" seguido de 4 chips em linha horizontal
+- Cada chip mostra o nome da paleta: `Brasil · Dia · Pop · Calmo`
+- Chip ativo tem borda/cor de destaque (ex: `border: 2px solid var(--primary)`)
+- Toque em um chip aplica o tema instantaneamente (chama `applyTheme(themeName)` ou equivalente) e fecha o dropdown
+- O chip ativo reflete o tema atual ao abrir o dropdown
+
+**Acceptance Criteria:**
+- Em mobile (viewport ≤ 720px), o dropdown `#userMenu` exibe uma linha "Tema:" com os 4 chips de paleta abaixo das opções existentes (Alterar senha, Exportar dados, Sair, Excluir conta).
+- Cada chip ao ser tocado: (1) aplica o tema via `data-theme` no `<html>`, (2) persiste em `localStorage('jerry_theme')`, (3) fecha o dropdown.
+- O chip correspondente ao tema ativo está visualmente destacado ao abrir o menu.
+- Em desktop (> 720px), o seletor no dropdown pode ser exibido ou omitido — o `#themeBtn` já cobre o caso desktop; omitir no desktop evita duplicação.
+- Não quebra o layout do dropdown (chips com `flex-wrap:wrap` se o espaço for estreito).
+- Funciona tanto para usuário logado (dropdown completo) quanto para convidado — neste caso, o seletor pode ser exibido em um local alternativo (ver nota abaixo).
+
+**Nota — usuário não logado em mobile:**
+Quando não há sessão ativa, o `#userMenu` não aparece — só o `#signInBtn`. Para garantir acesso à paleta sem login, o seletor pode ser exposto também dentro do modal de autenticação (abaixo do formulário) ou em um botão de configurações mínimo. Este ponto fica em aberto para decisão de produto; o mínimo aceitável é que **usuários logados** em mobile tenham acesso à paleta.
+
+**Sprint:** 18.1 · **Effort:** 1h
+
+---
+
 ## Epic 41 — Admin Dashboard & Data Monetisation (LGPD-Compliant)
 
 > ⚠️ **LGPD — Lei nº 13.709/2018:** E-mail, CPF e dados comportamentais (tickers, preferências de sinal) são dados pessoais. Compartilhá-los ou vendê-los a terceiros exige **consentimento explícito, específico, informado e livre** do usuário (Art. 7 I e Art. 8). O consentimento deve ser granular por finalidade, revogável a qualquer momento e demonstrável. As stories US-184, US-185, US-186 e US-187 **não podem ir a produção** antes que US-183 (infraestrutura de consentimento) esteja live e verificada. CPF nunca deve aparecer em exports para parceiros.
@@ -2926,8 +2961,8 @@ Atualmente o CPF é validado e obrigatório em `server.js` no endpoint `/api/aut
 
 ---
 
-*End of User Stories — v2.3*
-*B3 stocks · português · 189 stories across 41 epics*
+*End of User Stories — v2.4*
+*B3 stocks · português · 190 stories across 42 epics*
 
 | Sprint | Epics | Stories | Theme |
 |--------|-------|---------|-------|
@@ -2950,6 +2985,7 @@ Atualmente o CPF é validado e obrigatório em `server.js` no endpoint `/api/aut
 | 16 | 36 | US-162–164 | Watchlist P&L, Lista Redesign & DARF Fix |
 | 17 | 37 | US-165–172 | Simular, Primeiros Passos & Mobile Profile |
 | 18 | 38 | US-173–175 | Lista Interatividade: Acompanhar + Carteira |
+| 18.1 | 42 | US-190 | Mobile: Seletor de Paleta de Cores no Menu do Usuário |
 | 19 | 39 | US-176 | Acompanhados: Colunas de Acompanhamento e Indicadores |
 | 17.1 | 40 | US-177 | Admin Toggle: CPF obrigatório no cadastro |
 | 20 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log |
