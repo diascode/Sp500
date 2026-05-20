@@ -2595,35 +2595,42 @@ O botão `📊` atual chama `openPortfolioModal()` que abre o modal de adicionar
 
 ### US-192 — Corrigir Link "Ver Relatório DARF" que Não Funciona
 **As a** usuário na view Carteira,
-**I want** que ao clicar em "↓ Ver relatório" no card do Relatório de IR (DARF), seja levado à seção do relatório,
-**so that** possa acessar o cálculo de imposto sem precisar rolar manualmente até o final da página.
+**I want** que ao clicar em "↓ Ver relatório" no card do Relatório de IR (DARF) o painel DARF apareça sempre — mesmo quando ainda não tenho nenhuma venda registrada,
+**so that** possa configurar meu prejuízo acumulado (carryforward), ver meu CPF e entender o relatório antes de realizar a primeira venda.
 
 **Root Cause:**
-O card "Relatório de IR (DARF)" (linha ~2562) usa `onclick="document.getElementById('darfAnchor')?.scrollIntoView({behavior:'smooth'})"`. O elemento `#darfAnchor` só é renderizado **dentro de um `if (brlSold.length > 0)`** (linha ~3005) — ou seja, ele só existe no DOM se o usuário já tiver **posições vendidas em BRL**. Se o usuário não tem vendas registradas, `getElementById('darfAnchor')` retorna `null`, o optional chaining `?.` silencia o erro, e absolutamente nada acontece. Não há feedback visual nem mensagem de erro.
+O card "Relatório de IR (DARF)" (linha ~2562) usa `onclick="document.getElementById('darfAnchor')?.scrollIntoView({behavior:'smooth'})"`. O elemento `#darfAnchor` só é renderizado **dentro de um `if (brlSold.length > 0)`** (linha ~3005) — ou seja, ele só existe no DOM quando o usuário já tem posições vendidas em BRL. Sem vendas, `getElementById('darfAnchor')` retorna `null`, o optional chaining `?.` silencia o erro e nada acontece.
 
-**Fix:**
-Tornar a renderização do `#darfAnchor` **incondicional** — o anchor e o painel DARF devem sempre ser renderizados. Dentro do painel:
-- Se houver posições vendidas em BRL: exibe o relatório completo (comportamento atual).
-- Se **não** houver posições vendidas: exibe um estado vazio explicativo em vez de omitir o painel inteiro.
+**Fix — Renderizar o painel DARF sempre:**
+Mover o `<div id="darfAnchor">` para fora da condição `if (brlSold.length > 0)`. O painel deve sempre estar presente no DOM. A condição permanece, mas apenas para controlar o **conteúdo interno**:
 
-**Empty state (quando `brlSold.length === 0`):**
 ```
-📋 Relatório de IR (DARF)
-Nenhuma venda registrada ainda.
-O relatório aparecerá aqui quando você registrar a venda de uma ação.
-Acesse cada posição na tabela acima e clique em "Vender" para registrar.
+[sempre renderizado]
+<div id="darfAnchor">
+  <h3>DARF_TITLE</h3>
+  
+  [sempre visível] Campos de Loss Carryforward (Swing + Daytrade)
+  [sempre visível] Seção CPF + link SicalcWeb
+  
+  if (brlSold.length > 0):
+    → blocos de cálculo swing + daytrade (comportamento atual)
+  else:
+    → nota informativa: "Nenhuma venda em BRL registrada ainda.
+       Registre a venda de uma posição para ver o cálculo de IR."
+</div>
 ```
 
-**Code change (`stock-dashboard.html` linha ~3003–3005):**
-- Remover a condição `if (brlSold.length > 0)` que envolve toda a renderização do `#darfAnchor`.
-- Renderizar `<div id="darfAnchor" ...>` sempre.
-- Mover a lógica de conteúdo para dentro: `if (brlSold.length > 0) { /* relatório completo */ } else { /* empty state */ }`.
+**Por que mostrar carryforward e CPF mesmo sem vendas:**
+- O usuário pode já ter prejuízos de meses anteriores para configurar antes de operar.
+- O CPF é necessário para preencher o DARF no SicalcWeb — visualizá-lo mesmo sem vendas é útil.
+- Mantém consistência: o painel sempre existe e o scroll sempre funciona.
 
 **Acceptance Criteria:**
-- Clicar "↓ Ver relatório" com qualquer estado de portfólio (zero posições, só holding, holding + vendas) sempre rola suavemente até `#darfAnchor`.
-- Se não há vendas: exibe mensagem de empty state informativa em PT.
-- Se há vendas BRL: exibe o relatório DARF completo (comportamento existente, sem regressão).
-- Nenhuma mudança no cálculo de impostos, campos de carryforward ou exportação CSV.
+- Clicar "↓ Ver relatório" sempre rola até `#darfAnchor`, independente de haver ou não posições vendidas.
+- Com zero vendas: painel exibe os campos de carryforward, a seção de CPF e uma nota informativa. **Não** exibe os blocos de cálculo (swing/daytrade).
+- Com vendas BRL: exibe o painel completo com cálculos, exatamente como hoje (sem regressão).
+- Os campos de carryforward são editáveis e salvam via `saveDarfLossCarryforward()` em ambos os estados.
+- Nenhuma mudança nos cálculos de impostos, na exportação CSV ou na lógica de `darfBlock()`.
 
 **Sprint:** 18 · **Effort:** 30min
 
