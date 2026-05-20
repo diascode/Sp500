@@ -90,6 +90,9 @@ var LANGS = {
     portfolio_month: 'MONTH', portfolio_profitDeficit: 'PROFIT / DEFICIT',
     portfolio_totalRealized: 'TOTAL REALIZED',
     portfolio_totalUnrealized: 'TOTAL UNREALIZED',
+    portfolio_positions: 'Positions',
+    portfolio_posHolding: 'holding',
+    portfolio_posSold: 'sold',
     portfolio_freeTierLimit: 'Free tier: max 3 positions.',
     portfolio_upgradeLink: 'Upgrade to Pro',
 
@@ -347,6 +350,9 @@ var LANGS = {
     portfolio_month: 'MÊS', portfolio_profitDeficit: 'LUCRO / DÉFICIT',
     portfolio_totalRealized: 'TOTAL REALIZADO',
     portfolio_totalUnrealized: 'TOTAL NÃO REALIZADO',
+    portfolio_positions: 'Posições',
+    portfolio_posHolding: 'em carteira',
+    portfolio_posSold: 'encerradas',
     portfolio_freeTierLimit: 'Nível gratuito: máx 3 posições.',
     portfolio_upgradeLink: 'Upgrade para Pro',
 

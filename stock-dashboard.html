@@ -1972,7 +1972,7 @@ function updateTrackedCount() {
 }
 
 function getCurrentPrice(ticker) {
-  for (const m of ['us','europe','emerging']) {
+  for (const m of ['brasil','us','europe','emerging']) {
     const found = (state.analyzed[m] || []).find(s => s.ticker === ticker);
     if (found) return found.price;
   }
@@ -2474,7 +2474,7 @@ function renderPortfolioView() {
     html += '</div>';
   });
   html += '<div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);padding:2px 4px">';
-  html += 'Positions: <strong style="color:var(--ink)">' + state.portfolio.length + '</strong> (' + state.portfolio.filter(p => p.status === 'holding').length + ' holding, ' + state.portfolio.filter(p => p.status === 'sold').length + ' sold)</div>';
+  html += t('portfolio_positions') + ': <strong style="color:var(--ink)">' + state.portfolio.length + '</strong> (' + state.portfolio.filter(p => p.status === 'holding').length + ' ' + t('portfolio_posHolding') + ', ' + state.portfolio.filter(p => p.status === 'sold').length + ' ' + t('portfolio_posSold') + ')</div>';
   html += '</div>';
   
   // Monthly profit breakdown — grouped by currency then month
