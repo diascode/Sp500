@@ -184,7 +184,7 @@
     <h2 class="hed2" id="authModalTitle" style="font-size:26px;margin:0 0 6px">Bem-vindo de volta 👋</h2>
     <p id="authModalSub" style="color:var(--ink-3);font-size:14px;margin:0 0 24px">Continua de onde você parou.</p>
     <form id="authForm" class="stack-3" autocomplete="on" onsubmit="submitAuth(); return false;">
-      <input class="input" id="authEmail" placeholder="seu@email.com" type="email" autocomplete="email">
+      <input class="input" id="authEmail" placeholder="seu@email.com" type="email" autocomplete="username">
       <div id="authCpfRow" style="display:none">
         <input class="input" id="authCpf" type="text" inputmode="numeric" placeholder="CPF (000.000.000-00)" maxlength="14" oninput="this.value=formatCPF(this.value)" autocomplete="off" style="width:100%">
       </div>
@@ -2581,7 +2581,7 @@ function renderPortfolioView() {
   }
   
   // Tax tip card (glow border)
-  html += '<div class="card-glow" style="margin-bottom:var(--s-5);cursor:pointer" onclick="document.getElementById(\'darfAnchor\')?.scrollIntoView({behavior:\'smooth\'})">';
+  html += '<div class="card-glow" style="margin-bottom:var(--s-5);cursor:pointer" onclick="generateTaxReport();setTimeout(()=>document.getElementById(\'darfAnchor\')?.scrollIntoView({behavior:\'smooth\'}),80)">';
   html += '<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">';
   html += '<div style="width:48px;height:48px;border-radius:12px;background:color-mix(in srgb,var(--magenta) 18%,transparent);color:var(--magenta);display:grid;place-items:center;font-size:22px;flex-shrink:0">💰</div>';
   html += '<div style="flex:1;min-width:0">';
@@ -4370,7 +4370,7 @@ async function init() {
     try {
       await loadUniverse('brasil');
       const brMeta = state._universeMeta.brasil;
-      if (brMeta) { document.querySelector('[data-market="brasil"]').textContent = `🇧🇷 Brasil (${brMeta.visible})`; document.getElementById('universeCount').textContent = brMeta.visible; }
+      if (brMeta) { const mBtn = document.querySelector('[data-market="brasil"]'); if (mBtn) mBtn.textContent = `🇧🇷 Brasil (${brMeta.visible})`; const uc = document.getElementById('universeCount'); if (uc) uc.textContent = brMeta.visible; }
     } catch(e) { console.log('Universe load error:', e); }
   }, 50);
   // Phase 3: Correlation only — user must click SCAN explicitly
