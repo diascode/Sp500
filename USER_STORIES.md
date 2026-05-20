@@ -2593,6 +2593,42 @@ O botão `📊` atual chama `openPortfolioModal()` que abre o modal de adicionar
 
 ---
 
+### US-192 — Corrigir Link "Ver Relatório DARF" que Não Funciona
+**As a** usuário na view Carteira,
+**I want** que ao clicar em "↓ Ver relatório" no card do Relatório de IR (DARF), seja levado à seção do relatório,
+**so that** possa acessar o cálculo de imposto sem precisar rolar manualmente até o final da página.
+
+**Root Cause:**
+O card "Relatório de IR (DARF)" (linha ~2562) usa `onclick="document.getElementById('darfAnchor')?.scrollIntoView({behavior:'smooth'})"`. O elemento `#darfAnchor` só é renderizado **dentro de um `if (brlSold.length > 0)`** (linha ~3005) — ou seja, ele só existe no DOM se o usuário já tiver **posições vendidas em BRL**. Se o usuário não tem vendas registradas, `getElementById('darfAnchor')` retorna `null`, o optional chaining `?.` silencia o erro, e absolutamente nada acontece. Não há feedback visual nem mensagem de erro.
+
+**Fix:**
+Tornar a renderização do `#darfAnchor` **incondicional** — o anchor e o painel DARF devem sempre ser renderizados. Dentro do painel:
+- Se houver posições vendidas em BRL: exibe o relatório completo (comportamento atual).
+- Se **não** houver posições vendidas: exibe um estado vazio explicativo em vez de omitir o painel inteiro.
+
+**Empty state (quando `brlSold.length === 0`):**
+```
+📋 Relatório de IR (DARF)
+Nenhuma venda registrada ainda.
+O relatório aparecerá aqui quando você registrar a venda de uma ação.
+Acesse cada posição na tabela acima e clique em "Vender" para registrar.
+```
+
+**Code change (`stock-dashboard.html` linha ~3003–3005):**
+- Remover a condição `if (brlSold.length > 0)` que envolve toda a renderização do `#darfAnchor`.
+- Renderizar `<div id="darfAnchor" ...>` sempre.
+- Mover a lógica de conteúdo para dentro: `if (brlSold.length > 0) { /* relatório completo */ } else { /* empty state */ }`.
+
+**Acceptance Criteria:**
+- Clicar "↓ Ver relatório" com qualquer estado de portfólio (zero posições, só holding, holding + vendas) sempre rola suavemente até `#darfAnchor`.
+- Se não há vendas: exibe mensagem de empty state informativa em PT.
+- Se há vendas BRL: exibe o relatório DARF completo (comportamento existente, sem regressão).
+- Nenhuma mudança no cálculo de impostos, campos de carryforward ou exportação CSV.
+
+**Sprint:** 18 · **Effort:** 30min
+
+---
+
 ### US-191 — Traduzir Texto "Positions / holding / sold" na Carteira
 **As a** usuário na view Carteira,
 **I want** que o texto de resumo de posições seja exibido em português,
@@ -3003,8 +3039,8 @@ Quando não há sessão ativa, o `#userMenu` não aparece — só o `#signInBtn`
 
 ---
 
-*End of User Stories — v2.5*
-*B3 stocks · português · 191 stories across 42 epics*
+*End of User Stories — v2.6*
+*B3 stocks · português · 192 stories across 42 epics*
 
 | Sprint | Epics | Stories | Theme |
 |--------|-------|---------|-------|
@@ -3026,7 +3062,7 @@ Quando não há sessão ativa, o `#userMenu` não aparece — só o `#signInBtn`
 | 15 | 35 | US-153–161 | Qualidade & Português Completo |
 | 16 | 36 | US-162–164 | Watchlist P&L, Lista Redesign & DARF Fix |
 | 17 | 37 | US-165–172 | Simular, Primeiros Passos & Mobile Profile |
-| 18 | 38 | US-173–175, US-191 | Lista Interatividade: Acompanhar + Carteira; tradução "Positions" |
+| 18 | 38 | US-173–175, US-191, US-192 | Lista Interatividade, tradução "Positions", fix DARF link |
 | 18.1 | 42 | US-190 | Mobile: Seletor de Paleta de Cores no Menu do Usuário |
 | 19 | 39 | US-176 | Acompanhados: Colunas de Acompanhamento e Indicadores |
 | 17.1 | 40 | US-177 | Admin Toggle: CPF obrigatório no cadastro |
