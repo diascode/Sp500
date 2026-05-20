@@ -1367,7 +1367,7 @@ function renderDashboard() {
       });
       grid.querySelectorAll('.track-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          trackPickFromBtn(btn.dataset.ticker, btn.dataset.market, parseFloat(btn.dataset.price), parseFloat(btn.dataset.tp), parseFloat(btn.dataset.sl));
+          trackPick(btn.dataset.ticker, btn.dataset.market, parseFloat(btn.dataset.price), parseFloat(btn.dataset.tp), parseFloat(btn.dataset.sl));
         });
       });
       grid.querySelectorAll('.portfolio-add-btn').forEach(btn => {
@@ -1449,7 +1449,7 @@ function renderHomeLista() {
       const _isTracked = state.trackedPicks.some(p => p.ticker === s.t);
       html += `<td style="white-space:nowrap" onclick="event.stopPropagation()">
         <button class="btn" onclick="listaTrack('${s.t}',${price||0},${d?.tp||0},${d?.sl||0})" style="font-size:11px;padding:3px 8px;min-height:28px;${_isTracked?'color:var(--buy);border-color:var(--buy)':''}">${_isTracked?'✓':'⭐'}</button>
-        <button class="btn" onclick="openPortfolioModal('${s.t}','${price||0}')" style="font-size:11px;padding:3px 8px;min-height:28px;margin-left:4px">📊</button>
+        <button class="btn" title="Adicionar à Carteira" onclick="event.stopPropagation();openPortfolioModal('${s.t}','${price||0}')" style="font-size:11px;padding:3px 8px;min-height:28px;margin-left:4px">📊</button>
       </td>`;
       html += `</tr>`;
     });
@@ -1477,7 +1477,7 @@ function listaTrack(ticker, price, tp, sl) {
     state.trackedPicks.splice(already, 1);
     showToast(ticker + ' removido dos acompanhados', false, 2000);
   } else {
-    trackPickFromBtn(ticker, 'brasil', price, tp, sl);
+    trackPick(ticker, 'brasil', price, tp, sl);
   }
   renderHomeLista();
 }
