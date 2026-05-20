@@ -484,12 +484,377 @@ Atualmente o CPF é validado e obrigatório em `server.js` no endpoint `/api/aut
 
 ---
 
+---
+
+## Epic 43 — Security & Code Quality (Code Review Findings)
+
+> Findings from automated code review. Split into Sprint 23 (Critical + Major) and Sprint 24 (Minor). C3 (`trackPickFromBtn`) is already covered by US-173 in Sprint 18.
+
+---
+
+### US-193 — [C1] XSS: Sanitizar Conteúdo de Notícias Antes de Inserir no innerHTML
+**As a** usuário da plataforma,
+**I want** que títulos, resumos e publicadores de notícias sejam escapados antes de serem inseridos no DOM,
+**so that** um payload malicioso vindo da API do Yahoo Finance não execute código JavaScript no meu navegador.
+
+**Root Cause:**
+`stock-dashboard.html` função `renderItem` (~linha 1740): campos `n.title`, `n.summary` e `n.publisher` vindos da API de notícias são inseridos diretamente em `innerHTML` sem sanitização. Um título como `</a><img src=x onerror=alert(1)>` executa JS no contexto do usuário.
+
+**Fix:**
+```js
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+```
+Usar `esc(n.title)`, `esc(n.publisher)`, `esc(summary)` em todos os pontos de interpolação em `renderItem`. Para elementos que não precisam de HTML filho, usar `textContent` em vez de `innerHTML`.
+
+**Acceptance Criteria:**
+- `n.title`, `n.publisher` e `n.summary` são escapados via `esc()` antes de qualquer interpolação em string HTML.
+- Títulos com `<script>`, `<img onerror>` e aspas simples/duplas são exibidos como texto literal, sem execução.
+- Layout visual das notícias permanece idêntico.
+
+**Sprint:** 23 · **Effort:** 1h · **Severity:** 🔴 Critical
+
+---
+
+### US-194 — [C2] XSS: Email do Usuário no Painel Admin via onclick Inline
+**As an** administrador,
+**I want** que os botões de ação na tabela de usuários usem atributos `data-*` em vez de interpolar o email diretamente em strings `onclick`,
+**so that** um email cadastrado com conteúdo malicioso (ex: `x')+alert(1)//`) não execute código JS no painel admin.
+
+**Root Cause:**
+`stock-dashboard.html` função `showAdminView` (~linha 716): emails são interpolados diretamente em `onclick="setUserTier('${u.email}','free')"`. Um email contendo `'` quebra a string de atributo e executa JS arbitrário.
+
+**Fix:**
+```js
+// Em vez de onclick inline:
+`<button class="set-tier-btn" data-email="${esc(u.email)}" data-tier="free">↓ Revogar</button>`
+// Com listener separado:
+btn.addEventListener('click', () => setUserTier(btn.dataset.email, 'free'));
+```
+Aplicar para todos os botões da tabela admin (setUserTier, setAdmin).
+
+**Acceptance Criteria:**
+- Nenhum email de usuário é interpolado em strings de atributos `onclick`.
+- Botões da tabela admin usam `data-email` + `addEventListener`.
+- Email com caracteres especiais (`'`, `"`, `<`, `>`) é exibido corretamente e não executa código.
+- Adicionar validação de formato de email no signup no servidor (ver US-204).
+
+**Sprint:** 23 · **Effort:** 1h · **Severity:** 🔴 Critical
+
+---
+
+### US-195 — [M1] Rate Limiter: Remover Confiança em X-Forwarded-For
+**As a** operador da plataforma,
+**I want** que o rate limiter de autenticação use o IP real da conexão TCP em vez do header `X-Forwarded-For`,
+**so that** um atacante não possa burlar o limite de 10 tentativas/15min simplesmente trocando o valor desse header a cada requisição.
+
+**Root Cause:**
+`server.js` linha 138: `const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress`. O header `x-forwarded-for` é controlado pelo cliente — qualquer um pode enviar um IP diferente em cada request, zerando o contador de tentativas.
+
+**Fix:**
+```js
+const clientIp = req.socket.remoteAddress || 'unknown';
+```
+Em deployment Docker sem proxy reverso na frente, `remoteAddress` é o IP real. Se um proxy (nginx, Cloudflare) for adicionado no futuro, confiar apenas no último IP adicionado pelo proxy, não no header completo.
+
+**Acceptance Criteria:**
+- Rate limiter usa `req.socket.remoteAddress` exclusivamente.
+- 10 tentativas de login com IPs falsos via `X-Forwarded-For` são corretamente bloqueadas.
+- Comportamento de bloqueio por IP real permanece intacto.
+
+**Sprint:** 23 · **Effort:** 30min · **Severity:** 🟠 Major
+
+---
+
+### US-196 — [M2] Stripe Webhook: Adicionar Limite de Tamanho ao Body
+**As a** operador da plataforma,
+**I want** que o endpoint `/api/stripe/webhook` tenha um limite de tamanho no body recebido,
+**so that** um atacante não possa enviar um payload gigante e esgotar a memória do servidor.
+
+**Root Cause:**
+`server.js` linhas 481–483: o webhook do Stripe acumula o body sem limite, enquanto todas as outras rotas usam `readBody()` que tem cap de 1MB. O body bruto é necessário para verificação de assinatura HMAC, mas ainda precisa de um teto.
+
+**Fix:**
+```js
+let body = '', size = 0;
+req.on('data', c => {
+  size += c.length;
+  if (size > 1_048_576) { req.destroy(); return; }
+  body += c;
+});
+```
+
+**Acceptance Criteria:**
+- Payload acima de 1MB no webhook do Stripe destrói a conexão imediatamente.
+- Payloads legítimos do Stripe (sempre pequenos) continuam sendo processados corretamente.
+- Verificação de assinatura `stripe.webhooks.constructEvent` não é afetada.
+
+**Sprint:** 23 · **Effort:** 30min · **Severity:** 🟠 Major
+
+---
+
+### US-197 — [M3] Auth: Substituir scryptSync por scrypt Assíncrono
+**As a** usuário fazendo login ou cadastro,
+**I want** que a operação de hashing de senha não bloqueie o servidor para outros usuários,
+**so that** múltiplos logins simultâneos não causem lentidão para todos.
+
+**Root Cause:**
+`lib/auth.js` linhas 101 e 106: `crypto.scryptSync` bloqueia o event loop do Node.js por ~35ms a cada chamada. Com 10 logins simultâneos, isso gera ~350ms de stall antes da primeira resposta.
+
+**Fix:** Usar `crypto.scrypt` (versão assíncrona com callback) e `await` nas rotas de signup/login.
+```js
+function hashPassword(pw) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  return new Promise((resolve, reject) =>
+    crypto.scrypt(pw, salt, 64, (err, hash) =>
+      err ? reject(err) : resolve(salt + ':' + hash.toString('hex'))
+    )
+  );
+}
+```
+
+**Acceptance Criteria:**
+- `hashPassword()` e `verifyPassword()` são assíncronas e retornam Promises.
+- Rotas de signup e login usam `await hashPassword()` / `await verifyPassword()`.
+- Múltiplos logins simultâneos não bloqueiam o event loop.
+- Hash e verificação continuam funcionando corretamente.
+
+**Sprint:** 23 · **Effort:** 1h · **Severity:** 🟠 Major
+
+---
+
+### US-198 — [M4] Admin Email: Mover para Variável de Ambiente
+**As a** operador da plataforma,
+**I want** que o email do administrador seja configurado via variável de ambiente em vez de hardcoded no código-fonte,
+**so that** a conta admin não fique exposta se o repositório for compartilhado ou tornado público.
+
+**Root Cause:**
+`lib/auth.js` linha 90: `const ADMIN_EMAIL = 'thiagotupa@hotmail.com'.toLowerCase()` — email pessoal commitado no código.
+
+**Fix:**
+```js
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').toLowerCase();
+if (!ADMIN_EMAIL) console.warn('[auth] ADMIN_EMAIL not set — admin panel disabled');
+```
+Adicionar `ADMIN_EMAIL=...` ao `.env` do container Docker.
+
+**Acceptance Criteria:**
+- `ADMIN_EMAIL` lido de `process.env.ADMIN_EMAIL`.
+- Se não definido, painel admin fica inacessível e um warning é logado na inicialização.
+- Funcionalidade admin permanece idêntica quando a variável está definida.
+- Email não aparece mais em nenhum arquivo commitado no repositório.
+
+**Sprint:** 23 · **Effort:** 30min · **Severity:** 🟠 Major
+
+---
+
+### US-199 — [M5] Persistência: Proteger users.json Contra Gravações Concorrentes
+**As a** usuário salvando minha carteira,
+**I want** que meus dados não sejam perdidos quando outro usuário salva os dele simultaneamente,
+**so that** gravações concorrentes no mesmo arquivo não se sobrescrevam.
+
+**Root Cause:**
+`server.js` linhas 330 e 351: `saveUsers()` serializa e renomeia `users.json` inteiro a cada save de portfólio/watchlist. O padrão tmp+rename previne arquivos corrompidos mas não previne race conditions — duas gravações simultâneas resultam na segunda sobrescrevendo a primeira.
+
+**Fix — fila de gravação serial:**
+```js
+let _saveLock = Promise.resolve();
+function saveUsers() {
+  _saveLock = _saveLock.then(() => {
+    const tmp = DB_PATH + '.tmp.' + Date.now();
+    fs.writeFileSync(tmp, JSON.stringify(users, null, 2));
+    fs.renameSync(tmp, DB_PATH);
+  });
+  return _saveLock;
+}
+```
+Long-term: migrar portfólio e watchlist para arquivos por usuário (`data/portfolio-{id}.json`) para reduzir o tamanho do arquivo e o escopo de cada gravação.
+
+**Acceptance Criteria:**
+- `saveUsers()` executa gravações de forma serial via fila de Promises.
+- Dois saves simultâneos não resultam em perda de dados de nenhum dos usuários.
+- A abordagem de arquivo por usuário é documentada como próximo passo (não obrigatória nesta US).
+
+**Sprint:** 23 · **Effort:** 2h · **Severity:** 🟠 Major
+
+---
+
+### US-200 — [M6] Validação: Sanitizar Payloads de Portfólio e Watchlist
+**As a** operador da plataforma,
+**I want** que os endpoints de save de portfólio e watchlist validem os dados recebidos antes de persistir,
+**so that** um usuário autenticado não possa armazenar dados arbitrários e causar corrupção ou crescimento ilimitado do arquivo.
+
+**Root Cause:**
+`server.js` linhas 327–353: apenas verifica se o body é um array, sem validar campos, tipos, comprimento ou tamanho máximo.
+
+**Fix:**
+```js
+if (body.length > 500) return sendError(res, 400, 'Payload too large');
+for (const item of body) {
+  if (typeof item.ticker !== 'string' || item.ticker.length > 20) return sendError(res, 400, 'Invalid ticker');
+  if (item.quantity != null && typeof item.quantity !== 'number') return sendError(res, 400, 'Invalid quantity');
+  if (item.buyPrice != null && typeof item.buyPrice !== 'number') return sendError(res, 400, 'Invalid price');
+}
+```
+
+**Acceptance Criteria:**
+- Arrays com mais de 500 itens são rejeitados com 400.
+- Campos `ticker`, `quantity`, `buyPrice` têm tipos validados.
+- Payloads com campos válidos continuam sendo salvos normalmente.
+- Aplica-se tanto ao endpoint de portfólio quanto ao de watchlist.
+
+**Sprint:** 23 · **Effort:** 1h · **Severity:** 🟠 Major
+
+---
+
+### US-201 — [m4] getCurrentPrice Não Busca Preços do Mercado Brasil
+**As a** usuário com ações brasileiras na watchlist,
+**I want** que o preço atual de ações B3 seja encontrado e exibido corretamente,
+**so that** posso ver o status (TP/SL hit) das minhas posições acompanhadas sem que fique sempre em "WAITING".
+
+**Root Cause:**
+`stock-dashboard.html` função `getCurrentPrice` (~linha 1975): itera sobre `['us','europe','emerging']` mas omite `'brasil'` — o mercado principal. Qualquer ticker B3 retorna `null`.
+
+**Fix:** Adicionar `'brasil'` à lista:
+```js
+for (const m of ['brasil','us','europe','emerging']) {
+```
+
+**Acceptance Criteria:**
+- Ações B3 (ex: PETR4.SA, VALE3.SA) exibem preço atual corretamente na watchlist após um scan.
+- Status de TP/SL é calculado corretamente para posições brasileiras.
+
+**Sprint:** 23 · **Effort:** 5min · **Severity:** 🟡 Minor (high impact)
+
+---
+
+### US-202 — [m1] nextId(): Substituir Math.max(...spread) por reduce
+**As a** operador da plataforma,
+**I want** que a geração de IDs de usuário não quebre com bases de dados grandes,
+**so that** o servidor não lance `RangeError: Maximum call stack size exceeded` com mais de ~65k usuários.
+
+**Root Cause:**
+`lib/auth.js` linha 109: `Math.max(...users.map(u => u.id))` — spread como argumentos de função tem limite de ~65k itens no V8.
+
+**Fix:**
+```js
+function nextId() {
+  return users.reduce((max, u) => Math.max(max, u.id), 0) + 1;
+}
+```
+
+**Acceptance Criteria:**
+- `nextId()` usa `reduce` em vez de spread.
+- Funciona corretamente com qualquer número de usuários.
+
+**Sprint:** 24 · **Effort:** 5min · **Severity:** 🟡 Minor
+
+---
+
+### US-203 — [m3] Adicionar Handlers de uncaughtException e unhandledRejection
+**As a** operador da plataforma,
+**I want** que erros não tratados sejam logados antes de derrubar o servidor,
+**so that** posso diagnosticar crashes em produção em vez de encontrar o processo simplesmente morto.
+
+**Root Cause:**
+`server.js`: sem `process.on('unhandledRejection')` ou `process.on('uncaughtException')`. Em Node 15+, uma Promise rejeitada não tratada derruba o processo silenciosamente.
+
+**Fix:**
+```js
+process.on('unhandledRejection', (reason) => {
+  console.error('[fatal] Unhandled rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[fatal] Uncaught exception:', err);
+  process.exit(1);
+});
+```
+
+**Acceptance Criteria:**
+- Rejeições não tratadas são logadas com stack trace antes de qualquer exit.
+- Exceções não capturadas são logadas e o processo sai com código 1.
+
+**Sprint:** 24 · **Effort:** 15min · **Severity:** 🟡 Minor
+
+---
+
+### US-204 — [m6] Validar Formato de Email no Signup
+**As a** operador da plataforma,
+**I want** que o signup rejeite emails sem formato válido,
+**so that** a base de dados não acumule registros com emails inválidos que causam falhas silenciosas no envio.
+
+**Root Cause:**
+`server.js` linhas 147–148: apenas verifica se o campo é truthy — `"abc"` (sem `@`) é aceito, causando falha silenciosa no envio de email via Resend.
+
+**Fix:**
+```js
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+if (!emailRegex.test(email)) return sendError(res, 400, 'Email inválido');
+```
+
+**Acceptance Criteria:**
+- Emails sem `@` ou sem domínio são rejeitados com 400 no signup.
+- Emails válidos continuam sendo aceitos normalmente.
+- Mensagem de erro em PT: "Email inválido".
+
+**Sprint:** 24 · **Effort:** 15min · **Severity:** 🟡 Minor
+
+---
+
+### US-205 — [m5] CPF: Remover do Retorno de /api/auth/me
+**As a** usuário autenticado,
+**I want** que meu CPF não seja retornado em toda chamada de verificação de sessão,
+**so that** esse dado sensível não apareça em logs de rede, proxies ou DevTools desnecessariamente.
+
+**Root Cause:**
+`server.js` linha 185: CPF incluído no payload de `/api/auth/me` que é chamado a cada carregamento de página.
+
+**Fix:** Remover `cpf` do retorno de `/api/auth/me`. Criar endpoint separado `/api/auth/profile` (ou aproveitar o existente) que retorna o CPF somente quando explicitamente solicitado (ex: ao abrir a tela de perfil).
+
+**Acceptance Criteria:**
+- `/api/auth/me` não retorna o campo `cpf`.
+- A tela de perfil (`showProfile()`) busca o CPF via chamada separada somente quando necessário.
+- A tela do DARF que usa `authUser.cpf` é atualizada para buscar o CPF on-demand.
+- Regressão zero nas funcionalidades de perfil e DARF.
+
+**Sprint:** 24 · **Effort:** 1h · **Severity:** 🟡 Minor
+
+---
+
+### US-206 — [m7] Corrigir Confirmação Enganosa no "Excluir Conta"
+**As a** usuário tentando excluir minha conta,
+**I want** que o diálogo de confirmação peça que eu digite uma palavra específica para confirmar,
+**so that** a ação seja genuinamente intencional e não apenas dois cliques em "OK".
+
+**Root Cause:**
+`stock-dashboard.html` linhas 613–614: segundo `confirm()` diz "Type OK to confirm" mas `confirm()` não tem campo de texto — apresenta apenas OK/Cancel, tornando a instrução enganosa.
+
+**Fix:** Substituir o segundo `confirm()` por `prompt()`:
+```js
+const typed = prompt('Para confirmar, digite EXCLUIR:');
+if (typed !== 'EXCLUIR') return;
+```
+
+**Acceptance Criteria:**
+- O segundo passo de confirmação usa `prompt()` pedindo que o usuário digite `EXCLUIR`.
+- Qualquer resposta diferente de `EXCLUIR` (incluindo cancelar) aborta a exclusão.
+- Mensagem em PT-BR.
+
+**Sprint:** 24 · **Effort:** 15min · **Severity:** 🟡 Minor
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
 |--------|-------|---------|-------|--------|
 | 18 | 38, 40 | US-173–175, US-177, US-191, US-192 | Lista Interatividade, CPF toggle, tradução "Positions", fix DARF link | 🔄 In Progress |
 | 19 | 39 | US-176 | Acompanhados: Colunas de Acompanhamento e Indicadores | 📋 Planned |
+| 23 | 43 | US-193–201 | Security & Code Quality — Critical + Major | 📋 Planned |
+| 24 | 43 | US-202–206 | Security & Code Quality — Minor | 📋 Planned |
 | 20 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
 | 21 | 41 | US-183, US-184, US-189 | Admin Fase 2: Consentimento LGPD + Direitos do Titular | 🔒 Parked |
 | 22 | 41 | US-185–187 | Admin Fase 3: Export para Parceiros (gate jurídico) | 🔒 Parked |
