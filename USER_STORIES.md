@@ -727,7 +727,7 @@ for (const m of ['brasil','us','europe','emerging']) {
 - Ações B3 (ex: PETR4.SA, VALE3.SA) exibem preço atual corretamente na watchlist após um scan.
 - Status de TP/SL é calculado corretamente para posições brasileiras.
 
-**Sprint:** 23 · **Effort:** 5min · **Severity:** 🟡 Minor (high impact)
+**Sprint:** 18 · **Effort:** 5min · **Severity:** 🟡 Minor (high impact)
 
 ---
 
@@ -851,7 +851,7 @@ if (typed !== 'EXCLUIR') return;
 
 | Sprint | Epics | Stories | Theme | Status |
 |--------|-------|---------|-------|--------|
-| 18 | 38, 40 | US-173–175, US-177, US-191, US-192 | Lista Interatividade, CPF toggle, tradução "Positions", fix DARF link | 🔄 In Progress |
+| 18 | 38, 40, 43 | US-173–175, US-177, US-191, US-192, US-201 | Lista Interatividade, CPF toggle, tradução "Positions", fix DARF link, B3 watchlist prices | 🔄 In Progress |
 | 19 | 39 | US-176 | Acompanhados: Colunas de Acompanhamento e Indicadores | 📋 Planned |
 | 23 | 43 | US-193–201 | Security & Code Quality — Critical + Major | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | 📋 Planned |
