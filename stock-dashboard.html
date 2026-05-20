@@ -47,6 +47,15 @@
               <div class="dropdown-email" id="dropdownEmail"></div>
               <div class="dropdown-tier" id="dropdownTier"></div>
             </div>
+            <div style="padding:6px 12px 8px;border-bottom:1px solid var(--line)">
+              <div style="font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Tema</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="theme-chip" data-theme="brasil" onclick="selectTheme('brasil')">Brasil</button>
+                <button class="theme-chip" data-theme="day"    onclick="selectTheme('day')">Dia</button>
+                <button class="theme-chip" data-theme="pop"    onclick="selectTheme('pop')">Pop</button>
+                <button class="theme-chip" data-theme="calmo"  onclick="selectTheme('calmo')">Calmo</button>
+              </div>
+            </div>
             <button class="dropdown-item" onclick="showChangePassword()">🔑 Alterar senha</button>
             <button class="dropdown-item" id="adminPanelBtn" onclick="showAdminView()" style="display:none">⚙️ Painel admin</button>
             <button class="dropdown-item" onclick="exportMyData()">📥 Exportar meus dados</button>
@@ -4258,6 +4267,27 @@ function toggleTheme() {
   localStorage.setItem('jerry_theme', t);
   const lbl = document.getElementById('themeLabel');
   if (lbl) lbl.textContent = THEME_LABELS[t];
+  updateThemeChips();
+}
+
+function selectTheme(name) {
+  const idx = THEMES.indexOf(name);
+  if (idx < 0) return;
+  _themeIdx = idx;
+  document.documentElement.setAttribute('data-theme', name);
+  localStorage.setItem('jerry_theme', name);
+  const lbl = document.getElementById('themeLabel');
+  if (lbl) lbl.textContent = THEME_LABELS[name];
+  updateThemeChips();
+  const dd = document.getElementById('userDropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+function updateThemeChips() {
+  const current = THEMES[_themeIdx];
+  document.querySelectorAll('.theme-chip').forEach(chip => {
+    chip.classList.toggle('theme-chip-active', chip.dataset.theme === current);
+  });
 }
 
 function initTheme() {
@@ -4269,6 +4299,7 @@ function initTheme() {
   localStorage.setItem('jerry_theme', t); // sanitise legacy values (e.g. 'onedark')
   const lbl = document.getElementById('themeLabel');
   if (lbl) lbl.textContent = THEME_LABELS[t];
+  updateThemeChips();
 }
 
 // ─── INIT ───────────────────────────────────────────────────────────────
