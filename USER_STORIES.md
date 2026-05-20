@@ -2730,7 +2730,7 @@ Atualmente o CPF é validado e obrigatório em `server.js` no endpoint `/api/aut
 - Usuários já cadastrados (com ou sem CPF) não são afetados pela alteração da flag.
 - Login continua funcionando independentemente da flag (CPF não é verificado no login).
 
-**Sprint:** 17.1 (adicionar ao backlog imediato) · **Effort:** 2h
+**Sprint:** 18 · **Effort:** 2h
 
 ---
 
@@ -3069,10 +3069,10 @@ Quando não há sessão ativa, o `#userMenu` não aparece — só o `#signInBtn`
 | 15 | 35 | US-153–161 | Qualidade & Português Completo |
 | 16 | 36 | US-162–164 | Watchlist P&L, Lista Redesign & DARF Fix |
 | 17 | 37 | US-165–172 | Simular, Primeiros Passos & Mobile Profile |
-| 18 | 38 | US-173–175, US-191, US-192 | Lista Interatividade, tradução "Positions", fix DARF link |
+| 18 | 38, 40 | US-173–175, US-177, US-191, US-192 | Lista Interatividade, CPF toggle, tradução "Positions", fix DARF link |
 | 18.1 | 42 | US-190 | Mobile: Seletor de Paleta de Cores no Menu do Usuário |
 | 19 | 39 | US-176 | Acompanhados: Colunas de Acompanhamento e Indicadores |
-| 17.1 | 40 | US-177 | Admin Toggle: CPF obrigatório no cadastro |
+| 18 | 40 | US-177 | Admin Toggle: CPF obrigatório no cadastro |
 | 20 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log |
 | 21 | 41 | US-183, US-184, US-189 | Admin Fase 2: Consentimento LGPD + Direitos do Titular |
 | 22 | 41 | US-185–187 | Admin Fase 3: Export para Parceiros (gate jurídico) |
