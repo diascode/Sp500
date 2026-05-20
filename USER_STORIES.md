@@ -2593,6 +2593,48 @@ O botão `📊` atual chama `openPortfolioModal()` que abre o modal de adicionar
 
 ---
 
+### US-191 — Traduzir Texto "Positions / holding / sold" na Carteira
+**As a** usuário na view Carteira,
+**I want** que o texto de resumo de posições seja exibido em português,
+**so that** a interface seja consistente com o restante do app que já está em PT-BR.
+
+**Context:**
+Na view Carteira, abaixo dos totais realizados/não-realizados, há um texto hardcoded em inglês na linha ~2477 do `stock-dashboard.html`:
+```
+Positions: 3 (3 holding, 0 sold)
+```
+O código ao redor já usa o sistema de tradução `t()` (ex: `t('portfolio_totalRealized')`, `t('portfolio_totalUnrealized')`), mas esta linha foi deixada sem tradução.
+
+**Keys a adicionar em `static/i18n.js`:**
+| Key | EN | PT |
+|---|---|---|
+| `portfolio_positions` | `Positions` | `Posições` |
+| `portfolio_posHolding` | `holding` | `em carteira` |
+| `portfolio_posSold` | `sold` | `encerradas` |
+
+**Resultado esperado em PT:** `Posições: 3 (3 em carteira, 0 encerradas)`
+**Resultado esperado em EN:** `Positions: 3 (3 holding, 0 sold)`
+
+**Code change (`stock-dashboard.html` linha ~2477):**
+Substituir:
+```js
+html += 'Positions: <strong style="color:var(--ink)">' + state.portfolio.length + '</strong> (' + state.portfolio.filter(p => p.status === 'holding').length + ' holding, ' + state.portfolio.filter(p => p.status === 'sold').length + ' sold)</div>';
+```
+Por:
+```js
+html += t('portfolio_positions') + ': <strong style="color:var(--ink)">' + state.portfolio.length + '</strong> (' + state.portfolio.filter(p => p.status === 'holding').length + ' ' + t('portfolio_posHolding') + ', ' + state.portfolio.filter(p => p.status === 'sold').length + ' ' + t('portfolio_posSold') + ')</div>';
+```
+
+**Acceptance Criteria:**
+- Com `_lang = 'pt'` (padrão): exibe `Posições: X (X em carteira, X encerradas)`.
+- Com `_lang = 'en'`: exibe `Positions: X (X holding, X sold)`.
+- Os valores numéricos são calculados dinamicamente conforme o portfólio do usuário.
+- Nenhuma regressão no layout ou no cálculo de posições.
+
+**Sprint:** 18 · **Effort:** 15min
+
+---
+
 ### US-175 — Botão "Adicionar à Carteira" na Tabela Lista
 **As a** usuário na view Lista,
 **I want** um botão dedicado em cada linha da tabela para adicionar aquela ação à minha Carteira,
@@ -2961,8 +3003,8 @@ Quando não há sessão ativa, o `#userMenu` não aparece — só o `#signInBtn`
 
 ---
 
-*End of User Stories — v2.4*
-*B3 stocks · português · 190 stories across 42 epics*
+*End of User Stories — v2.5*
+*B3 stocks · português · 191 stories across 42 epics*
 
 | Sprint | Epics | Stories | Theme |
 |--------|-------|---------|-------|
@@ -2984,7 +3026,7 @@ Quando não há sessão ativa, o `#userMenu` não aparece — só o `#signInBtn`
 | 15 | 35 | US-153–161 | Qualidade & Português Completo |
 | 16 | 36 | US-162–164 | Watchlist P&L, Lista Redesign & DARF Fix |
 | 17 | 37 | US-165–172 | Simular, Primeiros Passos & Mobile Profile |
-| 18 | 38 | US-173–175 | Lista Interatividade: Acompanhar + Carteira |
+| 18 | 38 | US-173–175, US-191 | Lista Interatividade: Acompanhar + Carteira; tradução "Positions" |
 | 18.1 | 42 | US-190 | Mobile: Seletor de Paleta de Cores no Menu do Usuário |
 | 19 | 39 | US-176 | Acompanhados: Colunas de Acompanhamento e Indicadores |
 | 17.1 | 40 | US-177 | Admin Toggle: CPF obrigatório no cadastro |
