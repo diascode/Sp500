@@ -16,3 +16,12 @@ patch.js
 patch.py
 data/
 !.env.example
+
+# Claude Code tooling
+.claude/
+memory/
+.playwright-mcp/
+*.png
+*.jpeg
+*.jpg
+qa_screenshots/
