@@ -2325,6 +2325,13 @@ function showSimulatorView() {
   renderSimulator();
 }
 
+function simConvictionLabel(score) {
+  if (score >= 3.5) return { text: 'Alta convicção', color: 'var(--buy)' };
+  if (score >= 2.5) return { text: 'Convicção moderada', color: 'var(--buy)' };
+  if (score >= 1.5) return { text: 'Sinal fraco', color: 'var(--hold)' };
+  return { text: 'Aguardar — sinal muito fraco', color: 'var(--ink-3)' };
+}
+
 function renderSimulator() {
   if (!state.showSimulator) return;
   const container = document.getElementById('dashboard');
@@ -2332,9 +2339,9 @@ function renderSimulator() {
 
   const amounts = [100, 250, 500, 1000, 2500];
   const allStocksRaw = Object.values(state.analyzed).flat().filter(s => s && s.ticker && s.price > 0);
-  // US-165: show only buy/neutral, sorted by RSI ascending (lower RSI = closer to entry zone)
+  // US-165: show only buy/neutral; US-218: sorted by score descending (highest conviction first)
   const allStocks = allStocksRaw.length > 0
-    ? allStocksRaw.filter(s => s.signal === 'buy' || s.signal === 'neutral').sort((a, b) => (a.rsi || 50) - (b.rsi || 50))
+    ? allStocksRaw.filter(s => s.signal === 'buy' || s.signal === 'neutral').sort((a, b) => (b.score || 0) - (a.score || 0))
     : [];
 
   if (!_simTicker && allStocks.length > 0) {
@@ -2407,9 +2414,14 @@ function renderSimulator() {
     const isActive = s.ticker === _simTicker;
     const sig = s.signal === 'neutral' ? 'hold' : s.signal;
     const sigColor = sig === 'buy' ? 'var(--buy)' : sig === 'sell' ? 'var(--sell)' : 'var(--ink-3)';
+    const scoreVal = s.score != null ? +s.score : null;
+    const scoreColor = scoreVal != null
+      ? (scoreVal >= 3.0 ? 'var(--buy)' : scoreVal >= 1.5 ? 'var(--hold)' : 'var(--ink-3)')
+      : 'var(--ink-3)';
+    const scoreLabel = scoreVal != null ? ` <span style="font-family:var(--font-mono);font-size:11px;color:${scoreColor}">· ${scoreVal.toFixed(1)}</span>` : '';
     html += `<button class="ticker-pill${isActive ? ' active' : ''}" onclick="_simTicker='${s.ticker}';renderSimulator()">
       <span style="width:8px;height:8px;border-radius:50%;background:${sigColor};display:inline-block;flex-shrink:0"></span>
-      ${s.ticker}
+      ${s.ticker}${scoreLabel}
     </button>`;
   });
   html += '</div></div>';
@@ -2424,6 +2436,67 @@ function renderSimulator() {
       html += `<p style="font-size:14px;color:var(--ink-2);margin-bottom:var(--s-4)">Valor insuficiente para comprar 1 unidade de ${stock.ticker} (preço: ${sym} ${price.toFixed(2)}).</p>`;
     }
 
+    // US-218: Scorecard panel
+    if (stock && stock.score != null) {
+      const scoreVal = +stock.score;
+      const conviction = simConvictionLabel(scoreVal);
+      const pct = Math.min((scoreVal / 4.5) * 100, 100).toFixed(1);
+
+      html += `<div class="card" style="padding:var(--s-4);margin-bottom:var(--s-4)">`;
+      html += `<div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:var(--s-3)">Convicção do Sinal — ${stock.ticker}</div>`;
+
+      // Progress bar
+      html += `<div style="display:flex;align-items:center;gap:12px;margin-bottom:var(--s-3)">`;
+      html += `<div style="flex:1;height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${conviction.color};border-radius:4px;transition:width 0.3s"></div></div>`;
+      html += `<span style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:${conviction.color};white-space:nowrap">${scoreVal.toFixed(1)} / 4.5</span>`;
+      html += `<span style="font-size:13px;color:${conviction.color};white-space:nowrap">${conviction.text}</span>`;
+      html += `</div>`;
+
+      // 6 criteria rows
+      const criteria = [];
+
+      // SMA50
+      criteria.push({ icon: stock.pA50 ? '✅' : '❌', label: 'SMA50 — tendência de médio prazo', pts: stock.pA50 ? 0.75 : 0, positive: !!stock.pA50 });
+      // SMA200
+      criteria.push({ icon: stock.pA200 ? '✅' : '❌', label: 'SMA200 — regime de longo prazo', pts: stock.pA200 ? 0.75 : 0, positive: !!stock.pA200 });
+      // MACD
+      const macdPts = (stock.macd > 0 && stock.macdHist > 0) ? 1.0 : stock.macd > 0 ? 0.5 : 0;
+      const macdIcon = macdPts === 1.0 ? '✅' : macdPts === 0.5 ? '⚠️' : '❌';
+      const macdDesc = stock.macd != null ? `MACD ${stock.macd >= 0 ? '+' : ''}${(+stock.macd).toFixed(2)}${macdPts === 1.0 ? ' acelerando' : macdPts === 0.5 ? ' sem aceleração' : ' negativo'}` : 'MACD — sem dados';
+      criteria.push({ icon: macdIcon, label: macdDesc, pts: macdPts, positive: macdPts > 0 });
+      // RSI
+      const rsi = stock.rsi != null ? +stock.rsi : null;
+      let rsiPts = 0, rsiIcon = '⚠️', rsiDesc = 'RSI — sem dados';
+      if (rsi != null) {
+        if (rsi >= 50 && rsi <= 65) { rsiPts = 1.0; rsiIcon = '✅'; rsiDesc = `RSI ${rsi.toFixed(0)} — zona saudável (50–65)`; }
+        else if (rsi > 65 && rsi <= 70) { rsiPts = 0.25; rsiIcon = '⚠️'; rsiDesc = `RSI ${rsi.toFixed(0)} — forte mas esticado`; }
+        else if (rsi >= 40 && rsi < 50) { rsiPts = -0.25; rsiIcon = '⚠️'; rsiDesc = `RSI ${rsi.toFixed(0)} — momentum enfraquecendo`; }
+        else if (rsi > 70) { rsiPts = -0.5; rsiIcon = '❌'; rsiDesc = `RSI ${rsi.toFixed(0)} — sobrecomprado`; }
+        else { rsiPts = 0; rsiIcon = '⚠️'; rsiDesc = `RSI ${rsi.toFixed(0)}`; }
+      }
+      criteria.push({ icon: rsiIcon, label: rsiDesc, pts: rsiPts, positive: rsiPts > 0 });
+      // Volume
+      const vol = stock.volRatio != null ? +stock.volRatio : null;
+      const volPts = vol != null && vol > 1.2 ? 0.5 : 0;
+      criteria.push({ icon: volPts > 0 ? '✅' : '❌', label: vol != null ? `Volume ${vol.toFixed(1)}× média de 20 dias` : 'Volume — sem dados', pts: volPts, positive: volPts > 0 });
+      // ADX
+      const adx = stock.adx != null ? +stock.adx : null;
+      const adxPts = adx != null && adx > 25 ? 0.5 : 0;
+      criteria.push({ icon: adxPts > 0 ? '✅' : '⚠️', label: adx != null ? `ADX ${adx.toFixed(0)} — ${adxPts > 0 ? 'tendência forte' : 'tendência fraca (< 25)'}` : 'ADX — sem dados', pts: adxPts, positive: adxPts > 0 });
+
+      criteria.forEach(c => {
+        const ptsStr = c.pts > 0 ? `+${c.pts.toFixed(2)}` : c.pts < 0 ? c.pts.toFixed(2) : '+0.00';
+        const ptsColor = c.pts > 0 ? 'var(--buy)' : c.pts < 0 ? 'var(--sell)' : 'var(--ink-3)';
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)">`;
+        html += `<span style="flex-shrink:0">${c.icon}</span>`;
+        html += `<span style="flex:1;font-size:13px;color:var(--ink-2)">${c.label}</span>`;
+        html += `<span style="font-family:var(--font-mono);font-size:12px;font-weight:600;color:${ptsColor};flex-shrink:0">${ptsStr} pts</span>`;
+        html += `</div>`;
+      });
+
+      html += `</div>`;
+    }
+
     // Scenario: TP
     html += `<div class="scenario-box level-tp">
       <div style="font-size:32px;flex-shrink:0">🚀</div>
@@ -2431,6 +2504,7 @@ function renderSimulator() {
         <div style="font-family:var(--font-mono);font-size:11px;color:var(--buy);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Cenário otimista — TP atingido</div>
         <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--buy)">+${sym} ${Math.abs(gainTP).toFixed(2)}</div>
         <div style="font-size:13px;color:var(--ink-3);margin-top:4px">${qty} ações × ${sym} ${tp.toFixed(2)} = ${sym} ${(qty*tp).toFixed(2)} · ganho de +${pctTP.toFixed(1)}%</div>
+        ${stock && stock.score != null ? (() => { const cv = simConvictionLabel(+stock.score); return `<div style="font-size:12px;color:${cv.color};margin-top:6px;font-family:var(--font-mono)">Confiança do sinal: ${cv.text} · ${(+stock.score).toFixed(1)}/4.5</div>`; })() : ''}
       </div>
     </div>`;
 
