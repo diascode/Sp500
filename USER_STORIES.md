@@ -1783,16 +1783,16 @@ function runBacktest() {
 }
 ```
 
-#### 3. Nova aba "📊 Backtest" no segmented control
+#### 3. Nova aba "📊 Histórico" no segmented control
 
-Adicionar ao `#homeModesSeg`:
+Adicionar ao `#homeModesSeg` após o botão de Padrões:
 ```html
-<button class="seg-btn" data-mode="backtest" onclick="setHomeMode('backtest')">📊 Backtest</button>
+<button class="seg-btn" data-mode="historico" onclick="setHomeMode('historico')">📊 Histórico</button>
 ```
 
 Em `renderDashboard()`, adicionar branch:
 ```js
-if (state.homeMode === 'backtest') {
+if (state.homeMode === 'historico') {
   if (grid) { grid.style.display = 'none'; grid.innerHTML = ''; }
   if (dash) dash.style.display = 'block';
   renderBacktest();
@@ -1847,7 +1847,7 @@ state = { ..., backtestResults: null };
 ```
 
 **Acceptance Criteria:**
-- [ ] Aba "📊 Backtest" aparece no segmented control ao lado de Lista, Sinais etc.
+- [ ] Aba "📊 Histórico" aparece no segmented control como 4º botão após Padrões.
 - [ ] Antes de calcular, mostrar CTA com número de ações disponíveis para análise.
 - [ ] `backtestStock()` usa janela deslizante de 230 candles de aquecimento antes de gerar o primeiro sinal.
 - [ ] Somente sinais onde `candles[i + 30]` existe são incluídos (sem lookahead além da janela disponível).
