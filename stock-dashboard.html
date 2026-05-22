@@ -1118,6 +1118,13 @@ function feedCardWhy(d) {
   return sentence.charAt(0).toUpperCase() + sentence.slice(1);
 }
 function feedCardPillLabel(sig) { return sig === 'buy' ? 'Compra' : sig === 'sell' ? 'Venda' : 'Aguardar'; }
+function signalBadgeHtml(sig, score) {
+  const label = sig === 'buy' ? 'Compra' : sig === 'sell' ? 'Venda' : 'Aguardar';
+  const cls = sig === 'buy' ? 'buy' : sig === 'sell' ? 'sell' : 'hold';
+  const scoreStr = (score != null) ? ` · ${parseFloat(score).toFixed(1)}` : '';
+  const titleAttr = (score != null) ? ` title="Score: ${parseFloat(score).toFixed(1)} / 4.5 máximo"` : '';
+  return `<span class="signal-pill ${cls}"${titleAttr}>${label}${scoreStr}</span>`;
+}
 
 function buildFeedCard(d, idx) {
   const sym = getCurrencySymbol(d.ticker);
@@ -1139,7 +1146,7 @@ function buildFeedCard(d, idx) {
           <span class="ticker-text">${d.ticker}</span>
           <span class="flag-text">${stockFlag(d)}</span>
         </div>
-        <span class="signal-pill ${sig}">${feedCardPillLabel(d.signal)}</span>
+        ${signalBadgeHtml(sig, d.score)}
       </div>
       <div class="price-block">
         <span class="price-main">${priceStr}</span>
@@ -1251,7 +1258,7 @@ function openStockDetail(ticker, idx) {
           </div>
           <div style="margin-left:auto;text-align:right">
             <div style="font-family:var(--font-mono);font-size:32px;font-weight:600">${getCurrencySymbol(d.ticker)}${d.price.toFixed(2)}</div>
-            <span class="signal-pill ${d.signal === 'neutral' ? 'hold' : d.signal}">${feedCardPillLabel(d.signal)}</span>
+            ${signalBadgeHtml(d.signal === 'neutral' ? 'hold' : d.signal, d.score)}
           </div>
         </div>
       </div>
@@ -2077,7 +2084,8 @@ function renderTrackedPicks() {
     const pnl = (price !== null && pick.entryPrice && pick.entryPrice !== 0)
       ? (price - pick.entryPrice) / pick.entryPrice * 100
       : null;
-    return { pick, i, d, price, sym, priceStr, signal, rsi, tp, changePercent, macd, adx, pnl };
+    const score = d?.score ?? null;
+    return { pick, i, d, price, sym, priceStr, signal, rsi, tp, changePercent, macd, adx, pnl, score };
   });
 
   // Totals
@@ -2099,10 +2107,10 @@ function renderTrackedPicks() {
   html += '<th>#</th><th>TICKER</th><th>PREÇO</th><th>VAR%</th><th>P&L%</th><th>SINAL</th><th>RSI</th><th>MACD</th><th>ADX</th><th>ALVO (TP)</th><th></th>';
   html += '</tr></thead><tbody>';
 
-  rows.forEach(({ pick, i, priceStr, signal, rsi, tp, sym, changePercent, macd, adx, pnl }) => {
-    const sigLabel = signal === 'buy' ? '<span class="signal-pill buy">Compra</span>'
-      : signal === 'sell' ? '<span class="signal-pill sell">Venda</span>'
-      : signal === 'neutral' ? '<span style="font-size:10px;font-weight:600;color:var(--hold)">Aguardar</span>'
+  rows.forEach(({ pick, i, priceStr, signal, rsi, tp, sym, changePercent, macd, adx, pnl, score }) => {
+    const sigLabel = signal === 'buy' ? signalBadgeHtml('buy', score)
+      : signal === 'sell' ? signalBadgeHtml('sell', score)
+      : signal === 'neutral' ? signalBadgeHtml('hold', score)
       : '<span style="color:var(--ink-4)">—</span>';
     const rsiStr = rsi !== null ? rsi.toFixed(0) : '—';
     const tpStr = tp ? sym + tp.toFixed(2) : '—';
