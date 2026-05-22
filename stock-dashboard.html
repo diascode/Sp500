@@ -300,6 +300,10 @@ function featureEnabled(key) {
   return flag[tier] !== false;
 }
 
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 // ─── AUTH ────────────────────────────────────────────────────────────────
 const TOKEN_KEY = 'momentum_token';
 let authUser = null;
@@ -747,11 +751,11 @@ async function showAdminView() {
     const proBtn = u.tier === 'admin'
       ? '<span style="color:var(--ink-4);font-size:10px">—</span>'
       : u.tier === 'pro'
-        ? `<button class="btn-default" onclick="setUserTier('${u.email}','free')" style="font-size:10px;padding:4px 10px;color:var(--sell)">↓ Revogar</button>`
-        : `<button class="btn-default" onclick="setUserTier('${u.email}','pro')" style="font-size:10px;padding:4px 10px;color:var(--buy)">⭐ Pro</button>`;
+        ? `<button class="btn-default admin-tier-btn" data-email="${esc(u.email)}" data-tier="free" style="font-size:10px;padding:4px 10px;color:var(--sell)">↓ Revogar</button>`
+        : `<button class="btn-default admin-tier-btn" data-email="${esc(u.email)}" data-tier="pro" style="font-size:10px;padding:4px 10px;color:var(--buy)">⭐ Pro</button>`;
     const adminBtn = u.tier === 'admin'
       ? '<span style="color:var(--ink-4);font-size:10px">—</span>'
-      : `<button class="btn-default" onclick="setAdmin('${u.email}')" style="font-size:10px;padding:4px 10px;color:var(--magenta)">👑 Admin</button>`;
+      : `<button class="btn-default admin-admin-btn" data-email="${esc(u.email)}" style="font-size:10px;padding:4px 10px;color:var(--magenta)">👑 Admin</button>`;
     html += `<tr><td style="color:var(--ink-4)">${u.id}</td><td style="font-family:var(--font-mono);font-size:12px">${u.email}</td><td>${tierBadge}</td><td style="color:var(--ink-4);font-family:var(--font-mono);font-size:11px">${u.subscriptionEnd ? u.subscriptionEnd.slice(0,10) : '—'}</td><td style="color:var(--ink-4);font-family:var(--font-mono);font-size:11px">${u.createdAt.slice(0,10)}</td><td>${proBtn}</td><td>${adminBtn}</td></tr>`;
   });
   html += '</tbody></table></div>';
@@ -786,6 +790,13 @@ async function showAdminView() {
   html += '</tbody></table></div>';
   html += '</div>';
   container.innerHTML = html;
+
+  document.querySelectorAll('.admin-tier-btn').forEach(btn => {
+    btn.addEventListener('click', () => setUserTier(btn.dataset.email, btn.dataset.tier));
+  });
+  document.querySelectorAll('.admin-admin-btn').forEach(btn => {
+    btn.addEventListener('click', () => setAdmin(btn.dataset.email));
+  });
 }
 
 async function toggleFeatureFlag(key, tier, enabled) {
@@ -1896,12 +1907,12 @@ function renderNewsSentiment() {
       + '<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;flex-wrap:wrap">'
       + (showTicker && n.ticker ? '<span style="font-size:8px;font-family:var(--font-mono);color:' + signalColor(n.signal) + ';border:1px solid ' + signalColor(n.signal) + ';border-radius:2px;padding:0 3px">' + n.ticker + '</span>' : '')
       + '<span style="font-size:8px;font-family:var(--font-mono);color:' + sentColor(sc) + ';background:rgba(0,0,0,0.2);border-radius:2px;padding:0 4px;border:1px solid ' + sentColor(sc) + '">' + sentLabel(sc) + '</span>'
-      + (n.publisher ? '<span style="font-size:8px;color:var(--ink-3)">' + n.publisher + '</span>' : '')
+      + (n.publisher ? '<span style="font-size:8px;color:var(--ink-3)">' + esc(n.publisher) + '</span>' : '')
       + '</div>'
       + '<div style="font-size:10px;color:var(--ink-2);line-height:1.4">'
-      + (n.link ? '<a href="' + n.link + '" target="_blank" rel="noopener" style="color:var(--ink-2);text-decoration:none">' + n.title + ' ↗</a>' : n.title)
+      + (n.link ? '<a href="' + n.link + '" target="_blank" rel="noopener" style="color:var(--ink-2);text-decoration:none">' + esc(n.title) + ' ↗</a>' : esc(n.title))
       + '</div>'
-      + (summary ? '<div style="font-size:9px;color:var(--ink-3);margin-top:2px;line-height:1.4">' + summary + '</div>' : '')
+      + (summary ? '<div style="font-size:9px;color:var(--ink-3);margin-top:2px;line-height:1.4">' + esc(summary) + '</div>' : '')
       + '</div>';
   }
 
