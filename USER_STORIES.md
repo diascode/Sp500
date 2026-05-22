@@ -194,6 +194,32 @@ Atualmente o CPF é validado e obrigatório em `server.js` no endpoint `/api/aut
 
 ## 📋 Sprint 19 — Planned
 
+## Epic 44 — Sprint 19: Configuração de Admin via Variável de Ambiente
+
+### US-207 — ADMIN_EMAIL Configurável via Variável de Ambiente
+**As a** developer installing MOMENTUM on a new server,
+**I want** to set the admin account email via an environment variable,
+**so that** any install can have its own admin without hardcoding an email in the source code.
+
+**Context:** Currently `ADMIN_EMAIL` is hardcoded as `thiagotupa@hotmail.com` in `lib/auth.js:90`. On a fresh install the admin email never changes, making it impossible to grant admin access to a different owner without editing source code.
+
+**Implementation:**
+- Add `ADMIN_EMAIL` to `.env.example` with a placeholder and comment
+- In `lib/auth.js`, replace the hardcoded string with `process.env.ADMIN_EMAIL?.toLowerCase()` with a fallback warning if not set
+- Server should log a clear warning on startup if `ADMIN_EMAIL` is not set in the environment
+- Update `README.md` to document the variable and explain the first-login flow (sign up → auto-promoted to admin on next boot)
+
+**Acceptance Criteria:**
+- Setting `ADMIN_EMAIL=owner@example.com` in `.env` makes that email the admin on server start.
+- If `ADMIN_EMAIL` is not set, server logs `⚠ ADMIN_EMAIL not set — admin panel disabled` and all `/api/admin/*` routes return 403.
+- `.env.example` includes `ADMIN_EMAIL=` with an explanatory comment.
+- `README.md` documents the env var and the signup → admin flow.
+- Existing behaviour (auto-promote on boot, auto-demote others) is unchanged.
+
+**Sprint:** 19 · **Effort:** 30min · **Priority:** 🔴 High (blocks new deployments)
+
+---
+
 ## Epic 39 — Sprint 19: Acompanhados — Colunas de Acompanhamento e Indicadores
 
 ### US-176 — Redesign da Tabela Acompanhados: Colunas de Preço, P&L e Indicadores Técnicos
@@ -852,7 +878,7 @@ if (typed !== 'EXCLUIR') return;
 | Sprint | Epics | Stories | Theme | Status |
 |--------|-------|---------|-------|--------|
 | 18 | 38, 40, 43 | US-173–175, US-177, US-191, US-192, US-201 | Lista Interatividade, CPF toggle, tradução "Positions", fix DARF link, B3 watchlist prices | 🔄 In Progress |
-| 19 | 39 | US-176 | Acompanhados: Colunas de Acompanhamento e Indicadores | 📋 Planned |
+| 19 | 39, 44 | US-176, US-207 | Acompanhados redesign + ADMIN_EMAIL env var | 📋 Planned |
 | 23 | 43 | US-193–201 | Security & Code Quality — Critical + Major | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | 📋 Planned |
 | 20 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
