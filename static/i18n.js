@@ -257,6 +257,71 @@ var LANGS = {
     edu_sectorSubtitle: 'Why owning stocks across different industries protects you when one sector collapses.',
     edu_sectorBody: '<strong>Think of the stock market as a giant shopping mall.</strong><br>Every store inside it sells something different. The food court is always busy — even during a recession, people still need to eat. The electronics store explodes with sales every Black Friday but goes quiet in January. The pharmacy never stops, but it absolutely booms during a pandemic. The travel agency at the end of the corridor? It looked unstoppable in 2019 — and then in March 2020 the lights basically went out. Same mall. Same building. Same customers walking by. Completely different fates depending on what was happening in the outside world.<br><br>That mall is the Brazilian stock market. The stores are <em>sectors</em>. A sector is just a group of companies that all do roughly the same kind of business — banks compete with banks, miners compete with miners, supermarkets compete with supermarkets. And here is the key truth almost nobody explains clearly: <strong>sectors do not move together</strong>. When one is on fire, another may be drowning. That is not a bug of the market — it is its single most useful feature.<br><br><strong>The main sectors of B3 — with real tickers you can recognize:</strong><div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  <span style="color:#e8a846">⛽ Oil &amp; Gas</span>            PETR4, PRIO3, RECV3<br>  <span style="color:#e8a846">⛏️ Mining / metals</span>       VALE3, CSNA3, GGBR4<br>  <span style="color:#4caf50">🏦 Banks</span>                  ITUB4, BBDC4, BBAS3, SANB11<br>  <span style="color:#ef5350">🛒 Retail / consumer</span>     MGLU3, LREN3, AMER3, VIIA3<br>  <span style="color:#4caf50">🏭 Industrials</span>           WEGE3, EMBR3, RAIL3<br>  <span style="color:#4caf50">🌾 Agro / food</span>           SLCE3, JBSS3, BRFS3<br>  <span style="color:#4caf50">🏥 Healthcare</span>            RDOR3, HAPV3, FLRY3<br>  <span style="color:#4caf50">⚡ Utilities / energia</span>   TAEE11, ENGI11, CMIG4, EGIE3<br>  <span style="color:#ef5350">🏠 Real estate</span>           CYRE3, MRVE3, EZTC3<br>  <span style="color:#ef5350">✈️ Tourism / airlines</span>    AZUL4, CVCB3, GOLL4</div><br><strong>Defensive sectors vs cyclical sectors — the most important distinction:</strong><br>Some sectors are called <span style="color:#4caf50">defensive</span> because their business barely changes when the economy gets bad. People still pay their electricity bill in a recession (TAEE11, ENGI11). They still buy food (BRFS3, JBSS3). They still need medicine (RDOR3, HAPV3). Demand is sticky.<br><br>Other sectors are called <span style="color:#ef5350">cyclical</span> because their fortune rises and falls with the broader economy. When people feel rich, they buy a new TV at Magalu (MGLU3), they finance a new apartment at Cyrela (CYRE3), they fly Azul (AZUL4) to Fortaleza for vacation. When people feel poor, all three of those companies feel it within weeks.<br><br><strong>A real historical example — COVID, March 2020:</strong><br>The same single global event hit Brazil and split the market in half.<div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  <span style="color:#4caf50">MGLU3 (online retail)</span>    March 2020 to Nov 2020: <span style="color:#4caf50">+340%</span><br>  e-commerce exploded because malls were closed<br><br>  <span style="color:#ef5350">CVCB3 (tourism)</span>          March 2020 to Nov 2020: <span style="color:#ef5350">-65%</span><br>  nobody was booking trips during a global lockdown<br><br>  <span style="color:#4caf50">HAPV9 / RDOR3 (healthcare)</span> held up strong<br>  <span style="color:#ef5350">AZUL4 / GOL (airlines)</span>     lost more than half their value</div>Both MGLU3 and CVCB3 were perfectly legitimate businesses run by competent people. The difference was not management quality. The difference was <strong>which sector they were in</strong> when the world changed overnight. A portfolio holding both of them was protected. A portfolio holding only one was either lucky or wrecked.<br><br><strong>Brazil&apos;s hidden commodity bet:</strong><br>Here is something most beginners never realize. The Ibovespa — the famous index everyone talks about — is heavily concentrated in just two commodity stocks. <strong>VALE3</strong> and <strong>PETR4</strong> together represent roughly <strong>25% of the entire index</strong>. When iron ore prices rise globally, VALE3 drags the whole Ibovespa upward. When oil collapses, PETR4 pulls everything down. So if you think you own "the Brazilian market" by tracking Ibovespa, what you actually own is <em>a leveraged bet on global commodity prices</em>. That is fine if you understand it. It is dangerous if you do not. Owning individual stocks across many different sectors gives you actual diversification — not just the illusion of it.<br><br><strong>Sectors that tend to move together vs sectors that tend to move opposite:</strong><div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  MOVE TOGETHER (correlated):<br>  <span style="color:#e8a846">PETR4  +  VALE3</span>          both ride global commodity prices<br>  <span style="color:#4caf50">ITUB4  +  BBDC4</span>          all banks react to interest rates<br>  <span style="color:#ef5350">CYRE3  +  MRVE3</span>          all builders need cheap credit<br><br>  MOVE OPPOSITE (hedging effect):<br>  <span style="color:#4caf50">PETR4</span>  vs  <span style="color:#ef5350">AZUL4</span>          oil rises, airline costs rise, AZUL4 falls<br>  <span style="color:#4caf50">TAEE11</span> vs  <span style="color:#ef5350">MGLU3</span>          recession helps utilities, hurts retail<br>  <span style="color:#4caf50">JBSS3</span>  vs  <span style="color:#ef5350">LREN3</span>          food is essential, fashion is optional</div><br><strong>The practical lesson for your portfolio:</strong><br>Do not own three banks and call yourself diversified. Do not own PETR4, PRIO3, and RECV3 and feel safe — you have made the same single bet three times. Real diversification means picking <em>different sectors</em>, not just different tickers. A starter portfolio that genuinely spreads risk might look like one bank (ITUB4) + one utility (TAEE11) + one industrial (WEGE3) + one healthcare (RDOR3) + one retailer (LREN3). Five stocks, five sectors, five completely different things that have to go wrong for your portfolio to collapse.<br><br><strong>The goal is not to pick the sector that will win — it is to own enough sectors that one collapse does not sink your entire portfolio.</strong>',
 
+    edu_momentumSignalBody: `O Momentum avalia cada ação em 6 critérios independentes e soma uma pontuação de 0 a 4.5 pontos. Acima de 2.5 → COMPRA. Entre 1.0 e 2.5 → AGUARDAR. Abaixo de 1.0 → VENDA.
+
+<strong>Os 6 Critérios:</strong>
+
+<strong>1. SMA50 — Tendência de Médio Prazo</strong> — até 0.75 pts<br>
+Preço acima da média de 50 dias → +0.75. Abaixo → +0.
+
+<strong>2. SMA200 — Regime de Longo Prazo</strong> — até 0.75 pts<br>
+Preço acima da média de 200 dias → +0.75. Abaixo → +0.<br>
+⚠ Proteção: se abaixo da SMA200, o score total é limitado a 1.0 (sem COMPRA em bear market confirmado).
+
+<strong>3. Momentum — MACD + Aceleração</strong> — até 1.0 pt<br>
+MACD positivo E acelerando → +1.0. Positivo sem aceleração → +0.5. Negativo → +0.
+
+<strong>4. RSI — Zona de Tendência</strong> — até 1.0 pt<br>
+RSI 50–65 (zona saudável) → +1.0. RSI 65–70 (forte mas esticado) → +0.25. RSI 40–50 (enfraquecendo) → −0.25.<br>
+⚠ Proteção: RSI > 75 ou < 25 aplica penalidade de −1.0 ponto.
+
+<strong>5. Força da Tendência — ADX</strong> — até 0.5 pt<br>
+ADX > 25 = tendência definida → +0.5. ADX ≤ 25 = mercado lateral → +0.
+
+<strong>6. Confirmação de Volume</strong> — até 0.5 pt<br>
+Volume atual > 1.2× a média de 20 dias → +0.5. Na média ou abaixo → +0.
+
+<strong>Por que SMA50 e SMA200 são critérios separados?</strong><br>
+A SMA50 mede o médio prazo (~2 meses). A SMA200 mede o regime estrutural (~10 meses). Um ativo em pullback de curto prazo (abaixo da SMA50) mas em alta estrutural (acima da SMA200) merece crédito pelo regime preservado — esse setup antes pontuava 0, agora recebe +0.75.
+
+<strong>Exemplo — PETR4:</strong> RSI 57, MACD +0.43 acelerando, ADX 28, Volume 1.8×, acima de SMA50 e SMA200<br>
+SMA50: +0.75 | SMA200: +0.75 | MACD: +1.0 | RSI: +1.0 | ADX: +0.5 | Volume: +0.5<br>
+Score: 4.5/4.5 → COMPRA (convicção máxima)
+
+<strong>Exemplo — VALE3:</strong> RSI 47, MACD +0.12 estagnado, ADX 19, Volume 0.9×, acima só da SMA200<br>
+SMA50: +0 | SMA200: +0.75 | MACD: +0.5 | RSI: −0.25 | ADX: +0 | Volume: +0<br>
+Score: 1.0/4.5 → AGUARDAR (pullback em uptrend, aguardar retomada da SMA50)`,
+
+    edu_cdbCdiBody: `<strong>O que é o CDI?</strong><br>
+CDI (Certificado de Depósito Interbancário) é a taxa que os bancos cobram uns dos outros em empréstimos overnight. Na prática, o CDI anda colado à Taxa Selic — costuma ficar 0,10% abaixo dela.<br>
+Exemplo: Selic em 13,25% → CDI ≈ 13,15% ao ano.
+
+<strong>O que é o CDB?</strong><br>
+CDB (Certificado de Depósito Bancário) é um título emitido por bancos para captar dinheiro do público. A rentabilidade é expressa como % do CDI:<br>
+• CDB a 100% do CDI: rende o mesmo que o CDI<br>
+• CDB a 110% do CDI: rende 10% a mais — busque isso em bancos médios<br>
+• CDB a 90% do CDI: rende menos — evite
+
+<strong>Imposto de Renda (Tabela Regressiva):</strong><br>
+Até 180 dias → 22,5% | 181–360 dias → 20,0% | 361–720 dias → 17,5% | Acima de 720 dias → 15,0% ✅<br>
+IOF incide sobre resgates nos primeiros 30 dias.
+
+<strong>Garantia do FGC:</strong><br>
+CDBs são garantidos pelo Fundo Garantidor de Créditos até R$250.000 por CPF por instituição. Bancos menores pagam mais justamente por terem rating mais baixo — o FGC compensa esse risco.
+
+<strong>CDB vs Tesouro Selic vs LCI/LCA:</strong><br>
+CDB: 90–115% CDI, IR sim, liquidez variável, FGC sim<br>
+Tesouro Selic: Selic −0,10%, IR sim, D+1, risco soberano<br>
+LCI/LCA: 85–95% CDI, IR isento, carência 90–365 dias, FGC sim
+
+<strong>Quando escolher CDB?</strong><br>
+✅ Reserva de emergência: CDB com liquidez diária a 100%+ CDI ou Tesouro Selic — compare qual paga mais.<br>
+✅ Médio prazo (> 2 anos): CDB de banco médio a 110%+ CDI pode superar o Tesouro IPCA+ após IR.<br>
+❌ Evite CDB com carência longa se não souber quando vai precisar do dinheiro.
+
+<strong>Dica Momentum:</strong><br>
+O Momentum é para renda variável — ações de alta volatilidade. CDB e Tesouro são sua reserva e sua base de segurança. Monte a base de renda fixa primeiro, depois explore ações com o que sobra.`,
+
     // Footer
     footer_version: 'MOMENTUM · v5.0 · live from market data',
     footer_disclaimer: '⚠ PAPER TRADING — EDUCATIONAL PURPOSES ONLY. MOMENTUM is a technical analysis simulator. Nothing on this site constitutes financial advice, investment recommendation, or solicitation to buy or sell securities. All trades are simulated. Past performance does not guarantee future results. Consult a qualified financial advisor before making real investment decisions. By using this app you agree these are paper trades only.',
@@ -523,6 +588,71 @@ var LANGS = {
     edu_lciLcaBody: '<strong>LCI (Letra de Crédito Imobiliário) e LCA (Letra de Crédito do Agronegócio)</strong> são títulos emitidos por bancos para financiar os setores imobiliário e agro. A grande vantagem: <strong>isenção total de IR para pessoa física</strong>. Isso significa que um rendimento menor em termos brutos pode ser mais vantajoso que um CDB tributado.<br><br><strong>Como funciona a isenção?</strong><br>Enquanto o Tesouro e o CDB têm IR de 15% a 22,5%, a LCI e a LCA ficam com 100% do rendimento. Exemplo real:<div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  CDB  110% do CDI (1 ano) — tributado:<br>    CDI = 13% → 110% = 14,3% bruto<br>    IR 17,5% = -2,5%<br>    Líquido: <span style="color:#e8a846">~11,8% a.a.</span><br><br>  LCI   88% do CDI (1 ano) — isenta:<br>    CDI = 13% → 88% = 11,44% bruto<br>    IR = zero<br>    Líquido: <span style="color:#4caf50">~11,44% a.a.</span><br><br>  Neste exemplo o CDB ainda vence. Mas com LCI a 93%+<br>  do CDI, a LCI passa a ser melhor.</div><strong>Cobertura pelo FGC:</strong><br>O Fundo Garantidor de Créditos garante até <strong>R$ 250.000 por CPF por instituição</strong> (limite global de R$ 1 milhão por CPF). Isso significa que um LCI de banco pequeno tem o mesmo risco de crédito que um de banco grande — desde que fique dentro do limite do FGC.<br><br><strong>Cuidados importantes:</strong><div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  <span style="color:#ef5350">Carência mínima:</span> 90 dias para LCI, 90 dias para LCA (desde 2023)<br>  Antes do prazo: em geral NÃO há liquidez — o dinheiro fica travado<br>  Diferente do Tesouro Selic: não resgate antes do prazo de carência<br><br>  <span style="color:#e8a846">Concentração:</span> não coloque mais de R$ 250k no mesmo banco<br>  Diversifique entre 2-3 emissores se o valor for alto</div><strong>Quando LCI/LCA faz sentido?</strong><br>Ideal para quem tem faixa de IR alta (27,5% no IR de renda) e pode deixar o dinheiro parado por no mínimo 90 dias. Excelente para objetivos de médio prazo: viagem em 1 ano, reserva adicional, entrada de imóvel. Para reserva de emergência, prefira o Tesouro Selic pela liquidez diária.',
 
     edu_jurosCompostosBody: '<strong>Juros compostos são a única força no universo que cresce exponencialmente com o tempo — e você pode usá-la a seu favor.</strong><br><br><strong>Juros simples vs compostos — a diferença fundamental:</strong><div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  Você investe R$ 1.000 a 10% ao ano.<br><br>  Juros simples (cada ano rende sobre o capital original):<br>    Ano 1: R$ 1.100  (+ R$ 100)<br>    Ano 2: R$ 1.200  (+ R$ 100)<br>    Ano 5: R$ 1.500  (+ R$ 500 total)<br><br>  Juros compostos (cada ano rende sobre o total acumulado):<br>    Ano 1: R$ 1.100  (+ R$ 100)<br>    Ano 2: R$ 1.210  (+ R$ 110) ← juros sobre juros<br>    Ano 5: <span style="color:#4caf50">R$ 1.611</span>  (+ R$ 611 total — 22% a mais)</div><strong>A fórmula:</strong> <code style="background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px">M = C × (1 + i)^t</code><br>M = montante final · C = capital inicial · i = taxa (decimal) · t = tempo<br><br><strong>O que acontece com R$ 1.000 a 12% ao ano:</strong><div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  5 anos:   R$  1.762   (+76%)<br>  10 anos:  R$  3.106   (+211%)<br>  20 anos:  R$  9.646   (+865%)<br>  30 anos:  <span style="color:#4caf50">R$ 29.960</span>   (+2.896%) — quase 30× o capital inicial</div><strong>O poder do aporte mensal:</strong><div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  R$ 200 por mês a 12% a.a. por 20 anos:<br>    Total investido do bolso: R$ 48.000<br>    Saldo final:              <span style="color:#4caf50">R$ 199.830</span><br>    Rendimento:               R$ 151.830 — 3,2× o que você colocou<br><br>  A mesma lógica: quanto mais cedo você começa, menos<br>  precisa colocar do próprio bolso para chegar ao mesmo resultado.</div><strong>Começar cedo é mais poderoso que investir mais:</strong><div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  R$ 300/mês a 12% a.a.:<br>  Começou aos 25 → resultado aos 55:   <span style="color:#4caf50">~R$ 1.048.000</span><br>  Começou aos 35 → resultado aos 55:   <span style="color:#e8a846">~R$  296.000</span><br>  Começou aos 45 → resultado aos 55:   <span style="color:#ef5350">~R$   66.000</span><br><br>  Cada 10 anos de atraso reduz o resultado final em ~70-80%.</div><strong>A Regra dos 72:</strong> divida 72 pela taxa anual e você sabe em quantos anos o capital dobra.<div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  A 6% a.a.:   72 ÷ 6 = 12 anos para dobrar<br>  A 10% a.a.:  72 ÷ 10 = 7,2 anos para dobrar<br>  A 12% a.a.:  72 ÷ 12 = 6 anos para dobrar<br>  A 15% a.a.:  72 ÷ 15 = 4,8 anos para dobrar</div><strong>O inimigo dos juros compostos: a inflação.</strong> A taxa de 12% a.a. histórica da bolsa brasileira é <em>nominal</em>. Com IPCA de 5% a.a., o retorno real é ~6,7% a.a. — ainda muito poderoso, mas a inflação precisa ser descontada para você não se iludir com os números.<br><br><strong>A conclusão mais importante:</strong> você não precisa de talento especial, de renda alta ou de ser bom em matemática. Você precisa de <strong>consistência + tempo</strong>. Esses dois ingredientes, combinados com juros compostos, fazem o trabalho por você.',
+
+    edu_momentumSignalBody: `O Momentum avalia cada ação em 6 critérios independentes e soma uma pontuação de 0 a 4.5 pontos. Acima de 2.5 → COMPRA. Entre 1.0 e 2.5 → AGUARDAR. Abaixo de 1.0 → VENDA.
+
+<strong>Os 6 Critérios:</strong>
+
+<strong>1. SMA50 — Tendência de Médio Prazo</strong> — até 0.75 pts<br>
+Preço acima da média de 50 dias → +0.75. Abaixo → +0.
+
+<strong>2. SMA200 — Regime de Longo Prazo</strong> — até 0.75 pts<br>
+Preço acima da média de 200 dias → +0.75. Abaixo → +0.<br>
+⚠ Proteção: se abaixo da SMA200, o score total é limitado a 1.0 (sem COMPRA em bear market confirmado).
+
+<strong>3. Momentum — MACD + Aceleração</strong> — até 1.0 pt<br>
+MACD positivo E acelerando → +1.0. Positivo sem aceleração → +0.5. Negativo → +0.
+
+<strong>4. RSI — Zona de Tendência</strong> — até 1.0 pt<br>
+RSI 50–65 (zona saudável) → +1.0. RSI 65–70 (forte mas esticado) → +0.25. RSI 40–50 (enfraquecendo) → −0.25.<br>
+⚠ Proteção: RSI > 75 ou < 25 aplica penalidade de −1.0 ponto.
+
+<strong>5. Força da Tendência — ADX</strong> — até 0.5 pt<br>
+ADX > 25 = tendência definida → +0.5. ADX ≤ 25 = mercado lateral → +0.
+
+<strong>6. Confirmação de Volume</strong> — até 0.5 pt<br>
+Volume atual > 1.2× a média de 20 dias → +0.5. Na média ou abaixo → +0.
+
+<strong>Por que SMA50 e SMA200 são critérios separados?</strong><br>
+A SMA50 mede o médio prazo (~2 meses). A SMA200 mede o regime estrutural (~10 meses). Um ativo em pullback de curto prazo (abaixo da SMA50) mas em alta estrutural (acima da SMA200) merece crédito pelo regime preservado — esse setup antes pontuava 0, agora recebe +0.75.
+
+<strong>Exemplo — PETR4:</strong> RSI 57, MACD +0.43 acelerando, ADX 28, Volume 1.8×, acima de SMA50 e SMA200<br>
+SMA50: +0.75 | SMA200: +0.75 | MACD: +1.0 | RSI: +1.0 | ADX: +0.5 | Volume: +0.5<br>
+Score: 4.5/4.5 → COMPRA (convicção máxima)
+
+<strong>Exemplo — VALE3:</strong> RSI 47, MACD +0.12 estagnado, ADX 19, Volume 0.9×, acima só da SMA200<br>
+SMA50: +0 | SMA200: +0.75 | MACD: +0.5 | RSI: −0.25 | ADX: +0 | Volume: +0<br>
+Score: 1.0/4.5 → AGUARDAR (pullback em uptrend, aguardar retomada da SMA50)`,
+
+    edu_cdbCdiBody: `<strong>O que é o CDI?</strong><br>
+CDI (Certificado de Depósito Interbancário) é a taxa que os bancos cobram uns dos outros em empréstimos overnight. Na prática, o CDI anda colado à Taxa Selic — costuma ficar 0,10% abaixo dela.<br>
+Exemplo: Selic em 13,25% → CDI ≈ 13,15% ao ano.
+
+<strong>O que é o CDB?</strong><br>
+CDB (Certificado de Depósito Bancário) é um título emitido por bancos para captar dinheiro do público. A rentabilidade é expressa como % do CDI:<br>
+• CDB a 100% do CDI: rende o mesmo que o CDI<br>
+• CDB a 110% do CDI: rende 10% a mais — busque isso em bancos médios<br>
+• CDB a 90% do CDI: rende menos — evite
+
+<strong>Imposto de Renda (Tabela Regressiva):</strong><br>
+Até 180 dias → 22,5% | 181–360 dias → 20,0% | 361–720 dias → 17,5% | Acima de 720 dias → 15,0% ✅<br>
+IOF incide sobre resgates nos primeiros 30 dias.
+
+<strong>Garantia do FGC:</strong><br>
+CDBs são garantidos pelo Fundo Garantidor de Créditos até R$250.000 por CPF por instituição. Bancos menores pagam mais justamente por terem rating mais baixo — o FGC compensa esse risco.
+
+<strong>CDB vs Tesouro Selic vs LCI/LCA:</strong><br>
+CDB: 90–115% CDI, IR sim, liquidez variável, FGC sim<br>
+Tesouro Selic: Selic −0,10%, IR sim, D+1, risco soberano<br>
+LCI/LCA: 85–95% CDI, IR isento, carência 90–365 dias, FGC sim
+
+<strong>Quando escolher CDB?</strong><br>
+✅ Reserva de emergência: CDB com liquidez diária a 100%+ CDI ou Tesouro Selic — compare qual paga mais.<br>
+✅ Médio prazo (> 2 anos): CDB de banco médio a 110%+ CDI pode superar o Tesouro IPCA+ após IR.<br>
+❌ Evite CDB com carência longa se não souber quando vai precisar do dinheiro.
+
+<strong>Dica Momentum:</strong><br>
+O Momentum é para renda variável — ações de alta volatilidade. CDB e Tesouro são sua reserva e sua base de segurança. Monte a base de renda fixa primeiro, depois explore ações com o que sobra.`,
 
     // Footer
     footer_version: 'MOMENTUM · v5.0 · dados ao vivo do mercado',
