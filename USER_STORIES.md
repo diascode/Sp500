@@ -1706,6 +1706,259 @@ No header da Lista (ao lado do campo de busca), adicionar um botão `"⚡ Varrer
 
 ---
 
+## Epic 51 — Signal Engine v3: Critérios de Qualidade e Consistência
+
+### US-222 — Signal v3: Novo Tier "Monitorar", Critérios de Qualidade e Consistência Total
+
+**Como** usuário que segue os sinais de Compra do Momentum,
+**Quero** que o sinal de Compra represente apenas oportunidades com expectativa positiva comprovada,
+**Para que** eu não tome posições em ativos com sinal fraco que historicamente perdem valor.
+
+**Contexto — o que o backtest revelou:**
+
+Backtest executado em 33 ações B3, 5 anos de dados diários, 10.524 sinais de Compra gerados:
+
+| Tier | Sinais | Taxa de acerto 20d | Retorno médio 20d |
+|------|---------|--------------------|-------------------|
+| Score ≥ 3.5 (Alta Convicção) | 5.477 | **59,4%** | **+1,45%** |
+| Score 2.5–3.4 (Compra Regular) | 5.047 | **43,9%** | **-1,02%** |
+
+O band 2.5–3.4 tem **valor esperado negativo**. Chamar isso de "Compra" é enganoso para o usuário e prejudicial às suas posições. Esta story corrige o engine, adiciona 3 critérios de qualidade não-correlacionados e atualiza cada ponto do app que exibe rótulos de sinal.
+
+---
+
+### Parte 1 — Mudanças em `pickSignal()` (`stock-dashboard.html`)
+
+#### 1.1 Novo tier "watchlist" (Monitorar)
+
+```js
+// ANTES:
+const signal = s >= 2.5 ? 'buy' : s >= 1.0 ? 'neutral' : 'sell';
+
+// DEPOIS:
+const signal = s >= 3.5 ? 'buy'
+             : s >= 2.5 ? 'watchlist'  // "Monitorar" — observar, sem ação recomendada
+             : s >= 1.0 ? 'neutral'
+             : 'sell';
+```
+
+#### 1.2 Gate estrutural (precondição antes do scoring)
+
+Adicionar antes do bloco de scoring, usando valores já computados por `analyze()`:
+
+```js
+// Hard gate: ativo em tendência estrutural de queda é capado em neutral
+// sma200Rising = SMA200 hoje > SMA200 de 20 pregões atrás
+// distFromHigh = (max52w - price) / max52w
+if (!sma200Rising || distFromHigh > 0.35) {
+  return { signal: 'neutral', score: 0.0, structuralWeak: true };
+}
+```
+
+`sma200Rising` e `distFromHigh` são calculados em `analyze()` e passados como novos argumentos.
+
+#### 1.3 Três novos critérios de qualidade
+
+```js
+// Critério 7 — Distância do topo de 52 semanas (proximidade = liderança)
+if      (distFromHigh <= 0.05) s += 0.75;  // dentro de 5% do topo — ação em liderança
+else if (distFromHigh <= 0.15) s += 0.50;  // dentro de 15% — uptrend saudável
+else if (distFromHigh >  0.40) s -= 1.00;  // queda > 40% do topo — fraqueza estrutural
+
+// Critério 8 — Slope do RSI (momentum acelerando ou desacelerando)
+// rsiSlope = RSI[i] - RSI[i-5]
+if      (rsiSlope >= 5)               s += 0.50;  // momentum acelerando — entry timing bom
+else if (rsiSlope <= -5 && rsi < 60)  s -= 0.50;  // momentum caindo — sinal tardio
+
+// Critério 9 — Regime de volatilidade ATR (penalizar caos)
+// atrPctNow  = ATR14 / price (hoje)
+// atrPctAvg  = média de (ATR14/price) dos últimos 50 dias
+if (atrPctNow > 1.5 * atrPctAvg) s -= 0.50;  // volatilidade muito acima do normal
+```
+
+#### 1.4 Novo score máximo e thresholds
+
+Com os 3 novos critérios, o score máximo teórico sobe de 4.5 para 6.0 (arredondado). Atualizar a assinatura e toda exibição de score:
+
+```js
+// Score máximo: 6.0
+// Exibição: "3.8/6.0" em vez de "3.8/4.5"
+const MAX_SCORE = 6.0;
+```
+
+Thresholds:
+- **Alta Convicção (BUY)**: score ≥ 3.5
+- **Monitorar (watchlist)**: score 2.5–3.4
+- **Aguardar (neutral)**: score 1.0–2.4
+- **Venda (sell)**: score < 1.0
+
+---
+
+### Parte 2 — Mudanças em `analyze()` (`stock-dashboard.html`)
+
+`analyze()` precisa calcular e passar para `pickSignal()` os três novos inputs:
+
+```js
+// Calcular max52w (máximo de fechamento nos últimos 252 pregões)
+const max52w = Math.max(...c.slice(-252).map(x => x.c));
+const distFromHigh = parseFloat(((max52w - price) / max52w).toFixed(3));
+
+// Calcular sma200Rising (SMA200 hoje > SMA200 de 20 dias atrás)
+const sma200_20dAgo = s200[s200.length - 21] ?? sma200;
+const sma200Rising = sma200 > sma200_20dAgo;
+
+// Calcular rsiSlope (RSI hoje - RSI há 5 pregões)
+const rsiSlope = parseFloat(((rsiA[rsiA.length-1] ?? 50) - (rsiA[rsiA.length-6] ?? 50)).toFixed(1));
+
+// Calcular ATR regime
+const atrPctNow = parseFloat((atr / price).toFixed(4));
+const atrSlice = atrA.slice(-50).filter(v => v != null);
+const atrPctAvg = parseFloat((atrSlice.reduce((s,v) => s + v/price, 0) / (atrSlice.length || 1)).toFixed(4));
+
+// Atualizar chamada de pickSignal:
+const { signal, score, structuralWeak } = pickSignal(
+  rsi, macd, macdHist, adx, pA50, pA200, volRatio,
+  distFromHigh, sma200Rising, rsiSlope, atrPctNow, atrPctAvg
+);
+
+// Incluir no objeto retornado:
+return { ..., distFromHigh, sma200Rising, rsiSlope, atrPctNow, atrPctAvg, structuralWeak };
+```
+
+---
+
+### Parte 3 — Consistência: todos os pontos de exibição de sinal
+
+Cada um dos itens abaixo deve ser atualizado para reconhecer `signal === 'watchlist'` e exibir "Monitorar":
+
+#### 3.1 Filter chips (linha ~117)
+```html
+<!-- Renomear "Compra" para "Alta Convicção", adicionar chip "Monitorar" -->
+<button class="chip chip-active" data-signal="buy"       onclick="filterSignal('buy')">⭐ Alta Convicção</button>
+<button class="chip"             data-signal="watchlist" onclick="filterSignal('watchlist')">👁 Monitorar</button>
+<button class="chip"             data-signal="neutral"   onclick="filterSignal('neutral')">Aguardar</button>
+<button class="chip"             data-signal="sell"      onclick="filterSignal('sell')">Venda</button>
+<button class="chip"             data-signal="all"       onclick="filterSignal('all')">Todos</button>
+```
+
+#### 3.2 `feedCardPillLabel()` e `signalBadgeHtml()` (linhas ~1239–1244)
+```js
+function feedCardPillLabel(sig) {
+  return sig === 'buy' ? 'Alta Convicção' : sig === 'watchlist' ? 'Monitorar' : sig === 'sell' ? 'Venda' : 'Aguardar';
+}
+
+function signalBadgeHtml(sig, score) {
+  const label = sig === 'buy' ? 'Alta Convicção' : sig === 'watchlist' ? 'Monitorar' : sig === 'sell' ? 'Venda' : 'Aguardar';
+  const cls   = sig === 'buy' ? 'buy' : sig === 'watchlist' ? 'watchlist' : sig === 'sell' ? 'sell' : 'hold';
+  // ... resto igual
+}
+```
+
+#### 3.3 CSS — novo badge `.status-badge.watchlist`
+Adicionar ao CSS existente:
+```css
+.status-badge.watchlist {
+  background: rgba(234,179,8,0.15);  /* amarelo neutro — nem verde nem cinza */
+  color: #ca8a04;
+  border: 1px solid #ca8a04;
+}
+```
+
+#### 3.4 Lista `sigBadge` (linha ~1579)
+```js
+if (s === 'buy')       return `<span class="status-badge active">Alta Convicção</span>`;
+if (s === 'watchlist') return `<span class="status-badge watchlist">Monitorar</span>`;
+if (s === 'sell')      return `<span class="status-badge sl">Venda</span>`;
+return `<span style="font-size:10px;color:var(--hold);font-weight:600">Aguardar</span>`;
+```
+
+#### 3.5 `updateScanHed()` (linhas ~1341–1344)
+```js
+const buyCount = (stocks || []).filter(s => s.signal === 'buy').length;
+const watchCount = (stocks || []).filter(s => s.signal === 'watchlist').length;
+hed.innerHTML = buyCount > 0
+  ? `${buyCount} ${buyCount !== 1 ? 'ações' : 'ação'} com <span class="text-primary">Alta Convicção</span>${watchCount > 0 ? ` · ${watchCount} para Monitorar` : ''}.`
+  : watchCount > 0
+    ? `${watchCount} ${watchCount !== 1 ? 'ações' : 'ação'} para <span class="text-primary">Monitorar</span>.`
+    : 'Nenhum sinal de compra no momento.';
+```
+
+#### 3.6 `buyCount` no header (linha ~97 + 1709)
+Atualizar para somar buy + watchlist no contador, ou mostrar apenas buy:
+```js
+// Mostrar apenas Alta Convicção no badge do header (mais seletivo)
+document.getElementById('buyCount').textContent = results.filter(r => r.signal === 'buy').length;
+```
+
+#### 3.7 `simConvictionLabel()` (linhas ~2379–2381)
+```js
+function simConvictionLabel(score) {
+  if (score >= 3.5) return { text: 'Alta convicção',   color: 'var(--buy)' };
+  if (score >= 2.5) return { text: 'Monitorar',         color: '#ca8a04' };
+  if (score >= 1.0) return { text: 'Aguardar',          color: 'var(--hold)' };
+  return                   { text: 'Sem sinal',          color: 'var(--sell)' };
+}
+```
+
+#### 3.8 Score display — "/4.5" → "/6.0" (linhas ~1236, 1244, 1604, 1650, 2502, 2558)
+Substituir todas as ocorrências de `/4.5` e `/ 4.5` e `4.5 máximo` por `/6.0` e `6.0 máximo`.
+
+#### 3.9 Módulo de educação — `Sinal Momentum` (linha ~4394)
+Atualizar `subtitle` e `edu_momentumSignalBody` em `static/i18n.js`:
+- Mudar "score de 0 a 4.5" → "score de 0 a 6.0"
+- Adicionar descrição dos 3 novos critérios (Topo 52s, Slope RSI, Regime ATR)
+- Adicionar explicação do tier "Monitorar" vs "Alta Convicção"
+- Atualizar thresholds: BUY agora ≥ 3.5 (antes 2.5)
+
+#### 3.10 Onboarding Primeiros Passos (linha ~4824)
+Atualizar referência de "score de 0 a 4.5" → "score de 0 a 6.0" e mencionar que BUY = Alta Convicção ≥ 3.5.
+
+#### 3.11 `feedCardWhy()` — exibir structuralWeak (linha ~1162)
+Se `d.structuralWeak === true`, adicionar aviso no painel "Por que":
+```js
+if (d.structuralWeak) {
+  lines.push('🔴 Saúde estrutural: ativo a mais de 35% do topo de 52 semanas ou SMA200 em queda — sinal bloqueado');
+}
+```
+Também adicionar linha de Distância do Topo como critério visível:
+```js
+if (d.distFromHigh != null) {
+  const pct = (d.distFromHigh * 100).toFixed(1);
+  if (d.distFromHigh <= 0.05)       lines.push(`✅ Topo 52s: a ${pct}% do topo — ação em liderança (+0.75)`);
+  else if (d.distFromHigh <= 0.15)  lines.push(`✅ Topo 52s: a ${pct}% do topo — tendência preservada (+0.50)`);
+  else if (d.distFromHigh > 0.40)   lines.push(`❌ Topo 52s: a ${pct}% do topo — fraqueza estrutural (-1.00)`);
+  else                               lines.push(`⚠️ Topo 52s: a ${pct}% do topo — pullback moderado`);
+}
+```
+
+---
+
+### Parte 4 — Backtest: atualizar `backtestStock()` (US-221)
+
+A função `backtestStock()` usada no Histórico deve passar os novos argumentos para `pickSignal()`. Atualizar para calcular `distFromHigh`, `sma200Rising`, `rsiSlope`, `atrPctNow` e `atrPctAvg` dentro do loop de rolling window, consistente com a nova assinatura de `pickSignal()`.
+
+---
+
+**Acceptance Criteria:**
+- [ ] `pickSignal()` recebe 12 argumentos; thresholds BUY ≥ 3.5, watchlist 2.5–3.4.
+- [ ] Gate estrutural retorna `signal:'neutral', score:0, structuralWeak:true` quando SMA200 em queda ou ativo >35% abaixo do topo de 52 semanas.
+- [ ] Critério 7 (Topo 52s), Critério 8 (RSI slope), Critério 9 (ATR regime) são calculados e somados ao score.
+- [ ] Score máximo exibido em toda a app é 6.0 (não 4.5).
+- [ ] Filter chips incluem "⭐ Alta Convicção" e "👁 Monitorar" como opções separadas.
+- [ ] Badge "Monitorar" aparece em amarelo (distinto de verde e cinza) em todos os pontos de exibição: Lista, card de sinal, Simulador, "Por que".
+- [ ] `updateScanHed()` mostra contagens separadas de Alta Convicção e Monitorar.
+- [ ] `simConvictionLabel()` retorna "Monitorar" (amarelo) para scores 2.5–3.4.
+- [ ] `feedCardWhy()` mostra critérios 7, 8 e 9 com ✅/⚠️/❌ e o gate estrutural quando ativado.
+- [ ] Módulo de educação "Sinal Momentum" em `static/i18n.js` atualizado: score 0–6.0, 3 novos critérios, thresholds revisados.
+- [ ] Onboarding Primeiros Passos atualizado para score 0–6.0.
+- [ ] `backtestStock()` (US-221) atualizado com a nova assinatura de `pickSignal()`.
+- [ ] Sem regressão em Sinais, Lista, Simulador, Acompanhados, Portfólio.
+
+**Depends on:** US-210 (pickSignal v2 — base), US-218 (Simulador scorecard), US-221 (backtestStock)
+**Sprint:** 29 · **Effort:** 6h · **Priority:** 🔴 High · **Epic:** 51
+
+---
+
 ## Epic 50 — Backtest do Signal Engine
 
 ### US-221 — Backtest: Probabilidade de Ganho por Sinal de Compra
@@ -1888,6 +2141,7 @@ state = { ..., backtestResults: null };
 | 26 | 48 | US-215, US-216, US-217, US-218, US-219 | Education & Onboarding — Primeiros Passos, Sinal Momentum module, CDB/CDI module, Simulador scorecard, SMA50/200 split scoring | ✅ Done |
 | 23 | 43 | US-193–200 | Security & Code Quality — Critical + Major | ✅ Done |
 | 27 | 49 | US-220 | Lista: auto-scan + all signals displayed | ✅ Done |
+| 29 | 51 | US-222 | Signal v3: Monitorar tier, 3 quality criteria, full app consistency | 📋 Planned |
 | 28 | 50 | US-221 | Backtest: win rate and avg return from historical BUY signals | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | ✅ Done |
 | 25 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
