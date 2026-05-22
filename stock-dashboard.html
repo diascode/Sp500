@@ -1107,34 +1107,79 @@ function stockFlag(d) {
   return m === 'brasil' ? '🇧🇷' : m === 'us' ? '🇺🇸' : m === 'europe' ? '🇪🇺' : '🌍';
 }
 function feedCardWhy(d) {
-  const parts = [];
-  const rsi = d.rsi != null ? +d.rsi : null;
-  const macd = d.macd != null ? +d.macd : null;
-  const adx = d.adx != null ? +d.adx : null;
   const sig = d.signal;
+  const score = d.score != null ? d.score : '?';
+  const sigLabel = sig === 'buy' ? 'COMPRA' : sig === 'sell' ? 'VENDA' : 'AGUARDAR';
+  const lines = [];
 
-  if (rsi !== null) {
-    if (rsi < 30) parts.push(`RSI em ${rsi.toFixed(0)} — zona de sobrevenda extrema, compradores tendem a retornar`);
-    else if (rsi < 40) parts.push(`RSI em ${rsi.toFixed(0)} — ativo pressionado, mas próximo de piso técnico`);
-    else if (rsi > 75) parts.push(`RSI em ${rsi.toFixed(0)} — sobrecomprado, risco de realização no curto prazo`);
-    else if (rsi > 65) parts.push(`RSI em ${rsi.toFixed(0)} — momentum forte, mas atenção ao topo`);
-    else parts.push(`RSI em ${rsi.toFixed(0)} — neutro`);
+  // 1. Trend structure (SMA50 + SMA200)
+  if (d.pA50 && d.pA200) {
+    lines.push('✅ Tendência confirmada — preço acima das médias de 50 e 200 dias (alta estrutural)');
+  } else if (d.pA50 && !d.pA200) {
+    lines.push('⚠️ Preço acima da SMA50, mas abaixo da SMA200 — tendência parcial');
+  } else {
+    lines.push('❌ Preço abaixo das médias de 50 e 200 dias — tendência de baixa');
   }
-  if (macd !== null && adx !== null) {
-    if (macd > 0 && adx > 25) parts.push(`MACD positivo com tendência consolidada (ADX ${adx.toFixed(0)}) — fluxo comprador presente`);
-    else if (macd < 0 && adx > 25) parts.push(`MACD negativo com tendência forte (ADX ${adx.toFixed(0)}) — pressão vendedora dominante`);
-    else if (macd > 0 && adx <= 25) parts.push(`MACD virou positivo, mas ADX ${adx.toFixed(0)} indica tendência ainda fraca`);
-    else if (macd < 0) parts.push(`MACD negativo — momentum de baixa ainda ativo`);
-  } else if (macd !== null) {
-    if (macd > 0) parts.push(`MACD positivo — momentum favorável`);
-    else parts.push(`MACD negativo — momentum desfavorável`);
+
+  // 2. MACD
+  const macdVal = d.macd != null ? +d.macd : null;
+  const macdHist = d.macdHist != null ? +d.macdHist : null;
+  if (macdVal !== null) {
+    const sign = macdVal >= 0 ? '+' : '';
+    if (macdVal > 0 && macdHist != null && macdHist > 0) {
+      lines.push(`✅ MACD ${sign}${macdVal.toFixed(2)} e acelerando — momentum de compra em desenvolvimento`);
+    } else if (macdVal > 0) {
+      lines.push(`⚠️ MACD ${sign}${macdVal.toFixed(2)} positivo mas sem aceleração — momentum fraco`);
+    } else {
+      lines.push(`❌ MACD ${sign}${macdVal.toFixed(2)} negativo — momentum de venda dominante`);
+    }
   }
-  if (d.patternName && d.patternName !== 'none') {
-    parts.push(`padrão gráfico "${d.patternName}" detectado nos últimos 90 dias`);
+
+  // 3. RSI
+  const rsiVal = d.rsi != null ? +d.rsi : null;
+  if (rsiVal !== null) {
+    if (rsiVal >= 50 && rsiVal <= 65) {
+      lines.push(`✅ RSI ${rsiVal.toFixed(0)} — zona saudável de tendência (50–65), sem sobrecompra`);
+    } else if (rsiVal > 65 && rsiVal <= 70) {
+      lines.push(`⚠️ RSI ${rsiVal.toFixed(0)} — momentum forte, mas próximo de sobrecompra`);
+    } else if (rsiVal > 70) {
+      lines.push(`❌ RSI ${rsiVal.toFixed(0)} — sobrecomprado, risco de realização`);
+    } else if (rsiVal >= 40 && rsiVal < 50) {
+      lines.push(`⚠️ RSI ${rsiVal.toFixed(0)} — abaixo de 50, momentum enfraquecendo`);
+    } else if (rsiVal >= 25 && rsiVal < 40) {
+      lines.push(`⚠️ RSI ${rsiVal.toFixed(0)} — queda sem sobrevendido extremo, sem sinal de reversão`);
+    } else {
+      lines.push(`❌ RSI ${rsiVal.toFixed(0)} — sobrevendido extremo`);
+    }
   }
-  if (parts.length === 0) return 'Confluência de indicadores técnicos (RSI, MACD, ADX) aponta para este sinal.';
-  const sentence = parts.join('; ') + '.';
-  return sentence.charAt(0).toUpperCase() + sentence.slice(1);
+
+  // 4. Volume
+  const vol = d.volRatio != null ? +d.volRatio : null;
+  if (vol !== null) {
+    if (vol > 1.2) {
+      lines.push(`✅ Volume ${vol.toFixed(1)}× acima da média — pressão compradora presente`);
+    } else {
+      lines.push(`❌ Volume ${vol.toFixed(1)}× na média — sem convicção direcional`);
+    }
+  }
+
+  // 5. ADX
+  const adxVal = d.adx != null ? +d.adx : null;
+  if (adxVal !== null) {
+    if (adxVal > 25) {
+      lines.push(`✅ ADX ${adxVal.toFixed(0)} — tendência forte (> 25), direção definida`);
+    } else {
+      lines.push(`⚠️ ADX ${adxVal.toFixed(0)} — tendência ainda fraca (< 25), aguardar confirmação`);
+    }
+  }
+
+  // 6. Regime gate warning
+  if (d.pA200 === false) {
+    lines.push(`🔴 Regime de mercado: ativo abaixo da SMA200 — sinais de compra bloqueados`);
+  }
+
+  const header = `<strong>${sigLabel} · ${score}/4.5</strong>`;
+  return header + '<br>' + lines.map(l => `<span style="display:block;margin-top:4px">${l}</span>`).join('');
 }
 function feedCardPillLabel(sig) { return sig === 'buy' ? 'Compra' : sig === 'sell' ? 'Venda' : 'Aguardar'; }
 
@@ -2341,7 +2386,8 @@ function renderSimulator() {
     const whyTxt = feedCardWhy(stock);
     html += `<div class="card" style="padding:var(--s-5);margin-top:var(--s-4)">
       <div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Por que o Momentum sinalizou ${simSig === 'buy' ? 'Compra' : simSig === 'sell' ? 'Venda' : 'Aguardar'}</div>
-      <p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0">${whyTxt} Os valores de TP e SL são estimativas baseadas em suporte/resistência técnica e não garantem resultado.</p>
+      <div style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0">${whyTxt}</div>
+      <p style="font-size:12px;color:var(--ink-3);margin:8px 0 0">Os valores de TP e SL são estimativas baseadas em suporte/resistência técnica e não garantem resultado.</p>
     </div>`;
   }
 
