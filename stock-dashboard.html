@@ -616,8 +616,9 @@ async function exportMyData() {
 async function deleteMyAccount() {
   document.getElementById('userDropdown').style.display = 'none';
   const email = authUser?.email || 'your account';
-  if (!confirm('Permanently delete ' + email + '? This cannot be undone. All your data will be erased.')) return;
-  if (!confirm('Are you absolutely sure? Type OK to confirm.')) return;
+  if (!confirm(`Tem certeza que deseja excluir permanentemente ${email}? Esta ação não pode ser desfeita. Todos os seus dados serão apagados.`)) return;
+  const typed = prompt('Digite EXCLUIR para confirmar a exclusão da conta.');
+  if ((typed || '').trim().toUpperCase() !== 'EXCLUIR') return;
   const token = getToken();
   try {
     const res = await fetch('/api/auth/account', { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
@@ -2070,46 +2071,64 @@ function renderTrackedPicks() {
     const signal = d?.signal || null;
     const rsi = d?.rsi ?? null;
     const tp = d?.tp ?? pick.tp ?? null;
-    const potential = (price && tp) ? ((tp - price) / price * 100) : null;
-    return { pick, i, d, price, sym, priceStr, signal, rsi, tp, potential };
+    const changePercent = d?.changePercent ?? null;
+    const macd = d?.macd ?? null;
+    const adx = d?.adx ?? null;
+    const pnl = (price !== null && pick.entryPrice && pick.entryPrice !== 0)
+      ? (price - pick.entryPrice) / pick.entryPrice * 100
+      : null;
+    return { pick, i, d, price, sym, priceStr, signal, rsi, tp, changePercent, macd, adx, pnl };
   });
 
   // Totals
   const buyRows = rows.filter(r => r.signal === 'buy');
-  const avgPotential = buyRows.length > 0
-    ? buyRows.reduce((s, r) => s + (r.potential || 0), 0) / buyRows.length
+  const pnlRows = rows.filter(r => r.pnl !== null);
+  const avgPnl = pnlRows.length > 0
+    ? pnlRows.reduce((s, r) => s + r.pnl, 0) / pnlRows.length
     : null;
 
   // Summary bar
   html += '<div style="display:flex;gap:var(--s-4);flex-wrap:wrap;margin-top:var(--s-3);margin-bottom:var(--s-5);padding:var(--s-3) var(--s-4);background:var(--bg-2);border-radius:var(--r);border:1px solid var(--line)">';
   html += '<div><span style="color:var(--ink-3);font-size:11px">TOTAL</span><br><strong style="font-size:18px">' + state.trackedPicks.length + '</strong></div>';
   html += '<div><span style="color:var(--ink-3);font-size:11px">COMPRA</span><br><strong style="font-size:18px;color:var(--buy)">' + buyRows.length + '</strong></div>';
-  if (avgPotential !== null) html += '<div><span style="color:var(--ink-3);font-size:11px">POTENCIAL MÉDIO</span><br><strong style="font-size:18px;color:var(--buy)">+' + avgPotential.toFixed(1) + '%</strong></div>';
+  if (avgPnl !== null) html += '<div><span style="color:var(--ink-3);font-size:11px">RESULTADO</span><br><strong style="font-size:18px;color:' + (avgPnl >= 0 ? 'var(--buy)' : 'var(--sell)') + '">' + (avgPnl >= 0 ? '+' : '') + avgPnl.toFixed(1) + '%</strong></div>';
   html += '</div>';
 
   // Table
   html += '<div class="card-flush" style="overflow-x:auto"><table class="tracked-table"><thead><tr>';
-  html += '<th>#</th><th>TICKER</th><th>PREÇO</th><th>SINAL</th><th>RSI</th><th>ALVO (TP)</th><th>POTENCIAL</th><th></th>';
+  html += '<th>#</th><th>TICKER</th><th>PREÇO</th><th>VAR%</th><th>P&L%</th><th>SINAL</th><th>RSI</th><th>MACD</th><th>ADX</th><th>ALVO (TP)</th><th></th>';
   html += '</tr></thead><tbody>';
 
-  rows.forEach(({ pick, i, priceStr, signal, rsi, tp, sym, potential }) => {
+  rows.forEach(({ pick, i, priceStr, signal, rsi, tp, sym, changePercent, macd, adx, pnl }) => {
     const sigLabel = signal === 'buy' ? '<span class="signal-pill buy">Compra</span>'
       : signal === 'sell' ? '<span class="signal-pill sell">Venda</span>'
       : signal === 'neutral' ? '<span style="font-size:10px;font-weight:600;color:var(--hold)">Aguardar</span>'
       : '<span style="color:var(--ink-4)">—</span>';
     const rsiStr = rsi !== null ? rsi.toFixed(0) : '—';
     const tpStr = tp ? sym + tp.toFixed(2) : '—';
-    const potStr = potential !== null
-      ? '<span style="color:' + (potential >= 0 ? 'var(--buy)' : 'var(--sell)') + '">' + (potential >= 0 ? '+' : '') + potential.toFixed(1) + '%</span>'
+    const varStr = changePercent !== null
+      ? '<span style="color:' + (changePercent >= 0 ? 'var(--buy)' : 'var(--sell)') + '">' + (changePercent >= 0 ? '+' : '') + changePercent.toFixed(2) + '%</span>'
+      : '—';
+    const pnlStr = pnl !== null
+      ? '<span style="color:' + (pnl >= 0 ? 'var(--buy)' : 'var(--sell)') + '">' + (pnl >= 0 ? '+' : '') + pnl.toFixed(2) + '%</span>'
+      : '—';
+    const macdStr = macd !== null
+      ? '<span style="color:' + (macd > 0 ? 'var(--buy)' : 'var(--sell)') + '">' + (macd >= 0 ? '+' : '') + macd.toFixed(2) + '</span>'
+      : '—';
+    const adxStr = adx !== null
+      ? '<span style="color:' + (adx > 25 ? 'var(--primary)' : 'var(--ink-3)') + '">' + adx.toFixed(1) + '</span>'
       : '—';
     html += '<tr style="cursor:pointer" onclick="openStockDetailByTicker(\'' + pick.ticker + '\')">';
     html += '<td style="color:var(--ink-3)">' + (i + 1) + '</td>';
     html += '<td class="tkr">' + pick.ticker + '</td>';
     html += '<td style="font-family:var(--font-mono)">' + priceStr + '</td>';
+    html += '<td style="font-family:var(--font-mono)">' + varStr + '</td>';
+    html += '<td style="font-family:var(--font-mono)">' + pnlStr + '</td>';
     html += '<td>' + sigLabel + '</td>';
     html += '<td style="font-family:var(--font-mono)">' + rsiStr + '</td>';
+    html += '<td style="font-family:var(--font-mono)">' + macdStr + '</td>';
+    html += '<td style="font-family:var(--font-mono)">' + adxStr + '</td>';
     html += '<td style="font-family:var(--font-mono)">' + tpStr + '</td>';
-    html += '<td style="font-family:var(--font-mono)">' + potStr + '</td>';
     html += '<td onclick="event.stopPropagation()"><span style="cursor:pointer;color:var(--sell);font-size:14px" onclick="listaTrack(\'' + pick.ticker + '\',0,0,0)" title="Remover">✕</span></td>';
     html += '</tr>';
   });

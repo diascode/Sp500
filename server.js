@@ -637,12 +637,30 @@ async function handleRequest(req, res) {
       res.end(content);
     } catch { sendError(res, 404, 'Not Found'); }
   } catch (err) {
-    console.error('Server error:', err);
-    sendError(res, 500, 'Internal server error');
+    console.error('[signup error]', err);
+    res.writeHead(500); res.end(JSON.stringify({ error: 'Internal server error' }));
   }
 }
 
 // ─── START ──────────────────────────────────────────────────────────────
+
+// US-207: warn if admin email is not configured
+if (!process.env.ADMIN_EMAIL) {
+  console.warn('⚠ ADMIN_EMAIL not set — admin panel will be disabled. Set ADMIN_EMAIL in .env to enable.');
+}
+
+// US-209: pre-flight check — ensure data/ directory is writable before accepting requests
+const DATA_DIR = path.join(__dirname, 'data');
+try {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  const testFile = path.join(DATA_DIR, '.write-test');
+  fs.writeFileSync(testFile, 'ok');
+  fs.unlinkSync(testFile);
+} catch (err) {
+  console.error('FATAL: data/ directory is not writable:', err.message);
+  process.exit(1);
+}
+
 const server = http.createServer(handleRequest);
 server.listen(PORT, HOST, () => {
   const url = `http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`;

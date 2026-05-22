@@ -85,6 +85,13 @@ STRIPE_PRO_PRICE_ID=price_...
 
 # App URL (used in email links)
 APP_URL=http://localhost:8081
+
+# Admin panel
+# Set this to the email address you will sign up with.
+# On every server start, if an account with this email exists, it is
+# automatically promoted to the admin tier — enabling the admin panel.
+# Leave unset to disable the admin panel entirely.
+ADMIN_EMAIL=your-admin-email@example.com
 ```
 
 See `.env.example` for the full list with descriptions.

@@ -379,7 +379,7 @@ if ((typed || '').trim().toUpperCase() !== 'EXCLUIR') return;
 - Admin actions are logged with `admin_user_id`, `action`, `timestamp`, `ip` (see US-188).
 - Failed admin access attempts are logged and rate-limited.
 
-**Sprint:** 20 · **Effort:** S
+**Sprint:** 25 · **Effort:** S
 
 ---
 
@@ -394,7 +394,7 @@ if ((typed || '').trim().toUpperCase() !== 'EXCLUIR') return;
 - All numbers computed server-side (aggregates); no per-user data leaked.
 - Page loads under 2s with 10k users.
 
-**Sprint:** 20 · **Effort:** M
+**Sprint:** 25 · **Effort:** M
 
 ---
 
@@ -408,7 +408,7 @@ if ((typed || '').trim().toUpperCase() !== 'EXCLUIR') return;
 - Server-side pagination (50 per page), sortable columns.
 - CPF masked in the table (e.g. `***.***.**-12`); full CPF visible only on the detail view (US-181).
 
-**Sprint:** 20 · **Effort:** M
+**Sprint:** 25 · **Effort:** M
 
 ---
 
@@ -424,7 +424,7 @@ if ((typed || '').trim().toUpperCase() !== 'EXCLUIR') return;
 - Every CPF reveal writes to the audit log (US-188).
 - Read-only view; no edit capabilities in this story.
 
-**Sprint:** 20 · **Effort:** M
+**Sprint:** 25 · **Effort:** M
 
 ---
 
@@ -440,7 +440,7 @@ if ((typed || '').trim().toUpperCase() !== 'EXCLUIR') return;
 - Max 50k rows per export.
 - **⚠️ LGPD:** Este export é para uso de controllers internos (equipe Momentum) apenas. Qualquer envio a terceiros requer o fluxo de export consentido (US-185).
 
-**Sprint:** 20 · **Effort:** M
+**Sprint:** 25 · **Effort:** M
 
 ---
 
@@ -536,7 +536,7 @@ if ((typed || '').trim().toUpperCase() !== 'EXCLUIR') return;
 - Log exportável para CSV para atender solicitações da ANPD; este export também é logado.
 - Alerta (email ao contato de segurança) se um admin exportar mais de N linhas em 24h (padrão N = 5.000).
 
-**Sprint:** 20 · **Effort:** M
+**Sprint:** 25 · **Effort:** M
 
 ---
 
@@ -937,7 +937,7 @@ if (typed !== 'EXCLUIR') return;
 
 ---
 
-## 📋 Sprint 25 — Signal Engine v2: Critérios e Scoring
+## 📋 Sprint 20 — Signal Engine v2: Critérios e Scoring
 
 > ⚠️ **Prioridade alta** — Opus review identified that the current signal system contains dead code and should NOT be demoed to institutional partners (brokers, accelerators) until US-210 ships.
 
@@ -1003,7 +1003,7 @@ function pickSignal(rsi, macd, macdHist, adx, above50, above200, volRatio) {
 - Existing `analyze()` function passes the new arguments without breaking other features.
 - All signal chips (Compra / Aguardar / Venda) continue to work for filtering.
 
-**Sprint:** 25 · **Effort:** 2h · **Priority:** 🔴 Critical (blocks partner demo)
+**Sprint:** 20 · **Effort:** 2h · **Priority:** 🔴 Critical (blocks partner demo)
 
 ---
 
@@ -1038,7 +1038,7 @@ Natural volatility scaling — tight for blue chips, wider for small/mid caps.
 - Portfolio modal pre-fill uses ATR-based TP/SL (not fixed percentages).
 - Existing stored `trackedPicks` with old fixed TP/SL are not retroactively changed — only new picks use ATR-based exits.
 
-**Sprint:** 25 · **Effort:** 1h · **Priority:** 🔴 High
+**Sprint:** 20 · **Effort:** 1h · **Priority:** 🔴 High
 
 ---
 
@@ -1059,7 +1059,7 @@ Natural volatility scaling — tight for blue chips, wider for small/mid caps.
 - Tooltip on hover shows the max score (4.5) for context.
 - Score is rounded to 1 decimal place.
 
-**Sprint:** 25 · **Effort:** 1h · **Priority:** 🟠 Medium
+**Sprint:** 20 · **Effort:** 1h · **Priority:** 🟠 Medium
 
 ---
 
@@ -1113,7 +1113,53 @@ Por que: VENDA (score 0.5/4.5)
 - Score is shown in the header line ("COMPRA · 3.2/4.5").
 - Language is Portuguese only (matches app default language).
 
-**Sprint:** 25 · **Effort:** 2h · **Priority:** 🟠 Medium
+**Sprint:** 20 · **Effort:** 2h · **Priority:** 🟠 Medium
+
+---
+
+### US-214 — Lista/Sinais: Colunas de Indicadores (RSI, MACD, ADX, Volume, SMA, Score)
+
+**Epic:** 47 — Signal Engine v2
+
+**Como** investidor olhando para a tabela de sinais,
+**Quero** ver os valores numéricos dos indicadores principais diretamente nas colunas da Lista,
+**Para que** eu possa comparar ativos rapidamente sem precisar abrir cada linha individualmente.
+
+**Contexto:**
+A tabela Lista/Sinais atualmente exibe TICKER, NOME, SETOR, PREÇO, VAR%, SINAL e ações. Toda a inteligência analítica (RSI, MACD, ADX, Volume ratio, SMA trend, Score) fica escondida dentro do "Por que:" ao expandir a linha. Isso força o usuário a abrir cada ativo para comparar critérios — fluxo ineficiente quando se quer fazer triagem entre dezenas de ativos.
+
+Com o Signal Engine v2 (US-210), o scoring passa a ter 4.5 pts possíveis com componentes independentes. Exibir esses valores na tabela permite ao usuário fazer triagem quantitativa de um relance.
+
+**Novas colunas a adicionar (após VAR%, antes de SINAL):**
+
+| Coluna | Valor exibido | Cor/destaque |
+|--------|---------------|--------------|
+| RSI | Valor numérico (ex: 52) | Verde se ≥ 50, vermelho se < 40, neutro entre 40–49 |
+| MACD | Valor numérico + seta (ex: +0.43 ↑) | Verde se positivo, vermelho se negativo |
+| ADX | Valor numérico (ex: 28) | Destaque (cor primária) se > 25 (tendência confirmada) |
+| Volume | Ratio vs média 20d (ex: 1.8×) | Verde se > 1.2×, neutro caso contrário |
+| SMA | Tendência (ex: "50+200" / "50" / "—") | Verde se acima de ambas as médias, amarelo se só SMA50, vermelho se abaixo |
+| Score | Pontuação numérica (ex: 3.2/4.5) | Usa escala de cor: verde ≥ 3.0, amarelo 1.5–2.9, vermelho < 1.5 |
+
+**Comportamento:**
+- Colunas são adicionadas entre VAR% e SINAL (ou após SINAL, antes de ações — a decidir no design).
+- Em mobile (< 768px): ocultar ADX e Volume para manter legibilidade — RSI, MACD, Score, SINAL permanecem.
+- Ordenação por coluna: clique no header ordena a tabela por aquele indicador (decrescente no primeiro clique).
+- Tooltip no header de cada coluna explica o que é o indicador em PT-BR.
+- Valores "N/D" quando o dado não estiver disponível (ex: ativo sem volume suficiente).
+- Score exibido como denominador da versão v2 (4.5 pts, conforme US-210).
+
+**Acceptance Criteria:**
+- [ ] Todas as 6 colunas aparecem na tabela Lista com valores corretos.
+- [ ] Cores aplicadas conforme especificação acima.
+- [ ] Em viewport < 768px: colunas ADX e Volume somem, restantes permanecem.
+- [ ] Clique no header de cada nova coluna ordena a tabela.
+- [ ] Tooltip em PT-BR aparece ao hover no header.
+- [ ] Valores "N/D" para dados ausentes — sem crash.
+- [ ] A coluna Score usa o scoring v2 (US-210 deve estar shipado antes).
+
+**Depends on:** US-210 (score v2 must ship first or simultaneously)
+**Sprint:** 20 · **Effort:** 3h · **Priority:** 🟡 High
 
 ---
 
@@ -1123,10 +1169,10 @@ Por que: VENDA (score 0.5/4.5)
 |--------|-------|---------|-------|--------|
 | 18 | 38, 40, 43 | US-173–175, US-177, US-191, US-192, US-201 | Lista Interatividade, CPF toggle, tradução "Positions", fix DARF link, B3 watchlist prices | ✅ Done |
 | 19 | 39, 44, 45, 46 | US-176, US-207, US-208, US-209 | Acompanhados redesign + ADMIN_EMAIL env var + delete account PT fix + signup 500 fix | 📋 Planned |
-| 25 | 47 | US-210, US-211, US-212, US-213 | Signal Engine v2 — scoring fix, ATR exits, score display, Por que enrichment | ⚠️ Planned (blocks partner demo) |
+| 20 | 47 | US-210, US-211, US-212, US-213, US-214 | Signal Engine v2 — scoring fix, ATR exits, score display, Por que enrichment, indicator columns | ⚠️ Planned (blocks partner demo) |
 | 23 | 43 | US-193–201 | Security & Code Quality — Critical + Major | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | 📋 Planned |
-| 20 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
+| 25 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
 | 21 | 41 | US-183, US-184, US-189 | Admin Fase 2: Consentimento LGPD + Direitos do Titular | 🔒 Parked |
 | 22 | 41 | US-185–187 | Admin Fase 3: Export para Parceiros (gate jurídico) | 🔒 Parked |
 
