@@ -1716,7 +1716,7 @@ No header da Lista (ao lado do campo de busca), adicionar um botão `"⚡ Varrer
 | 26 | 48 | US-215, US-216, US-217, US-218, US-219 | Education & Onboarding — Primeiros Passos, Sinal Momentum module, CDB/CDI module, Simulador scorecard, SMA50/200 split scoring | ✅ Done |
 | 23 | 43 | US-193–200 | Security & Code Quality — Critical + Major | ✅ Done |
 | 27 | 49 | US-220 | Lista: auto-scan + all signals displayed | 📋 Planned |
-| 24 | 43 | US-202–206 | Security & Code Quality — Minor | 📋 Planned |
+| 24 | 43 | US-202–206 | Security & Code Quality — Minor | ✅ Done |
 | 25 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
 | 21 | 41 | US-183, US-184, US-189 | Admin Fase 2: Consentimento LGPD + Direitos do Titular | 🔒 Parked |
 | 22 | 41 | US-185–187 | Admin Fase 3: Export para Parceiros (gate jurídico) | 🔒 Parked |
