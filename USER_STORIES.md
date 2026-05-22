@@ -1802,11 +1802,25 @@ if (state.homeMode === 'historico') {
 
 #### 4. Função `renderBacktest()`
 
-Layout de 3 seções:
+Layout de 4 seções:
 
-**a) Banner de aviso**
+**a) Explicação para o usuário (sempre visível, acima dos resultados)**
+
+Mostrar um parágrafo fixo no topo da aba explicando o que a ferramenta faz e por que os números importam. Não deve ser colapsável — faz parte da experiência de aprender a usar os sinais. Exemplo de texto:
+
+> **O que é o Histórico?**
+> O Histórico aplica os critérios de sinal do Momentum (RSI, MACD, ADX, Volume, SMA50, SMA200) sobre todos os pregões dos últimos 5 anos, identificando cada data em que uma ação teria gerado um sinal de **Compra**. Em seguida, mede o retorno real da ação nos 10, 20 e 30 pregões seguintes.
+>
+> O resultado mostra a **taxa de acerto histórica** — quantas vezes o sinal de Compra foi seguido de uma valorização — e o **retorno médio**, indicando se os ganhos quando o sinal acertou compensaram as perdas quando errou.
+>
+> Use o Histórico para calibrar sua confiança: sinais de **Alta Convicção** (score ≥ 3.5) tendem a ter taxa de acerto e retorno médio maiores do que sinais de **Compra Regular** (score 2.5–3.4).
+
+Abaixo do texto explicativo, mostrar os avisos de limitação em fonte menor (12px, cinza):
+
 ```
-⚠️ Backtest in-sample · Sem custos · Survivorship bias
+⚠️ Backtest in-sample · Os critérios foram calibrados com visão do passado — resultados reais podem ser menores.
+⚠️ Não inclui custos de corretagem, spread, IR ou slippage.
+⚠️ Survivorship bias: apenas ações que existem hoje são analisadas.
 ```
 
 **b) Cards de resumo** (calculados sobre todos os sinais de Compra):
@@ -1853,7 +1867,8 @@ state = { ..., backtestResults: null };
 - [ ] Somente sinais onde `candles[i + 30]` existe são incluídos (sem lookahead além da janela disponível).
 - [ ] Cards de resumo mostram: número de sinais, taxa de acerto (10d / 20d / 30d), retorno médio, fator de lucro.
 - [ ] Tabela por tier (≥ 3.5 vs 2.5–3.4) mostra se alta convicção supera compra regular.
-- [ ] Três avisos de disclaimer obrigatórios são visíveis acima dos resultados.
+- [ ] Parágrafo explicativo ("O que é o Histórico?") é sempre visível no topo da aba, antes dos resultados.
+- [ ] Três avisos de disclaimer (in-sample, sem custos, survivorship bias) aparecem abaixo do parágrafo em fonte menor.
 - [ ] Resultados ficam em `state.backtestResults` — trocar de aba e voltar não recalcula.
 - [ ] Se não há varredura (< 5 ações analisadas), mostrar mensagem pedindo para varrer primeiro.
 - [ ] Sem regressão nas outras abas (Sinais, Lista, Simulador).
