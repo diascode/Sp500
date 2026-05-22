@@ -152,7 +152,7 @@ async function handleRequest(req, res) {
       if (!validateCPF(cpfDigits)) return sendError(res, 400, 'CPF inválido');
       if (users.some(u => u.cpf === cpfDigits)) return sendError(res, 409, 'CPF já cadastrado');
       if (findUser(email)) return sendError(res, 409, 'Email already registered');
-      const user = { id: nextId(), email: email.toLowerCase(), password: hashPassword(password), cpf: cpfDigits, tier: 'free', createdAt: new Date().toISOString(), subscriptionId: null, subscriptionEnd: null, emailVerified: false };
+      const user = { id: nextId(), email: email.toLowerCase(), password: await hashPassword(password), cpf: cpfDigits, tier: 'free', createdAt: new Date().toISOString(), subscriptionId: null, subscriptionEnd: null, emailVerified: false };
       users.push(user); saveUsers(users);
       // Send verification email (non-blocking)
       const vToken = makeToken();
@@ -174,7 +174,7 @@ async function handleRequest(req, res) {
       const { email, password } = body;
       if (!email || !password) return sendError(res, 400, 'Email and password required');
       const user = findUser(email);
-      if (!user || !verifyPassword(password, user.password)) return sendError(res, 401, 'Invalid email or password');
+      if (!user || !await verifyPassword(password, user.password)) return sendError(res, 401, 'Invalid email or password');
       return sendJSON(res, 200, { token: signToken(user), user: { id: user.id, email: user.email, tier: user.tier } });
     }
 
@@ -218,9 +218,9 @@ async function handleRequest(req, res) {
       const user = findUser(authUser.email);
       if (!user) return sendError(res, 404, 'User not found');
       if (!body.oldPassword) return sendError(res, 400, 'Current password is required');
-      if (!verifyPassword(body.oldPassword, user.password)) return sendError(res, 400, 'Current password is incorrect');
+      if (!await verifyPassword(body.oldPassword, user.password)) return sendError(res, 400, 'Current password is incorrect');
       if (!body.newPassword || body.newPassword.length < 6) return sendError(res, 400, 'New password must be at least 6 characters');
-      user.password = hashPassword(body.newPassword);
+      user.password = await hashPassword(body.newPassword);
       user.passwordChangedAt = new Date().toISOString();
       saveUsers(users);
       return sendJSON(res, 200, { ok: true });
@@ -255,7 +255,7 @@ async function handleRequest(req, res) {
       if (!entry || entry.expiresAt < Date.now()) return sendError(res, 400, 'Reset link has expired or is invalid. Please request a new one.');
       const user = findUser(entry.email);
       if (!user) return sendError(res, 404, 'User not found');
-      user.password = hashPassword(password);
+      user.password = await hashPassword(password);
       user.passwordChangedAt = new Date().toISOString();
       saveUsers(users);
       _resetTokens.delete(token);
