@@ -935,12 +935,195 @@ if (typed !== 'EXCLUIR') return;
 
 ---
 
+---
+
+## 📋 Sprint 25 — Signal Engine v2: Critérios e Scoring
+
+> ⚠️ **Prioridade alta** — Opus review identified that the current signal system contains dead code and should NOT be demoed to institutional partners (brokers, accelerators) until US-210 ships.
+
+## Epic 47 — Signal Engine v2
+
+### US-210 — Signal Scoring v2: Remove Dead Code, Add SMA200 Regime Gate e Volume
+**As a** user scanning stocks,
+**I want** the BUY/HOLD/SELL signal to be based on a logically coherent, multi-factor score,
+**so that** the signals I see reflect genuine market conditions and not a broken scoring formula.
+
+**Background:** A quantitative review (subagent + Opus) found three critical flaws in the current `pickSignal` function:
+1. The `RSI < 35` bonus is dead code — RSI < 35 and RSI 45–65 are mutually exclusive sets that can never both be true.
+2. Three inputs (RSI, MACD, SMA50) measure the same thing (trend direction) — no independent confirmation.
+3. No volume confirmation and no bear-market regime gate — can fire BUY in a confirmed downtrend.
+
+**New scoring function (replace `pickSignal` in `stock-dashboard.html`):**
+
+```js
+function pickSignal(rsi, macd, macdHist, adx, above50, above200, volRatio) {
+  let s = 0;
+
+  // 1. Trend structure (SMA50 + SMA200) — max 1.5 pts
+  if (above50 && above200) s += 1.5;   // full uptrend
+  else if (above50)        s += 0.75;  // partial uptrend (above 50 only)
+
+  // 2. Momentum — MACD value + histogram direction — max 1.0 pt
+  if (macd > 0 && macdHist > 0) s += 1.0;  // positive AND accelerating
+  else if (macd > 0)             s += 0.5;  // positive but not accelerating
+
+  // 3. RSI — single coherent zone — max 1.0 pt
+  if      (rsi >= 50 && rsi <= 65) s += 1.0;   // trend-confirmation zone
+  else if (rsi > 65  && rsi <= 70) s += 0.25;  // strong but stretched
+  else if (rsi >= 40 && rsi <  50) s -= 0.25;  // weakening momentum
+
+  // 4. Trend strength (ADX) — max 0.5 pts
+  if (adx > 25) s += 0.5;
+
+  // 5. Volume confirmation (NEW) — max 0.5 pts
+  if (volRatio > 1.2) s += 0.5;   // 20%+ above 20-day average volume
+
+  // Hard guards
+  if (!above200) s = Math.min(s, 1.0);  // cap at HOLD in confirmed bear regime
+  if (rsi > 75 || rsi < 25) s -= 1.0;  // severe extreme penalty
+
+  return s >= 2.5 ? 'buy' : s >= 1.0 ? 'neutral' : 'sell';
+}
+```
+
+**Maximum possible score: 4.5 points.**
+- Full uptrend (SMA50+200): 1.5
+- MACD positive + accelerating: 1.0
+- RSI in sweet zone (50–65): 1.0
+- ADX > 25: 0.5
+- Volume > 1.2×: 0.5
+
+**`analyze()` function:** Pass `macdHist` (last histogram value), `above200` (price > sma200), and `volRatio` (already computed) to `pickSignal`.
+
+**Acceptance Criteria:**
+- No dead code — all scoring clauses can independently contribute to BUY.
+- A stock with price below SMA200 cannot receive a BUY signal (capped at HOLD by the regime gate).
+- The RSI sweet zone is 50–65 (not 45–65 — tightened to reduce noise).
+- Volume above 1.2× 20-day average adds +0.5 to score.
+- Existing `analyze()` function passes the new arguments without breaking other features.
+- All signal chips (Compra / Aguardar / Venda) continue to work for filtering.
+
+**Sprint:** 25 · **Effort:** 2h · **Priority:** 🔴 Critical (blocks partner demo)
+
+---
+
+### US-211 — ATR-Based TP/SL: Exits que Respeitam a Volatilidade de Cada Ativo
+**As a** user tracking a position or viewing a stock card,
+**I want** the Take Profit and Stop Loss levels to be based on each stock's actual volatility (ATR),
+**so that** B3 stocks with high volatility don't get me stopped out on normal noise, and low-volatility stocks aren't given excessively wide stops.
+
+**Background:** Current TP = price × 1.15, SL = price × 0.93 (fixed 15%/7% for all stocks). Opus review: "A 7% SL is ~0.4σ on VALE3 — you're guaranteed to be stopped on noise." B3 stocks average 30–50% annualized vol vs ~20% for S&P 500. Fixed stops are wrong for this universe.
+
+**New formula (replace TP/SL calculation in `analyze()`):**
+```js
+const atr14 = atr; // already computed in analyze()
+const tp = parseFloat((price + 3.0 * atr14).toFixed(2));  // 3× ATR upside
+const sl = parseFloat((price - 1.5 * atr14).toFixed(2));  // 1.5× ATR downside
+// R:R ratio preserved at 2:1
+```
+
+For reference on typical B3 names:
+| Stock | ATR(14) approx | New SL | New TP |
+|-------|---------------|--------|--------|
+| PETR4 (R$45) | ~R$1.80 | −R$2.70 (−6%) | +R$5.40 (+12%) |
+| VALE3 (R$81) | ~R$3.20 | −R$4.80 (−6%) | +R$9.60 (+12%) |
+| MGLU3 (R$6.6) | ~R$0.45 | −R$0.68 (−10%) | +R$1.35 (+20%) |
+| ITUB4 (R$40) | ~R$0.90 | −R$1.35 (−3%) | +R$2.70 (+7%) |
+
+Natural volatility scaling — tight for blue chips, wider for small/mid caps.
+
+**Acceptance Criteria:**
+- TP = price + (3.0 × ATR14), SL = price − (1.5 × ATR14), rounded to 2 decimal places.
+- Displayed TP/SL values on stock cards and in the Acompanhados table update to ATR-based values.
+- Portfolio modal pre-fill uses ATR-based TP/SL (not fixed percentages).
+- Existing stored `trackedPicks` with old fixed TP/SL are not retroactively changed — only new picks use ATR-based exits.
+
+**Sprint:** 25 · **Effort:** 1h · **Priority:** 🔴 High
+
+---
+
+### US-212 — Mostrar Score Numérico no Sinal: "COMPRA · 3.2/4.5"
+**As a** user viewing a stock card or the Lista,
+**I want** to see the numeric score behind the BUY/HOLD/SELL verdict,
+**so that** I can understand how strong the signal is and learn what makes a conviction buy vs a marginal one.
+
+**Implementation:**
+- `analyze()` returns `score` (the raw numeric value before threshold comparison).
+- Signal badge becomes: `"COMPRA · 3.2"` or `"Aguardar · 1.8"` with max shown in tooltip: `title="Score: 3.2 / 4.5 máximo"`.
+- Color logic unchanged — buy = green, sell = red, neutral = yellow.
+- In the Lista table, the SINAL column shows badge + score.
+- In the Sinais feed cards, the pill shows score.
+
+**Acceptance Criteria:**
+- Score is visible in the signal badge on both the Sinais feed and Lista table.
+- Tooltip on hover shows the max score (4.5) for context.
+- Score is rounded to 1 decimal place.
+
+**Sprint:** 25 · **Effort:** 1h · **Priority:** 🟠 Medium
+
+---
+
+### US-213 — Enriquecer "Por que:" com Explicações Detalhadas por Indicador
+**As a** user viewing a stock card,
+**I want** the "Por que:" section to explain in plain Portuguese why the stock received that signal, with a line per indicator showing the value and what it means,
+**so that** I learn to read indicators — not just trust a label.
+
+**Current behaviour:** "Por que:" shows a brief generic summary like "MACD positivo, RSI neutro, acima da SMA50."
+
+**New behaviour — structured explanation per indicator, matching the v2 scoring:**
+
+```
+Por que: COMPRA (score 3.2/4.5)
+
+✅ Tendência confirmada — preço acima das médias de 50 e 200 dias (alta estrutural)
+✅ MACD +0.43 e acelerando — momentum de compra em desenvolvimento
+✅ RSI 57 — zona saudável de tendência (50–65), sem sobrecompra
+✅ Volume 1.8× acima da média — pressão compradora institucional
+⚠️ ADX 21 — tendência ainda fraca (< 25), aguardar confirmação
+```
+
+For HOLD:
+```
+Por que: AGUARDAR (score 1.5/4.5)
+
+✅ Preço acima da SMA50, mas abaixo da SMA200 — tendência parcial
+⚠️ MACD +0.12 positivo mas sem aceleração — momentum fraco
+⚠️ RSI 47 — abaixo de 50, momentum enfraquecendo
+❌ Volume na média — sem convicção direcional
+❌ ADX 18 — mercado lateral, sem tendência definida
+```
+
+For SELL:
+```
+Por que: VENDA (score 0.5/4.5)
+
+❌ Preço abaixo das médias de 50 e 200 dias — tendência de baixa
+❌ MACD −0.28 negativo — momentum de venda dominante
+⚠️ RSI 38 — queda sem sobrevendido extremo, sem sinal de reversão
+❌ Volume 0.9× na média — sem pressão compradora
+🔴 Regime de mercado: ativo abaixo da SMA200 — sinais de compra bloqueados
+```
+
+**Implementation:** Replace `generateWhy()` in `server.js` (or the client-side equivalent) with a structured function that maps each scoring component to a PT-BR sentence using the actual indicator values.
+
+**Acceptance Criteria:**
+- Each indicator (SMA trend, MACD, RSI, Volume, ADX) gets its own line with ✅/⚠️/❌ icon.
+- Values are shown numerically (RSI 57, MACD +0.43, Volume 1.8×, ADX 28).
+- The regime gate is explained if active ("sinais de compra bloqueados — ativo abaixo da SMA200").
+- Score is shown in the header line ("COMPRA · 3.2/4.5").
+- Language is Portuguese only (matches app default language).
+
+**Sprint:** 25 · **Effort:** 2h · **Priority:** 🟠 Medium
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
 |--------|-------|---------|-------|--------|
-| 18 | 38, 40, 43 | US-173–175, US-177, US-191, US-192, US-201 | Lista Interatividade, CPF toggle, tradução "Positions", fix DARF link, B3 watchlist prices | 🔄 In Progress |
+| 18 | 38, 40, 43 | US-173–175, US-177, US-191, US-192, US-201 | Lista Interatividade, CPF toggle, tradução "Positions", fix DARF link, B3 watchlist prices | ✅ Done |
 | 19 | 39, 44, 45, 46 | US-176, US-207, US-208, US-209 | Acompanhados redesign + ADMIN_EMAIL env var + delete account PT fix + signup 500 fix | 📋 Planned |
+| 25 | 47 | US-210, US-211, US-212, US-213 | Signal Engine v2 — scoring fix, ATR exits, score display, Por que enrichment | ⚠️ Planned (blocks partner demo) |
 | 23 | 43 | US-193–201 | Security & Code Quality — Critical + Major | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | 📋 Planned |
 | 20 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
