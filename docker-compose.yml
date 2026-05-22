@@ -9,15 +9,19 @@ services:
       - NODE_ENV=production
       - JWT_SECRET=${JWT_SECRET}
       - APP_URL=${APP_URL:-http://localhost:8080}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_PRICE_PRO_MONTHLY=${STRIPE_PRICE_PRO_MONTHLY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL:-Momentum <noreply@momentum.app>}
     volumes:
-      - ./data:/app/data
+      - momentum_data:/app/data
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
+
+volumes:
+  momentum_data:
