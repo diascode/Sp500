@@ -44,6 +44,15 @@ const {
   serverCalcRSI, serverCalcMACD, generateWhy, extractCloses,
 } = scan;
 
+// ─── PROCESS ERROR HANDLERS ─────────────────────────────────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('[fatal] Unhandled rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[fatal] Uncaught exception:', err);
+  process.exit(1);
+});
+
 // ─── FEATURE FLAGS ──────────────────────────────────────────────────────
 const FLAGS_PATH = path.join(DIR, 'data', 'feature-flags.json');
 const DEFAULT_FLAGS = {
@@ -147,6 +156,8 @@ async function handleRequest(req, res) {
       const body = await readBody(req);
       const { email, password } = body;
       if (!email || !password || password.length < 6) return sendError(res, 400, 'Email and password (min 6 chars) required');
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) return sendError(res, 400, 'Email inválido');
       const cpfDigits = (body.cpf || '').replace(/\D/g, '');
       if (featureFlags.cpf_required !== false && !cpfDigits) return sendError(res, 400, 'CPF é obrigatório para cadastro');
       if (!validateCPF(cpfDigits)) return sendError(res, 400, 'CPF inválido');
