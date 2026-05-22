@@ -1497,6 +1497,12 @@ function renderHomeLista() {
     if (_listaSort === 'preco')   { va = da?.price||0; vb = db?.price||0; return (va-vb)*_listaSortDir; }
     if (_listaSort === 'var')     { va = da?.changePercent||0; vb = db?.changePercent||0; return (va-vb)*_listaSortDir; }
     if (_listaSort === 'sinal')   { va = da?.signal||'z'; vb = db?.signal||'z'; return va < vb ? -_listaSortDir : va > vb ? _listaSortDir : 0; }
+    if (_listaSort === 'rsi')     { va = da?.rsi??-999; vb = db?.rsi??-999; return (va-vb)*_listaSortDir; }
+    if (_listaSort === 'macd')    { va = da?.macd??-999; vb = db?.macd??-999; return (va-vb)*_listaSortDir; }
+    if (_listaSort === 'adx')     { va = da?.adx??-999; vb = db?.adx??-999; return (va-vb)*_listaSortDir; }
+    if (_listaSort === 'vol')     { va = da?.volRatio??-999; vb = db?.volRatio??-999; return (va-vb)*_listaSortDir; }
+    if (_listaSort === 'sma')     { va = ((da?.pA50?1:0)+(da?.pA200?1:0)); vb = ((db?.pA50?1:0)+(db?.pA200?1:0)); return (va-vb)*_listaSortDir; }
+    if (_listaSort === 'score')   { va = da?.score??-999; vb = db?.score??-999; return (va-vb)*_listaSortDir; }
     return 0;
   });
 
@@ -1527,7 +1533,7 @@ function renderHomeLista() {
     html += `</div>`;
   } else {
     html += `<div class="card-flush" style="overflow-x:auto"><table class="tracked-table">`;
-    html += `<thead><tr>${th('ticker','TICKER')}${th('nome','NOME')}${th('setor','SETOR')}${th('preco','PREÇO')}${th('var','VAR %')}${th('sinal','SINAL')}<th></th></tr></thead><tbody>`;
+    html += `<thead><tr>${th('ticker','TICKER')}${th('nome','NOME')}${th('setor','SETOR')}${th('preco','PREÇO')}${th('var','VAR %')}<th title="Índice de Força Relativa — zona saudável 50–65" style="cursor:pointer" onclick="sortLista('rsi')">RSI</th><th title="Moving Average Convergence Divergence — positivo = momentum de compra" style="cursor:pointer" onclick="sortLista('macd')">MACD</th><th class="hide-mobile" title="Average Directional Index — > 25 = tendência forte" style="cursor:pointer" onclick="sortLista('adx')">ADX</th><th class="hide-mobile" title="Volume atual vs média de 20 dias" style="cursor:pointer" onclick="sortLista('vol')">Volume</th><th title="Posição relativa às médias SMA50 e SMA200" style="cursor:pointer" onclick="sortLista('sma')">SMA</th><th title="Pontuação do sinal (máximo 4.5)" style="cursor:pointer" onclick="sortLista('score')">Score</th>${th('sinal','SINAL')}<th></th></tr></thead><tbody>`;
     rows.forEach(s => {
       const d = sigMap[s.t];
       const price = d?.price;
@@ -1539,6 +1545,26 @@ function renderHomeLista() {
       html += `<td style="color:var(--ink-3);font-size:11px">${s.s||'—'}</td>`;
       html += `<td style="font-family:var(--font-mono)">${price != null ? 'R$ '+price.toFixed(2) : '—'}</td>`;
       html += `<td style="font-family:var(--font-mono)">${chgStr}</td>`;
+      const rsiVal = d?.rsi != null ? +d.rsi : null;
+      const rsiColor = rsiVal != null ? (rsiVal >= 50 ? 'var(--buy)' : rsiVal < 40 ? 'var(--sell)' : 'var(--ink-2)') : 'var(--ink-3)';
+      html += `<td style="font-family:var(--font-mono);color:${rsiColor}">${rsiVal != null ? rsiVal.toFixed(0) : 'N/D'}</td>`;
+      const macdVal = d?.macd != null ? +d.macd : null;
+      const macdSign = macdVal != null ? (macdVal >= 0 ? '+' : '') : '';
+      const macdArrow = (d?.macdHist != null && +d.macdHist > 0) ? '↑' : (d?.macdHist != null && +d.macdHist < 0) ? '↓' : '';
+      const macdColor = macdVal != null ? (macdVal > 0 ? 'var(--buy)' : 'var(--sell)') : 'var(--ink-3)';
+      html += `<td style="font-family:var(--font-mono);color:${macdColor}">${macdVal != null ? macdSign + macdVal.toFixed(2) + ' ' + macdArrow : 'N/D'}</td>`;
+      const adxVal = d?.adx != null ? +d.adx : null;
+      const adxColor = adxVal != null && adxVal > 25 ? 'var(--primary)' : 'var(--ink-3)';
+      html += `<td class="hide-mobile" style="font-family:var(--font-mono);color:${adxColor}">${adxVal != null ? adxVal.toFixed(1) : 'N/D'}</td>`;
+      const volVal = d?.volRatio != null ? +d.volRatio : null;
+      const volColor = volVal != null && volVal > 1.2 ? 'var(--buy)' : 'var(--ink-2)';
+      html += `<td class="hide-mobile" style="font-family:var(--font-mono);color:${volColor}">${volVal != null ? volVal.toFixed(1) + '×' : 'N/D'}</td>`;
+      const smaLabel = (d?.pA50 && d?.pA200) ? '50+200' : d?.pA50 ? '50' : '—';
+      const smaColor = (d?.pA50 && d?.pA200) ? 'var(--buy)' : d?.pA50 ? 'var(--hold)' : 'var(--sell)';
+      html += `<td style="font-family:var(--font-mono);color:${smaColor}">${smaLabel}</td>`;
+      const scoreVal = d?.score != null ? +d.score : null;
+      const scoreColor = scoreVal != null ? (scoreVal >= 3.0 ? 'var(--buy)' : scoreVal >= 1.5 ? 'var(--hold)' : 'var(--sell)') : 'var(--ink-3)';
+      html += `<td style="font-family:var(--font-mono);color:${scoreColor}">${scoreVal != null ? scoreVal.toFixed(1) + '/4.5' : 'N/D'}</td>`;
       html += `<td>${sigBadge(d?.signal)}</td>`;
       const _isTracked = state.trackedPicks.some(p => p.ticker === s.t);
       html += `<td style="white-space:nowrap" onclick="event.stopPropagation()">
