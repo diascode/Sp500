@@ -1409,6 +1409,124 @@ ações com o que sobra e não vai fazer falta.
 
 ---
 
+### US-218 — Simulador: Incorporar Critérios v2 (Score, Scorecard, Ranking por Convicção)
+
+**Como** usuário no Simulador que quer simular uma operação,
+**Quero** ver o score de convicção do sinal, o detalhamento dos 5 critérios e os ativos ordenados por força do sinal,
+**Para que** eu simule operações nos ativos com maior fundamentação técnica — não apenas os de RSI mais baixo.
+
+**Contexto:**
+O Simulador atual filtra ativos por Compra/Aguardar e os ordena por RSI crescente. Com o Signal Engine v2 (US-210), cada ativo tem um score numérico de 0 a 4.5 que representa convicção real. Um ativo com score 1.1 ("Aguardar fraco") aparece atualmente ao lado de um com score 4.2 ("Compra forte") sem distinção visual. O usuário não sabe qual setup é mais sólido antes de simular.
+
+**Mudanças a implementar em `renderSimulator()` em `stock-dashboard.html`:**
+
+---
+
+#### 1. Ordenar ativos por score decrescente (substituir sort por RSI)
+
+Linha atual (~2298):
+```js
+.sort((a, b) => (a.rsi || 50) - (b.rsi || 50))
+```
+
+Substituir por:
+```js
+.sort((a, b) => (b.score || 0) - (a.score || 0))
+```
+
+Ativos com maior convicção aparecem primeiro na lista de pills.
+
+---
+
+#### 2. Mostrar score em cada ticker pill
+
+Cada pill atualmente mostra apenas um ponto colorido + ticker. Adicionar score:
+
+```
+● PETR4 · 3.8     (verde, score alto)
+● VALE3 · 2.1     (amarelo, score médio)
+● MGLU3 · 1.1     (cinza, score baixo)
+```
+
+Cor do score segue a mesma escala da Lista: verde ≥ 3.0, amarelo 1.5–2.9, cinza < 1.5.
+
+Implementação — no loop de `displayStocks.forEach`:
+```js
+const scoreVal = s.score != null ? +s.score : null;
+const scoreColor = scoreVal != null
+  ? (scoreVal >= 3.0 ? 'var(--buy)' : scoreVal >= 1.5 ? 'var(--hold)' : 'var(--ink-3)')
+  : 'var(--ink-3)';
+const scoreLabel = scoreVal != null ? ` · ${scoreVal.toFixed(1)}` : '';
+// add scoreLabel to the pill button text after ticker
+```
+
+---
+
+#### 3. Painel de Scorecard para o ativo selecionado
+
+Exibir acima dos cenários (TP/SL), após o resumo de quantidade comprada:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  CONVICÇÃO DO SINAL — PETR4                             │
+│  ████████████████░░░  3.8 / 4.5   Alta convicção        │
+│                                                         │
+│  ✅ Tendência SMA50+200    +1.5 pts                     │
+│  ✅ MACD positivo acelerando   +1.0 pts                 │
+│  ✅ RSI 57 — zona saudável     +1.0 pts                 │
+│  ✅ Volume 1.8× média          +0.5 pts                 │
+│  ⚠️ ADX 21 — tendência fraca   +0.0 pts                 │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Label de convicção** baseado no score:
+- score ≥ 3.5 → "Alta convicção" (verde)
+- score ≥ 2.5 → "Convicção moderada" (verde claro)
+- score ≥ 1.5 → "Sinal fraco" (amarelo)
+- score < 1.5 → "Aguardar — sinal muito fraco" (cinza)
+
+**Barra de progresso** visual: `width: ${(score/4.5)*100}%`, cor conforme label.
+
+**Critérios** — mostrar cada um com ícone e pontos efetivos:
+
+| Critério | Condição | Pontos |
+|----------|----------|--------|
+| Tendência SMA | `pA50 && pA200` → +1.5, `pA50` → +0.75 | dinâmico |
+| MACD | `macd > 0 && macdHist > 0` → +1.0, `macd > 0` → +0.5 | dinâmico |
+| RSI | zona 50–65 → +1.0, 65–70 → +0.25, 40–50 → −0.25 | dinâmico |
+| Volume | `volRatio > 1.2` → +0.5 | dinâmico |
+| ADX | `adx > 25` → +0.5 | dinâmico |
+
+Cada linha mostra: ícone (✅/⚠️/❌) + descrição curta + pontos em `var(--font-mono)`.
+
+---
+
+#### 4. Label de convicção no cenário TP
+
+No bloco do Cenário Otimista (🚀 TP atingido), adicionar uma linha extra:
+
+```
+Confiança do sinal: Alta convicção · 3.8/4.5
+```
+
+Cor e texto conforme a mesma escala acima.
+
+---
+
+**Acceptance Criteria:**
+- [ ] Ativos ordenados por score decrescente (maior convicção primeiro).
+- [ ] Cada ticker pill mostra score com cor (verde/amarelo/cinza).
+- [ ] Painel Scorecard aparece para o ativo selecionado mostrando os 5 critérios com pontos e ícone.
+- [ ] Barra de progresso visual mostra score/4.5.
+- [ ] Label de convicção (Alta/Moderada/Fraco) aparece no painel e no cenário TP.
+- [ ] Valores "N/D" para campos ausentes — sem crash.
+- [ ] Layout funciona em mobile (scorecard empilha verticalmente).
+
+**Depends on:** US-210 (score em analyze()) — já shipado em Sprint 20.
+**Sprint:** 26 · **Effort:** 2h · **Priority:** 🟡 High
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -1416,7 +1534,7 @@ ações com o que sobra e não vai fazer falta.
 | 18 | 38, 40, 43 | US-173–175, US-177, US-191, US-192, US-201 | Lista Interatividade, CPF toggle, tradução "Positions", fix DARF link, B3 watchlist prices | ✅ Done |
 | 19 | 39, 44, 45, 46 | US-176, US-207, US-208, US-209 | Acompanhados redesign + ADMIN_EMAIL env var + delete account PT fix + signup 500 fix | ✅ Done |
 | 20 | 47 | US-210, US-211, US-212, US-213, US-214 | Signal Engine v2 — scoring fix, ATR exits, score display, Por que enrichment, indicator columns | ✅ Done |
-| 26 | 48 | US-215, US-216, US-217 | Education & Onboarding — Primeiros Passos, Sinal Momentum module, CDB/CDI module | 📋 Planned |
+| 26 | 48 | US-215, US-216, US-217, US-218 | Education & Onboarding — Primeiros Passos, Sinal Momentum module, CDB/CDI module, Simulador scorecard | 📋 Planned |
 | 23 | 43 | US-193–201 | Security & Code Quality — Critical + Major | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | 📋 Planned |
 | 25 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
