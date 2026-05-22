@@ -194,6 +194,36 @@ Atualmente o CPF é validado e obrigatório em `server.js` no endpoint `/api/aut
 
 ## 📋 Sprint 19 — Planned
 
+## Epic 46 — Sprint 19: Signup Estabilidade em Fresh Install
+
+### US-209 — "Internal Server Error" Intermitente no Primeiro Cadastro em Nova Instalação
+**As a** developer or user setting up MOMENTUM on a new machine,
+**I want** the signup to succeed on the first attempt,
+**so that** I don't have to refresh the page and retry to create an account.
+
+**Observed behaviour:** On a fresh Docker install, the first signup attempt returns `Internal server error (500)`. Refreshing and trying again succeeds. Subsequent signups always work.
+
+**Root cause analysis (most likely):**
+1. **Missing `data/` directory on first boot.** `saveUsers()` calls `fs.mkdirSync({ recursive: true })` before writing, but on some Docker volume configurations `fs.renameSync(tmp, DB_PATH)` can race with the volume mount completing — throwing `ENOENT` or `EXDEV` which bubbles up as a 500.
+2. **`scryptSync` slow on cold start.** `crypto.scryptSync` is CPU-blocking. On a resource-constrained or cold Docker container it can take 1–3s, potentially exceeding client-side timeouts before returning — causing the client to receive an error even though the server succeeds.
+3. **No startup pre-flight.** The server starts accepting HTTP connections before verifying the `data/` directory is writable. First inbound request hits the unready state.
+
+**Implementation:**
+- In `server.js` startup sequence, add a pre-flight check: create `data/` dir and write a test file before the HTTP server starts listening. If it fails, log a clear error and exit.
+- In `lib/auth.js`, wrap `saveUsers` write+rename in a retry loop (max 3 attempts, 50ms apart) to handle transient filesystem race on Docker volume mount.
+- Log the actual caught error (not just "Internal server error") to `console.error` so future failures are diagnosable: `console.error('[signup error]', err)`.
+- Add `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `ADMIN_EMAIL` to `.env.example` with comments — currently missing, causing confusing `undefined` values on fresh installs.
+
+**Acceptance Criteria:**
+- Fresh Docker install: first signup attempt succeeds without needing a refresh.
+- If `data/` directory is not writable, server logs a clear message on startup and refuses to start (rather than failing silently on first request).
+- Actual error details are logged server-side (not swallowed), so the root cause is visible in `docker logs jerry-stock-dashboard`.
+- `.env.example` includes `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `ADMIN_EMAIL`.
+
+**Sprint:** 19 · **Effort:** 45min · **Priority:** 🔴 High (blocks new deployments)
+
+---
+
 ## Epic 45 — Sprint 19: UX & Localização
 
 ### US-208 — Confirmação de Exclusão de Conta em Português com Double-Confirm
@@ -910,7 +940,7 @@ if (typed !== 'EXCLUIR') return;
 | Sprint | Epics | Stories | Theme | Status |
 |--------|-------|---------|-------|--------|
 | 18 | 38, 40, 43 | US-173–175, US-177, US-191, US-192, US-201 | Lista Interatividade, CPF toggle, tradução "Positions", fix DARF link, B3 watchlist prices | 🔄 In Progress |
-| 19 | 39, 44, 45 | US-176, US-207, US-208 | Acompanhados redesign + ADMIN_EMAIL env var + delete account PT fix | 📋 Planned |
+| 19 | 39, 44, 45, 46 | US-176, US-207, US-208, US-209 | Acompanhados redesign + ADMIN_EMAIL env var + delete account PT fix + signup 500 fix | 📋 Planned |
 | 23 | 43 | US-193–201 | Security & Code Quality — Critical + Major | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | 📋 Planned |
 | 20 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
