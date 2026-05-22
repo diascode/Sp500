@@ -1634,6 +1634,78 @@ const smaColor = (d?.pA50 && d?.pA200) ? 'var(--buy)'
 
 ---
 
+## Epic 49 — Lista Completa com Sinais
+
+### US-220 — Lista: Exibir Todos os Ativos com Sinais Completos
+
+**Como** usuário da aba Lista,
+**Quero** ver todos os ativos do universo Brasil com seus sinais e indicadores calculados,
+**Para que** eu possa comparar e filtrar o mercado completo sem precisar clicar em "Varrer" manualmente.
+
+**Contexto — por que hoje não funciona:**
+
+A Lista mostra todos os ativos de `state.universeCache['brasil']` (universo completo), mas os sinais (RSI, MACD, ADX, Score, Sinal) só aparecem para stocks em `state.analyzed['brasil']`, que só é populado após uma varredura manual ("⚡ Varrer"). Dois problemas adicionais agravam isso:
+
+1. **Filtro de candles silencioso** (`scanMarket`, linha ~1060): `if (c.length > 100)` — ativos com menos de 100 velas históricas (listagens recentes, FIIs, BDRs) são descartados silenciosamente e nunca entram em `state.analyzed`. Aparecem na Lista com `N/D` em todas as colunas.
+
+2. **Sem auto-varredura ao abrir a Lista**: Entrar na aba Lista sem ter varrido antes resulta em uma tabela com 300+ linhas e zero sinais. O usuário não recebe nenhum aviso nem botão de ação dentro da tabela.
+
+**Mudanças de implementação:**
+
+#### 1. Auto-scan ao entrar na Lista (`setHomeMode` / `renderHomeLista`)
+
+Em `setHomeMode('lista')`, verificar se `state.analyzed['brasil']` está vazio. Se sim, disparar `scanMarket('brasil')` em background e mostrar um banner de progresso no topo da tabela:
+
+```js
+if (state.homeMode === 'lista' && !(state.analyzed['brasil']||[]).length) {
+  // Show inline progress bar, then scan
+  _listaScanning = true;
+  scanMarket('brasil').then(() => { _listaScanning = false; renderHomeLista(); });
+}
+```
+
+O banner deve mostrar: `"Calculando sinais… X de Y ações"` — atualizando a cada tick de `scanMarket`. A tabela exibe linhas à medida que os resultados chegam (re-render progressivo via `renderHomeLista()` já chamado dentro de `scanMarket`).
+
+#### 2. Abaixar threshold de candles: `> 100` → `>= 30`
+
+Em `scanMarket()`:
+```js
+// ANTES:
+if (c.length > 100) {
+
+// DEPOIS:
+if (c.length >= 30) {
+```
+
+Com 30 velas (~6 semanas de pregão) é possível calcular RSI(14), MACD(12,26) básico e SMA50 parcial. Para ativos com menos de 50 velas, indicadores que requerem mais dados (`pA50`, `pA200`, `adx`) serão `null` e exibirão `N/D`, mas o ativo ainda aparece com os indicadores disponíveis em vez de sumir completamente.
+
+#### 3. Distinção visual: `N/D` vs `Sem dados`
+
+Na renderização da Lista:
+- Ativo **analisado mas indicador nulo** (ex: SMA200 sem dados suficientes): mostrar `N/D` em cinza claro.
+- Ativo **não analisado** (fora do `sigMap`): mostrar `—` em cinza mais escuro com `title="Não varrido"`.
+
+Isso permite que o usuário distinga entre "indicador calculado mas ausente" e "ativo nunca analisado".
+
+#### 4. Botão "Varrer Lista" no header da Lista (fallback manual)
+
+No header da Lista (ao lado do campo de busca), adicionar um botão `"⚡ Varrer Lista"` que dispara `scanMarket('brasil')` e re-renderiza progressivamente. O botão fica desabilitado durante a varredura e mostra `"Varrendo… X%"`.
+
+**Acceptance Criteria:**
+- [ ] Ao clicar em "📋 Lista" pela primeira vez (sem varredura prévia), a varredura inicia automaticamente e um banner de progresso aparece no topo da tabela.
+- [ ] Ativos com 30–99 velas são incluídos na varredura e aparecem na Lista com os indicadores que for possível calcular.
+- [ ] Ativos sem nenhum dado de mercado (falha total no fetch) continuam mostrando `—` e não travam o render.
+- [ ] Há um botão "⚡ Varrer Lista" no header que permite re-varrer manualmente.
+- [ ] O botão fica desabilitado e mostra progresso durante a varredura.
+- [ ] Após a varredura, a tabela exibe sinais (Compra / Aguardar / Venda) para todos os ativos que retornaram dados suficientes.
+- [ ] Se a varredura já foi feita (sinais em cache), abrir a Lista não dispara uma nova varredura automática.
+- [ ] Sem regressão no comportamento atual de "Varrer" pelo botão global.
+
+**Depends on:** US-214 (colunas da Lista — já shipado)
+**Sprint:** 27 · **Effort:** 3h · **Priority:** 🔴 High
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -1643,6 +1715,7 @@ const smaColor = (d?.pA50 && d?.pA200) ? 'var(--buy)'
 | 20 | 47 | US-210, US-211, US-212, US-213, US-214 | Signal Engine v2 — scoring fix, ATR exits, score display, Por que enrichment, indicator columns | ✅ Done |
 | 26 | 48 | US-215, US-216, US-217, US-218, US-219 | Education & Onboarding — Primeiros Passos, Sinal Momentum module, CDB/CDI module, Simulador scorecard, SMA50/200 split scoring | ✅ Done |
 | 23 | 43 | US-193–200 | Security & Code Quality — Critical + Major | ✅ Done |
+| 27 | 49 | US-220 | Lista: auto-scan + all signals displayed | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | 📋 Planned |
 | 25 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
 | 21 | 41 | US-183, US-184, US-189 | Admin Fase 2: Consentimento LGPD + Direitos do Titular | 🔒 Parked |
