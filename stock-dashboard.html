@@ -56,6 +56,7 @@
                 <button class="theme-chip" data-theme="calmo"  onclick="selectTheme('calmo')">Calmo</button>
               </div>
             </div>
+            <button class="dropdown-item" onclick="showOnboardingModal()">🚀 Primeiros Passos</button>
             <button class="dropdown-item" onclick="showChangePassword()">🔑 Alterar senha</button>
             <button class="dropdown-item" id="adminPanelBtn" onclick="showAdminView()" style="display:none">⚙️ Painel admin</button>
             <button class="dropdown-item" onclick="exportMyData()">📥 Exportar meus dados</button>
@@ -486,6 +487,29 @@ function showAuthModal() {
 
 function closeAuthModal() { document.getElementById('authModal').classList.remove('show'); }
 
+function showOnboardingModal() {
+  const el = document.getElementById('onboardingModal');
+  if (el) el.style.display = 'flex';
+}
+
+function dismissOnboarding() {
+  const el = document.getElementById('onboardingModal');
+  if (el) el.style.display = 'none';
+}
+
+async function completeOnboarding() {
+  dismissOnboarding();
+  if (!authUser) return;
+  try {
+    await fetch('/api/user/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('momentum_token') },
+      body: JSON.stringify({ onboardingDone: true })
+    });
+    if (authUser) authUser.onboardingDone = true;
+  } catch(e) {}
+}
+
 function showForgotPanel(show) {
   document.getElementById('authForm').style.display = show ? 'none' : '';
   document.getElementById('forgotPanel').style.display = show ? '' : 'none';
@@ -576,6 +600,9 @@ async function submitAuth() {
       closeAuthModal();
       if (authMode === 'signup') {
         showToast('📧 Check your email for a verification link.', true, 5000);
+      }
+      if (authUser && !authUser.onboardingDone) {
+        setTimeout(showOnboardingModal, 800);
       }
     } else {
       errEl.textContent = data.error || t('auth_wrongCredentials');
@@ -4611,5 +4638,35 @@ init();
     <span class="bn-label">Carteira</span>
   </button>
 </nav>
+
+<div id="onboardingModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--surface);border-radius:16px;max-width:480px;width:100%;padding:32px;position:relative;max-height:90vh;overflow-y:auto">
+    <div style="font-size:36px;text-align:center;margin-bottom:16px">🚀</div>
+    <h2 style="font-family:var(--font-display);font-size:24px;font-weight:700;text-align:center;margin:0 0 8px">Bem-vindo ao Momentum!</h2>
+    <p style="color:var(--ink-3);text-align:center;font-size:14px;margin:0 0 24px">Veja o que você pode fazer:</p>
+    <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:28px">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <span style="font-size:22px;flex-shrink:0">📡</span>
+        <div><strong style="color:var(--ink)">Passo 1 — Varra o mercado</strong><br><span style="font-size:13px;color:var(--ink-3)">Clique em "Varrer Agora" para analisar as ações. O Momentum calcula RSI, MACD, ADX e exibe um sinal: Compra, Aguardar ou Venda.</span></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <span style="font-size:22px;flex-shrink:0">⭐</span>
+        <div><strong style="color:var(--ink)">Passo 2 — Acompanhe oportunidades</strong><br><span style="font-size:13px;color:var(--ink-3)">Clique ⭐ em qualquer ação para adicioná-la aos Acompanhados. Veja P&L%, VAR%, MACD e ADX em tempo real.</span></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <span style="font-size:22px;flex-shrink:0">💼</span>
+        <div><strong style="color:var(--ink)">Passo 3 — Simule uma operação</strong><br><span style="font-size:13px;color:var(--ink-3)">Vá em Carteira e adicione uma compra simulada. Acompanhe seu resultado sem arriscar dinheiro real.</span></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <span style="font-size:22px;flex-shrink:0">📚</span>
+        <div><strong style="color:var(--ink)">Passo 4 — Aprenda os indicadores</strong><br><span style="font-size:13px;color:var(--ink-3)">Vá em Educação para entender RSI, MACD, ADX, DARF e mais. 16+ lições para operar com mais segurança.</span></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px">
+      <button onclick="completeOnboarding()" style="flex:1;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px">Começar agora →</button>
+      <button onclick="dismissOnboarding()" style="padding:12px 16px;background:transparent;color:var(--ink-3);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px">Ver depois</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
