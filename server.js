@@ -136,7 +136,7 @@ async function handleRequest(req, res) {
   const pathname = url.pathname;
 
   // Auth rate limiting (IP-based)
-  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const clientIp = req.socket.remoteAddress || 'unknown';
   if ((pathname === '/api/auth/login' || pathname === '/api/auth/signup' || pathname === '/api/auth/forgot-password') && req.method === 'POST') {
     if (!checkAuthRateLimit(clientIp)) return sendError(res, 429, 'Too many attempts. Please wait 15 minutes before trying again.');
   }
@@ -337,6 +337,12 @@ async function handleRequest(req, res) {
       if (!authUser) return sendError(res, 401, 'Not authenticated');
       const body = await readBody(req);
       if (!Array.isArray(body)) return sendError(res, 400, 'Portfolio must be an array');
+      if (body.length > 500) return sendError(res, 400, 'Payload too large');
+      for (const item of body) {
+        if (typeof item.ticker !== 'string' || item.ticker.length > 20) return sendError(res, 400, 'Invalid ticker');
+        if (item.quantity != null && typeof item.quantity !== 'number') return sendError(res, 400, 'Invalid quantity');
+        if (item.buyPrice != null && typeof item.buyPrice !== 'number') return sendError(res, 400, 'Invalid price');
+      }
       const user = findUser(authUser.email);
       if (!user) return sendError(res, 404, 'User not found');
       user.portfolio = body;
@@ -358,6 +364,11 @@ async function handleRequest(req, res) {
       if (!authUser) return sendError(res, 401, 'Not authenticated');
       const body = await readBody(req);
       if (!Array.isArray(body)) return sendError(res, 400, 'Tracked picks must be an array');
+      if (body.length > 500) return sendError(res, 400, 'Payload too large');
+      for (const item of body) {
+        if (typeof item.ticker !== 'string' || item.ticker.length > 20) return sendError(res, 400, 'Invalid ticker');
+        if (item.entryPrice != null && typeof item.entryPrice !== 'number') return sendError(res, 400, 'Invalid price');
+      }
       const user = findUser(authUser.email);
       if (!user) return sendError(res, 404, 'User not found');
       user.trackedPicks = body;
@@ -492,8 +503,12 @@ async function handleRequest(req, res) {
 
     if (pathname === '/api/stripe/webhook' && req.method === 'POST') {
       if (!stripe || !ENV.STRIPE_WEBHOOK_SECRET) return sendError(res, 503, 'Stripe webhook not configured');
-      let body = '';
-      req.on('data', c => body += c);
+      let body = '', size = 0;
+      req.on('data', chunk => {
+        size += chunk.length;
+        if (size > 1_048_576) { req.destroy(); return; }
+        body += chunk;
+      });
       await new Promise(resolve => req.on('end', resolve));
       try {
         const sig = req.headers['stripe-signature'];
