@@ -2131,6 +2131,447 @@ state = { ..., backtestResults: null };
 
 ---
 
+## Epic 52 — Strategy Engine: Saída, Regime e Capital
+
+### US-223 — Saída Inteligente: Stop Móvel + Prazo de 20 Dias
+
+**Como** usuário que acompanha sinais de Alta Convicção,
+**Quero** que cada posição tenha uma regra clara de saída — um prazo máximo e um stop que sobe junto com o preço —
+**Para que** eu nunca fique preso numa posição por indecisão e meus ganhos sejam protegidos quando o papel valoriza.
+
+**O que muda para o usuário:**
+
+Hoje cada sinal tem um alvo fixo (+3×ATR) e um stop fixo (−1.5×ATR) que nunca se movem. Na prática, a maioria das posições não chega em nenhum dos dois — o usuário fica sem saber quando sair. Após esta story:
+
+- Cada posição rastreada exibe: **"Saída em 12 pregões"** (contagem regressiva visível)
+- Se o papel subir e recuar, o **stop móvel** trava os ganhos a 2×ATR abaixo do ponto mais alto atingido
+- O usuário sempre sabe: *"Saio no prazo ou quando o stop móvel for atingido, o que vier primeiro"*
+- Cards de posição mostram: preço de entrada, stop atual (atualizado), dias restantes
+
+**Implementação — `stock-dashboard.html`:**
+
+#### Lógica de saída por posição em `state.trackedPicks`
+
+Ao registrar uma posição, salvar:
+```js
+{
+  ticker, entryPrice, entryDate,
+  atrAtEntry,          // ATR no dia de entrada
+  highSinceEntry,      // atualizado a cada varredura
+  holdDays: 20,        // padrão; varia se regime ativo (US-224)
+  exitRule: 'time_or_trail'
+}
+```
+
+A cada varredura, para cada pick ativo:
+```js
+const daysHeld = businessDaysBetween(pick.entryDate, today);
+const trailStop = pick.highSinceEntry - 2 * pick.atrAtEntry;
+const timeExit  = daysHeld >= pick.holdDays;
+const stopHit   = currentPrice <= trailStop && pick.highSinceEntry > pick.entryPrice;
+
+if (timeExit || stopHit) {
+  // sinalizar saída recomendada com motivo
+  pick.exitSignal = timeExit ? 'prazo' : 'stop_movel';
+  pick.exitPrice  = currentPrice;
+}
+// Atualizar highSinceEntry
+if (currentPrice > pick.highSinceEntry) pick.highSinceEntry = currentPrice;
+```
+
+#### UI — cards de posição em `renderTrackedPicks()`
+
+Cada card mostra:
+- **Barra de progresso**: `████████░░ 8/20 pregões`
+- **Stop móvel atual**: `Stop: R$18.40 (↑ de R$17.20 na entrada)`
+- **Status**: `✅ Dentro do prazo` / `⚠️ Saída recomendada — prazo atingido` / `🔴 Saída recomendada — stop atingido`
+
+Remover o alvo fixo (`tp`) da exibição — substituir pelo stop móvel.
+
+**Acceptance Criteria:**
+- [ ] Cada pick salvo inclui `atrAtEntry`, `highSinceEntry`, `holdDays`, `exitRule`.
+- [ ] A cada varredura, `highSinceEntry` é atualizado e `trailStop` recalculado.
+- [ ] Card mostra contagem de dias restantes e stop móvel atual em R$.
+- [ ] Quando prazo OU stop são atingidos, card destaca a saída recomendada com motivo.
+- [ ] Módulo de educação US-229 é linkado no card via "?" tooltip.
+
+**Depends on:** US-211 (ATR exits base), US-229 (training module)
+**Sprint:** 30 · **Effort:** 3h · **Priority:** 🔴 High · **Epic:** 52
+
+---
+
+### US-224 — Filtro de Regime de Mercado (IBOV)
+
+**Como** usuário do Momentum,
+**Quero** que o app me avise quando o mercado está em condição desfavorável para compras —
+**Para que** eu não entre em posições durante quedas do IBOV que historicamente eliminam o ganho dos sinais técnicos.
+
+**O que muda para o usuário:**
+
+Em outubro de 2022, o app teria gerado sinais de Alta Convicção para PETR4, MGLU3 e SMTO3 — todas perderam 28–38% em 20 dias porque o IBOV estava em queda confirmada. Com o filtro de regime, esses sinais não teriam aparecido como acionáveis.
+
+O usuário vê, no topo da tela (abaixo do header), um indicador de 3 estados:
+
+```
+🟢 Mercado Favorável   — sinais normais, capital total
+🟡 Mercado Neutro      — apenas score ≥ 4.0, posições menores
+🔴 Mercado em Alerta   — nenhum sinal de compra recomendado
+                          "IBOV abaixo da SMA200 — aguardando recuperação"
+```
+
+Em RISK_OFF, o app substitui os sinais de Compra por uma mensagem explicativa e um link para o módulo de educação US-228.
+
+**Implementação — `stock-dashboard.html` + `server.js`:**
+
+#### Cálculo do regime em `scanMarket()` / novo `calcMarketRegime()`
+
+BOVA11.SA já está no universo. A cada varredura, buscar seus candles e calcular:
+
+```js
+function calcMarketRegime(bova11Candles) {
+  const closes  = bova11Candles.map(c => c.c);
+  const sma200  = calcSMA(bova11Candles, 200);
+  const sma50   = calcSMA(bova11Candles, 50);
+  const last    = closes.length - 1;
+  const price   = closes[last];
+  const hi60    = Math.max(...closes.slice(-60));
+  const drawdown = (hi60 - price) / hi60;
+  const atrPct   = calcATR(bova11Candles, 20)[last] / price;
+
+  if (price < sma200[last] || drawdown > 0.15 || atrPct > 0.025) return 'risk_off';
+  if (price > sma200[last] && sma50[last] > sma200[last] && drawdown < 0.08) return 'risk_on';
+  return 'neutral';
+}
+```
+
+Salvar em `state.marketRegime`. Reavaliado a cada varredura.
+
+#### Aplicação do regime
+
+- **risk_on**: sistema completo, threshold 3.5
+- **neutral**: threshold sobe para 4.0; posição padrão × 0.5 (exibido no card)
+- **risk_off**: `renderDashboard()` em modo Sinais mostra banner vermelho + zero sinais de compra; Lista ainda exibe os dados mas sem badge "Alta Convicção"; Simulador mostra aviso
+
+#### Indicador visual no header
+
+Entre a barra de navegação e os seg-btns, adicionar:
+```html
+<div id="regimeIndicator" style="...">
+  🟢 Mercado Favorável — sinais ativos
+</div>
+```
+
+Atualizado após cada varredura.
+
+**Acceptance Criteria:**
+- [ ] `calcMarketRegime()` retorna `risk_on` / `neutral` / `risk_off` baseado em BOVA11.SA.
+- [ ] Indicador de regime visível no header em todas as views (Sinais, Lista, Simulador).
+- [ ] Em `risk_off`: nenhum sinal aparece com badge "Alta Convicção"; banner explica motivo.
+- [ ] Em `neutral`: sinais com score < 4.0 aparecem como "Monitorar" independente do score original.
+- [ ] Regime é recalculado a cada varredura e persiste em `state.marketRegime`.
+- [ ] Link para módulo de educação US-228 aparece no banner de RISK_OFF.
+
+**Depends on:** US-222 (threshold logic), US-228 (training module)
+**Sprint:** 31 · **Effort:** 4h · **Priority:** 🔴 High · **Epic:** 52
+
+---
+
+### US-225 — Capital Composto + Caixa Rende CDI no Simulador
+
+**Como** usuário do Simulador,
+**Quero** que meus ganhos sejam reinvestidos automaticamente nas próximas posições e que o capital parado renda CDI —
+**Para que** o Simulador reflita como funciona um investimento real e eu veja o efeito do juro composto ao longo do tempo.
+
+**O que muda para o usuário:**
+
+Hoje o Simulador usa R$100 fixo por posição independente de ganhos anteriores. Após esta story:
+
+1. **Compounding**: posição = 10% do capital atual. Se o usuário começou com R$1.000 e tem agora R$1.200, cada posição é R$120 — os ganhos trabalham para gerar mais ganhos.
+
+2. **Caixa rende CDI**: quando menos de 10 posições estão abertas, o capital parado aparece com um rendimento estimado baseado na taxa CDI atual (~13,75% a.a.). Exibido como: `"R$400 em caixa · rendendo ~R$0,15/dia (CDI)"`.
+
+3. **Comparativo honesto**: o Simulador passa a mostrar a comparação correta entre a estratégia e o CDI — antes, o caixa parado rendia zero no cálculo, subestimando o retorno real.
+
+**Implementação — `stock-dashboard.html` (Simulador):**
+
+```js
+const CDI_ANNUAL = 0.1375;  // configurável — reavaliar a cada sprint
+const CDI_DAILY  = Math.pow(1 + CDI_ANNUAL, 1/252) - 1;
+
+// Em vez de POSITION_SIZE fixo:
+function calcPositionSize(equity) {
+  return Math.floor(equity * 0.10 / 10) * 10; // 10% do equity, arredondado p/ R$10
+}
+
+// Rendimento diário do caixa
+function applyIdleCDI(state, daysElapsed) {
+  const deployed = state.openPositions.reduce((s,p) => s + p.cost, 0);
+  const idle = state.equity - deployed;
+  state.equity += idle * CDI_DAILY * daysElapsed;
+}
+```
+
+**UI — painel de capital no Simulador:**
+
+```
+Capital total:    R$1.243,80
+  ├ Posições abertas:  R$840  (6 posições × ~R$140)
+  └ Caixa (CDI):       R$403,80  +R$0,15/dia estimado
+Tamanho por posição: R$124 (10% do capital)
+```
+
+**Acceptance Criteria:**
+- [ ] Tamanho de posição = 10% do equity atual (não R$100 fixo).
+- [ ] Capital parado acumula rendimento CDI diário proporcional ao período simulado.
+- [ ] Painel de capital mostra split posições / caixa com rendimento estimado.
+- [ ] Comparativo CDI no Simulador usa o mesmo CDI_ANNUAL como linha de referência (não zero).
+- [ ] Módulo de educação US-228 linkado via "?" no painel de capital.
+
+**Depends on:** US-218 (Simulador base), US-228 (training module)
+**Sprint:** 32 · **Effort:** 3h · **Priority:** 🔴 High · **Epic:** 52
+
+---
+
+### US-226 — Tamanho de Posição por Qualidade + Limite por Setor
+
+**Como** usuário que segue múltiplos sinais simultaneamente,
+**Quero** que o app aposte mais nos sinais de maior qualidade e menos nos de maior risco —
+**Para que** as posições com maior probabilidade de ganho pesem mais no meu resultado final.
+
+**O que muda para o usuário:**
+
+Hoje todos os sinais recebem o mesmo tamanho (R$100, ou 10% após US-225). Após esta story, o usuário vê no card de cada sinal e no Simulador:
+
+```
+WEGE3  score 4.5  → Posição: R$156  (alta convicção, baixa vol)
+PETR4  score 3.5  → Posição: R$72   (convicção mínima, vol elevada)
+```
+
+E se dois sinais do mesmo setor já estiverem abertos:
+```
+PRIO3 — ⚠️ Energia já em 22% do capital (limite: 25%) — posição reduzida
+```
+
+**Implementação — `stock-dashboard.html`:**
+
+```js
+const SECTOR_MAP = {
+  'PETR4.SA':'energia','PRIO3.SA':'energia','CSAN3.SA':'energia','UGPA3.SA':'energia','VBBR3.SA':'energia',
+  'VALE3.SA':'materiais','SUZB3.SA':'materiais','GGBR4.SA':'materiais','CSNA3.SA':'materiais',
+  'ITUB4.SA':'financeiro','BBDC4.SA':'financeiro','BBAS3.SA':'financeiro','B3SA3.SA':'financeiro',
+  'ABEV3.SA':'consumo','JBSS3.SA':'consumo','BRFS3.SA':'consumo','SMTO3.SA':'consumo',
+  'WEGE3.SA':'industrial','RAIL3.SA':'industrial','EMBR3.SA':'industrial',
+  'EQTL3.SA':'utilidades','TAEE11.SA':'utilidades','CPFE3.SA':'utilidades','CMIG4.SA':'utilidades','SBSP3.SA':'utilidades','ELET3.SA':'utilidades',
+  'VIVT3.SA':'telecom','TIMS3.SA':'telecom',
+  'MGLU3.SA':'varejo','LREN3.SA':'varejo','PETZ3.SA':'varejo',
+  'RADL3.SA':'saude','HAPV3.SA':'saude',
+  'TOTS3.SA':'tecnologia',
+  'SLCE3.SA':'agro','AGRO3.SA':'agro','MRFG3.SA':'agro',
+  'MULT3.SA':'imoveis','RENT3.SA':'imoveis',
+};
+
+function calcAdjustedSize(baseSize, score, atrPct, ticker, openPositions, equity) {
+  // Score multiplier
+  const scoreMult = score >= 4.5 ? 1.50 : score >= 4.0 ? 1.20 : score >= 3.75 ? 1.00 : 0.70;
+
+  // Volatility normalisation (target 2.2% ATR as baseline)
+  const volMult = Math.min(Math.max(0.022 / (atrPct || 0.022), 0.6), 1.4);
+
+  // Sector cap (25% of equity max per sector)
+  const sector = SECTOR_MAP[ticker];
+  const sectorExposure = openPositions
+    .filter(p => SECTOR_MAP[p.ticker] === sector)
+    .reduce((s, p) => s + p.cost, 0);
+  const sectorMult = (sectorExposure / equity) >= 0.25 ? 0.0 : 1.0; // block if at cap
+
+  return Math.round(baseSize * scoreMult * volMult * sectorMult / 10) * 10;
+}
+```
+
+**UI — card de sinal:**
+
+Adicionar abaixo do badge de sinal:
+```
+Posição sugerida: R$124
+  Score 4.0 ↑  ·  Vol normal  ·  Setor: 12% do capital
+```
+
+Se setor em limite: `⚠️ Setor Energia no limite (25%) — sinal postergado`
+
+**Acceptance Criteria:**
+- [ ] `calcAdjustedSize()` combina score × vol × setor corretamente.
+- [ ] Score 3.5 em ação volátil resulta em posição menor que base; score 4.5 em ação estável resulta em maior.
+- [ ] Setor no limite (≥ 25% do equity) → posição bloqueada com explicação.
+- [ ] SECTOR_MAP cobre todos os 40 ativos do universo Brasil.
+- [ ] Posição sugerida visível no card do sinal e no Simulador.
+- [ ] Módulo US-228 linkado via tooltip "Como calculamos o tamanho?".
+
+**Depends on:** US-225 (equity base), US-222 (score), US-228 (training)
+**Sprint:** 32 · **Effort:** 4h · **Priority:** 🟡 Medium · **Epic:** 52
+
+---
+
+## Epic 53 — Educação: Estratégia Avançada
+
+### US-227 — Módulo "Saída Inteligente — Stop Móvel e o Prazo de 20 Dias"
+
+**Como** usuário que nunca usou stop ou saída programada,
+**Quero** entender por que o app sugere sair em 20 dias e o que é um stop móvel —
+**Para que** eu siga as saídas com confiança em vez de ignorá-las por falta de entendimento.
+
+**Contexto educacional:**
+
+O maior erro do investidor iniciante não é entrar errado — é não saber quando sair. Segurar um papel que caiu esperando "voltar" é o comportamento que transforma pequenas perdas em grandes. Este módulo explica a lógica de saída do Momentum de forma que qualquer pessoa entenda, sem jargão financeiro.
+
+**Conteúdo do módulo (em PT-BR, tom de conversa):**
+
+> **Por que sair em 20 dias?**
+>
+> O Momentum analisou 5 anos de histórico de 33 ações brasileiras. Descobrimos que os sinais de Alta Convicção geram o maior retorno médio nos primeiros 20 pregões após a entrada. Depois disso, a probabilidade de ganho começa a cair — o movimento já aconteceu.
+>
+> 20 dias = aproximadamente 1 mês de pregão. É tempo suficiente para o mercado "digerir" o sinal, mas não tanto que outros fatores comecem a dominar.
+>
+> **O que é um stop móvel?**
+>
+> Imagine que você comprou WEGE3 a R$40. O papel sobe para R$46. Um stop fixo travaria sua saída em R$38 (abaixo da entrada). Mas com o stop móvel, ele sobe junto: agora protege em R$43. Se o papel continuar subindo para R$50, o stop sobe para R$47.
+>
+> O stop móvel nunca desce. Só sobe. Assim você protege os ganhos acumulados sem precisar monitorar o papel o dia todo.
+>
+> **E se o stop for atingido antes dos 20 dias?**
+>
+> Sai. Sem hesitação. O stop foi calculado sobre o ATR — a volatilidade normal do papel. Se ele caiu abaixo do stop, algo mudou. O sinal foi invalidado. Não faz sentido esperar os 20 dias se o mercado já mostrou que estava errado.
+>
+> **Resumo:**
+> ✅ Saia no 20º pregão se o stop não tiver sido atingido
+> ✅ Saia antes se o stop móvel for tocado
+> ✅ O app avisa os dois — você só precisa agir
+
+Adicionar exemplos visuais (mini-chart ASCII ou tabela simples) mostrando:
+- Trade vencedor: entrada → stop sobe junto → saída no topo
+- Trade perdedor: entrada → cai → stop atingido no dia 7 → saída protegida
+
+**Acceptance Criteria:**
+- [ ] Módulo registrado em COURSE_MODULES sob categoria "Estratégia".
+- [ ] Ícone: 🛡️, nome: "Saída Inteligente".
+- [ ] Conteúdo em PT-BR e EN (keys `edu_smartExitBody` em `static/i18n.js`).
+- [ ] Link para o módulo aparece no card de posição rastreada (tooltip "?").
+- [ ] Módulo menciona explicitamente os 20 dias e o cálculo 2×ATR do stop.
+
+**Sprint:** 30 · **Effort:** 2h · **Priority:** 🟡 Medium · **Epic:** 53
+
+---
+
+### US-228 — Módulo "Regime de Mercado — Quando Investir e Quando Esperar"
+
+**Como** usuário que vê o indicador de regime na tela,
+**Quero** entender o que significa 🟢 / 🟡 / 🔴 e por que o app para de mostrar compras em alerta —
+**Para que** eu confie no sistema em vez de ficar frustrado quando não aparecem sinais.
+
+**Contexto educacional:**
+
+A maior surpresa para usuários novos será ver a tela de Sinais vazia durante um período de RISK_OFF. Sem explicação, a reação natural é "o app quebrou" ou "não funciona". Este módulo transforma essa frustração em confiança.
+
+**Conteúdo do módulo (em PT-BR, tom de conversa):**
+
+> **O que é regime de mercado?**
+>
+> O Momentum monitora o índice IBOV (via BOVA11) para entender se o mercado como um todo está em alta, lateral ou em queda. Chamamos isso de "regime".
+>
+> Mesmo a melhor ação, com todos os indicadores positivos, tende a cair durante uma queda do IBOV. É como nadar contra a maré: você pode ser um ótimo nadador, mas a maré mais forte.
+>
+> **Os três estados:**
+>
+> 🟢 **Favorável** — IBOV acima da média de 200 dias, tendência clara de alta. Os sinais de Alta Convicção têm historicamente 60–65% de acerto neste regime.
+>
+> 🟡 **Neutro** — IBOV em zona de indefinição. O app só mostra sinais com score muito alto (≥ 4.0) e sugere posições menores. É como dirigir em neblina: pode continuar, mas devagar.
+>
+> 🔴 **Em Alerta** — IBOV abaixo da média de 200 dias ou caindo mais de 15% do topo recente. O app pausa os sinais de compra. Em vez de entrar em posições de risco, o capital parado rende CDI.
+>
+> **O que fazer em cada estado?**
+>
+> - 🟢: siga os sinais normalmente
+> - 🟡: seja seletivo, prefira scores ≥ 4.0, posições menores
+> - 🔴: não compre. Revise posições abertas. Deixe o caixa render.
+>
+> **Isso não é "market timing"?**
+>
+> Market timing significa tentar prever o topo e o fundo exato. O filtro de regime não faz isso — ele segue regras objetivas baseadas em médias móveis do IBOV. Não é uma aposta sobre o futuro; é uma leitura do presente.
+>
+> **Dado histórico:** Em 2022, o filtro de regime teria pausado os sinais de Alta Convicção durante ~60% do ano. As posições que seriam abertas nesse período perderam em média 18% em 20 dias. Ficar fora valeu +CDI.
+
+**Acceptance Criteria:**
+- [ ] Módulo registrado em COURSE_MODULES sob categoria "Estratégia".
+- [ ] Ícone: 🌡️, nome: "Regime de Mercado".
+- [ ] Conteúdo em PT-BR e EN (keys `edu_marketRegimeBody` em `static/i18n.js`).
+- [ ] Link para o módulo aparece no banner de RISK_OFF (linha "Saiba mais →").
+- [ ] Módulo menciona BOVA11, SMA200, os três estados e o dado histórico de 2022.
+- [ ] Seção "O que fazer em cada estado?" exibe os três estados com ícones coloridos.
+
+**Sprint:** 31 · **Effort:** 2h · **Priority:** 🔴 High · **Epic:** 53
+
+---
+
+### US-229 — Módulo "Gestão de Capital — Tamanho de Posição, Juros Compostos e Diversificação"
+
+**Como** usuário que quer maximizar seus retornos com segurança,
+**Quero** entender por que o Momentum varia o tamanho das posições e como os juros compostos funcionam na prática —
+**Para que** eu compreenda que não é aleatório — há uma lógica matemática que protege o capital e potencializa os ganhos.
+
+**Contexto educacional:**
+
+Este é o módulo mais poderoso e mais ignorado da educação financeira. A maioria dos investidores foca em "qual ação comprar" e ignora "quanto comprar". Mas o *quanto* determina mais o resultado final do que o *qual*. Este módulo explica três conceitos que o app usa silenciosamente e que o usuário merece entender.
+
+**Conteúdo do módulo (em PT-BR, tom de conversa):**
+
+> **1. Por que o tamanho da posição muda?**
+>
+> Imagine dois sinais de Alta Convicção no mesmo dia:
+> - WEGE3: score 4.5, volatilidade baixa (oscila ~1.5%/dia)
+> - PETR4: score 3.5, volatilidade alta (oscila ~3%/dia)
+>
+> Se você aposta o mesmo valor em ambos, está arriscando o dobro em PETR4 — porque ela pode cair o dobro em um dia ruim. O Momentum ajusta automaticamente: menos dinheiro onde há mais risco, mais onde há mais qualidade.
+>
+> Regra simples: **apostamos mais quando temos mais certeza e o papel é mais estável.**
+>
+> **2. O que é juro composto e por que importa?**
+>
+> Se você tem R$1.000 e ganha 10%, tem R$1.100. No próximo round, você investe R$110 (10% de R$1.100) — não R$100. Esse reinvestimento dos ganhos é o juro composto.
+>
+> Sem composto: R$1.000 → R$1.521 em 5 anos (nosso backtest).
+> Com composto: R$1.000 → ~R$1.900 em 5 anos — sem mudar nenhum sinal.
+>
+> A diferença de R$379 não veio de sinais melhores. Veio de usar os ganhos para gerar mais ganhos.
+>
+> Einstein chamou o juro composto de "a oitava maravilha do mundo". Quem entende, ganha. Quem não entende, paga.
+>
+> **3. Por que limitar a exposição por setor?**
+>
+> Se você tem PETR4, PRIO3 e CSAN3 abertas ao mesmo tempo (todas do setor Energia), você não tem três apostas — você tem uma. Quando o petróleo cai, as três caem juntas.
+>
+> O Momentum limita Energia (e qualquer outro setor) a no máximo 25% do seu capital. Isso garante que uma notícia ruim de um setor não destrua seu portfólio inteiro.
+>
+> **O que "diversificação real" significa:**
+> ❌ Ter 10 ações do setor financeiro não é diversificação
+> ✅ Ter ações de 5 setores diferentes com limite de 25% cada é diversificação
+>
+> **Resumo prático:**
+> - O app calcula o tamanho certo automaticamente
+> - Seus ganhos são reinvestidos — deixe o composto trabalhar
+> - Nunca mais de 25% num setor — o app bloqueia quando necessário
+
+**Acceptance Criteria:**
+- [ ] Módulo registrado em COURSE_MODULES sob categoria "Estratégia".
+- [ ] Ícone: 💰, nome: "Gestão de Capital".
+- [ ] Conteúdo em PT-BR e EN (keys `edu_capitalMgmtBody` em `static/i18n.js`).
+- [ ] Exemplo numérico do juro composto (R$1.521 vs R$1.900) incluído no texto.
+- [ ] Seção de diversificação inclui o exemplo ❌/✅.
+- [ ] Link para o módulo aparece no card de sinal (tooltip "Como calculamos o tamanho?").
+- [ ] Módulo menciona WEGE3 vs PETR4 como exemplo concreto de ajuste por volatilidade.
+
+**Sprint:** 32 · **Effort:** 2h · **Priority:** 🟡 Medium · **Epic:** 53
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -2142,7 +2583,10 @@ state = { ..., backtestResults: null };
 | 23 | 43 | US-193–200 | Security & Code Quality — Critical + Major | ✅ Done |
 | 27 | 49 | US-220 | Lista: auto-scan + all signals displayed | ✅ Done |
 | 29 | 51 | US-222 | Signal v3: Monitorar tier, 3 quality criteria, full app consistency | 📋 Planned |
-| 28 | 50 | US-221 | Backtest: win rate and avg return from historical BUY signals | 📋 Planned |
+| 28 | 50 | US-221 | Backtest: Histórico tab — win rate and avg return from historical BUY signals | 📋 Planned |
+| 30 | 52, 53 | US-223, US-227 | Saída Inteligente: trailing stop + 20-day exit + training module | 📋 Planned |
+| 31 | 52, 53 | US-224, US-228 | Regime de Mercado: IBOV filter + training module | 📋 Planned |
+| 32 | 52, 53 | US-225, US-226, US-229 | Capital: compounding + CDI accounting + position sizing + sector cap + training module | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | ✅ Done |
 | 25 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
 | 21 | 41 | US-183, US-184, US-189 | Admin Fase 2: Consentimento LGPD + Direitos do Titular | 🔒 Parked |
