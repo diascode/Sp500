@@ -1163,13 +1163,260 @@ Com o Signal Engine v2 (US-210), o scoring passa a ter 4.5 pts possíveis com co
 
 ---
 
+## 📋 Sprint 26 — Education & Onboarding
+
+## Epic 48 — Educação & Primeiros Passos
+
+### US-215 — Primeiros Passos: Guia de Início para Novos Usuários
+
+**Como** um novo usuário que acabou de criar conta,
+**Quero** ver um guia de primeiros passos que me explique como o Momentum funciona e o que fazer primeiro,
+**Para que** eu possa aproveitar o app desde o primeiro acesso sem precisar descobrir tudo sozinho.
+
+**Contexto:**
+Atualmente um novo usuário cria conta e cai direto na tela de scan sem qualquer orientação. Não sabe que precisa varrer o mercado primeiro, não entende o que é RSI ou ADX, não sabe que existe a view Acompanhados. A taxa de abandono de novos usuários deve ser alta por isso.
+
+**UX — Modal "Primeiros Passos" no primeiro login:**
+
+Exibido automaticamente na primeira vez que o usuário faz login (controlado por flag `user.onboardingDone` no perfil). Pode ser dispensado pelo usuário, mas reaparece ao clicar em "Primeiros Passos" no menu.
+
+Estrutura do modal — 4 passos com ícones e descrição curta:
+
+```
+🚀 Bem-vindo ao Momentum!
+
+Passo 1 — Varra o mercado
+  Clique em "Varrer Agora" para analisar as ações disponíveis.
+  O Momentum vai calcular RSI, MACD, ADX e outros indicadores
+  e mostrar um sinal: Compra, Aguardar ou Venda.
+
+Passo 2 — Acompanhe as melhores oportunidades
+  Clique ⭐ em qualquer ação para adicioná-la aos Acompanhados.
+  Você vai ver P&L%, VAR%, MACD e ADX em tempo real.
+
+Passo 3 — Simule uma operação
+  Clique em "Carteira" e adicione uma compra simulada.
+  Acompanhe seu resultado sem arriscar dinheiro real.
+
+Passo 4 — Aprenda os indicadores
+  Vá em "Educação" para entender RSI, MACD, ADX, DARF e mais.
+  16 lições para você operar com mais segurança.
+
+[Começar agora →]   [Ver depois]
+```
+
+**Comportamento:**
+- Modal aparece automaticamente após o primeiro login bem-sucedido.
+- "Começar agora" fecha o modal e marca `onboardingDone: true` no perfil do usuário via `PATCH /api/user/profile`.
+- "Ver depois" fecha sem marcar — modal reaparece no próximo login até ser completado.
+- Link "Primeiros Passos" no header/menu abre o modal manualmente a qualquer momento.
+- Em mobile: modal ocupa tela inteira com scroll.
+
+**Acceptance Criteria:**
+- [ ] Modal aparece automaticamente no primeiro login (usuário sem `onboardingDone: true`).
+- [ ] "Começar agora" marca `onboardingDone` e fecha.
+- [ ] "Ver depois" fecha sem marcar — reaparece no próximo login.
+- [ ] Link no menu abre o modal manualmente.
+- [ ] Modal é responsivo (mobile-friendly).
+- [ ] Backend: `PATCH /api/user/profile` aceita `{ onboardingDone: true }` e persiste no users.json.
+
+**Sprint:** 26 · **Effort:** 2h · **Priority:** 🟡 High
+
+---
+
+### US-216 — Educação: Módulo "Como Funciona o Sinal Momentum"
+
+**Como** usuário que vê sinais de Compra/Aguardar/Venda na tela,
+**Quero** um módulo de educação que explique exatamente como o Momentum calcula esses sinais,
+**Para que** eu entenda o que está por trás do número e possa usá-lo com mais confiança.
+
+**Contexto:**
+O Signal Engine v2 (Sprint 20) usa 5 critérios independentes com pontuação máxima de 4.5 pts. Os usuários veem "COMPRA · 3.2" e "Por que:" com ✅/⚠️/❌ por indicador, mas não há nenhuma explicação sistematizada sobre o modelo de scoring. Este módulo preenche essa lacuna.
+
+**Novo módulo na seção Educação:**
+
+```
+id: 'momentum_signal'
+icon: '🎯'
+name: 'Sinal Momentum'
+color: '#22d3ee'
+title: 'Como o Momentum Calcula os Sinais'
+subtitle: 'Entenda os 5 critérios do scoring v2 e o que significa a pontuação 3.2/4.5.'
+```
+
+**Conteúdo do módulo (corpo do texto em PT-BR):**
+
+```
+O Momentum avalia cada ação em 5 critérios independentes e soma uma pontuação de 0 a 4.5 pontos.
+Acima de 2.5 → COMPRA. Entre 1.0 e 2.5 → AGUARDAR. Abaixo de 1.0 → VENDA.
+
+─── Os 5 Critérios ───
+
+1. Tendência Estrutural (SMA50 + SMA200) — até 1.5 pts
+   Preço acima de SMA50 E SMA200 = alta estrutural confirmada → +1.5
+   Preço acima apenas da SMA50 = tendência parcial → +0.75
+   Preço abaixo das duas médias = baixa → +0
+
+2. Momentum — MACD + Aceleração — até 1.0 pt
+   MACD positivo E acelerando (histograma crescendo) → +1.0
+   MACD positivo mas estagnado → +0.5
+   MACD negativo → +0
+
+3. RSI — Zona de Tendência — até 1.0 pt
+   RSI entre 50 e 65 = zona saudável de tendência → +1.0
+   RSI entre 65 e 70 = forte mas esticado → +0.25
+   RSI entre 40 e 50 = momentum enfraquecendo → −0.25
+
+4. Força da Tendência — ADX — até 0.5 pt
+   ADX > 25 = tendência definida → +0.5
+
+5. Confirmação de Volume — até 0.5 pt
+   Volume atual > 1.2× a média de 20 dias → +0.5
+
+─── Proteções Adicionais ───
+
+• Gate de regime (SMA200): se o preço estiver abaixo da SMA200,
+  o score é limitado a 1.0 — nenhum sinal de COMPRA em bear market confirmado.
+
+• RSI extremo: RSI > 75 ou < 25 aplica penalidade de −1.0 ponto.
+
+─── Exemplo Real ───
+
+PETR4: RSI 57, MACD +0.43 acelerando, ADX 28, Volume 1.8×, acima de SMA50 e SMA200
+→ Tendência: +1.5 | MACD: +1.0 | RSI: +1.0 | ADX: +0.5 | Volume: +0.5
+→ Score: 4.5/4.5 → COMPRA (convicção máxima)
+
+VALE3: RSI 47, MACD +0.12 estagnado, ADX 19, Volume 0.9×, acima só da SMA50
+→ Tendência: +0.75 | MACD: +0.5 | RSI: −0.25 | ADX: +0 | Volume: +0
+→ Score: 1.0/4.5 → AGUARDAR (momentum fraco)
+```
+
+**Implementation:** Add the new lesson object to the `eduLessons` array in `stock-dashboard.html` and add the corresponding `edu_momentumSignalBody` key to `static/i18n.js` (PT-BR only — English version can be same content for now).
+
+**Acceptance Criteria:**
+- [ ] Módulo aparece na lista de lições da Educação.
+- [ ] Conteúdo explica os 5 critérios com pontuação e exemplos reais.
+- [ ] Regime gate e RSI extremo são explicados.
+- [ ] Exemplo numérico com ação real (PETR4 ou similar) incluído.
+- [ ] Módulo acessível via filtro/categoria "Sinais" ou "Análise Técnica".
+
+**Sprint:** 26 · **Effort:** 1.5h · **Priority:** 🟡 High
+
+---
+
+### US-217 — Educação: Módulo "CDB e CDI — Renda Fixa Bancária"
+
+**Como** investidor brasileiro que usa o Momentum para ações,
+**Quero** entender CDB e CDI no módulo de educação,
+**Para que** eu possa comparar renda fixa com renda variável e tomar decisões mais informadas sobre alocação.
+
+**Contexto:**
+O Momentum já tem módulos sobre Tesouro Direto e LCI/LCA. CDB e CDI estão ausentes — são os instrumentos de renda fixa mais populares no Brasil (mais de 60% dos investidores PF têm algum CDB). Faz sentido completar o bloco de renda fixa.
+
+**Novo módulo na seção Educação:**
+
+```
+id: 'cdb_cdi'
+icon: '🏦'
+name: 'CDB e CDI'
+color: '#4caf50'
+title: 'CDB e CDI — Renda Fixa Bancária'
+subtitle: 'O que é CDI, como o CDB rende sobre ele, e quando compensa mais que o Tesouro.'
+```
+
+**Conteúdo do módulo (corpo do texto em PT-BR):**
+
+```
+─── O que é o CDI? ───
+
+CDI (Certificado de Depósito Interbancário) é a taxa que os bancos cobram
+uns dos outros em empréstimos overnight. Na prática, o CDI anda colado à
+Taxa Selic — costuma ficar 0,10% abaixo dela.
+
+Exemplo: Selic em 13,25% → CDI ≈ 13,15% ao ano.
+
+─── O que é o CDB? ───
+
+CDB (Certificado de Depósito Bancário) é um título emitido por bancos
+para captar dinheiro do público. Funciona como um empréstimo que você
+faz ao banco — ele te paga juros em troca.
+
+A rentabilidade é quase sempre expressa como % do CDI:
+• CDB a 100% do CDI: rende o mesmo que o CDI
+• CDB a 110% do CDI: rende 10% a mais que o CDI
+• CDB a 90% do CDI: rende menos — evite
+
+─── Imposto de Renda (Tabela Regressiva) ───
+
+Quanto mais tempo você fica, menos IR paga:
+
+Prazo            IR sobre o lucro
+Até 180 dias     22,5%
+181 a 360 dias   20,0%
+361 a 720 dias   17,5%
+Acima de 720d    15,0%   ← meta ideal para CDB longo
+
+IOF: incidem sobre resgates nos primeiros 30 dias (tabela decrescente de 96% a 0%).
+
+─── Garantia do FGC ───
+
+CDBs são garantidos pelo FGC (Fundo Garantidor de Créditos) até
+R$250.000 por CPF por instituição. Bancos menores costumam pagar
+mais justamente por terem rating de crédito mais baixo — o FGC
+compensa esse risco para o investidor.
+
+─── CDB vs Tesouro Selic vs LCI/LCA ───
+
+                  CDB         Tesouro Selic   LCI/LCA
+Rentabilidade     90–115% CDI  Selic − 0,10%  85–95% CDI
+IR                Sim           Sim             Não (isento)
+Liquidez          Varia*        D+1             90–365 dias
+FGC               Sim           Não (Tesouro)   Sim
+Risco             Banco         União Federal   Banco
+
+* CDB com liquidez diária existe, mas paga menos (95–100% CDI).
+  CDB de prazo fixo (sem liquidez) paga mais (100–115% CDI).
+
+─── Quando escolher CDB? ───
+
+✅ Reserve de emergência: prefira CDB com liquidez diária a 100%+ CDI
+   ou Tesouro Selic — ambos funcionam, mas confira qual paga mais.
+
+✅ Investimento de médio prazo (> 2 anos): CDB prefixado ou IPCA+ de
+   banco médio a 110%+ CDI pode superar o Tesouro IPCA+ após IR.
+
+❌ Evite CDB com carência longa sem liquidez se não souber quando
+   vai precisar do dinheiro.
+
+─── Dica Momentum ───
+
+O Momentum é para renda variável — ações de alta volatilidade.
+CDB e Tesouro são sua reserva de emergência e sua base de segurança.
+A regra geral: monte a base de renda fixa primeiro, depois explore
+ações com o que sobra e não vai fazer falta.
+```
+
+**Implementation:** Add the new lesson object to the `eduLessons` array in `stock-dashboard.html` and add the `edu_cdbCdiBody` key to `static/i18n.js` (PT-BR only for now).
+
+**Acceptance Criteria:**
+- [ ] Módulo aparece na lista de lições com ícone 🏦 e cor verde.
+- [ ] Conteúdo cobre: definição CDI, CDB como % do CDI, tabela IR regressiva, FGC, comparativo com Tesouro e LCI/LCA, dica de alocação.
+- [ ] Tabela IR está correta (22.5% → 15%).
+- [ ] Limite FGC de R$250k por CPF por instituição está correto.
+- [ ] Módulo acessível via filtro/categoria "Renda Fixa".
+
+**Sprint:** 26 · **Effort:** 1h · **Priority:** 🟠 Medium
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
 |--------|-------|---------|-------|--------|
 | 18 | 38, 40, 43 | US-173–175, US-177, US-191, US-192, US-201 | Lista Interatividade, CPF toggle, tradução "Positions", fix DARF link, B3 watchlist prices | ✅ Done |
-| 19 | 39, 44, 45, 46 | US-176, US-207, US-208, US-209 | Acompanhados redesign + ADMIN_EMAIL env var + delete account PT fix + signup 500 fix | 📋 Planned |
-| 20 | 47 | US-210, US-211, US-212, US-213, US-214 | Signal Engine v2 — scoring fix, ATR exits, score display, Por que enrichment, indicator columns | ⚠️ Planned (blocks partner demo) |
+| 19 | 39, 44, 45, 46 | US-176, US-207, US-208, US-209 | Acompanhados redesign + ADMIN_EMAIL env var + delete account PT fix + signup 500 fix | ✅ Done |
+| 20 | 47 | US-210, US-211, US-212, US-213, US-214 | Signal Engine v2 — scoring fix, ATR exits, score display, Por que enrichment, indicator columns | ✅ Done |
+| 26 | 48 | US-215, US-216, US-217 | Education & Onboarding — Primeiros Passos, Sinal Momentum module, CDB/CDI module | 📋 Planned |
 | 23 | 43 | US-193–201 | Security & Code Quality — Critical + Major | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | 📋 Planned |
 | 25 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
