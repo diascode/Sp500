@@ -1706,6 +1706,163 @@ No header da Lista (ao lado do campo de busca), adicionar um botão `"⚡ Varrer
 
 ---
 
+## Epic 50 — Backtest do Signal Engine
+
+### US-221 — Backtest: Probabilidade de Ganho por Sinal de Compra
+
+**Como** usuário que confia nos sinais do Momentum,
+**Quero** ver uma análise histórica que mostre quantas vezes os sinais de Compra geraram retorno positivo em 10, 20 e 30 dias,
+**Para que** eu saiba a taxa de acerto real dos critérios e possa calibrar minha confiança nos sinais futuros.
+
+**Contexto técnico:**
+
+O servidor já busca `range=5y&interval=1d` do Yahoo Finance — cada ativo tem ~1250 velas diárias disponíveis em `state.analyzed[market][i].candles`. Todas as funções de indicador (`calcSMA`, `calcRSI`, `calcMACD`, `calcADX`, `calcATR`) já rodam no cliente e operam sobre arrays de velas. Isso permite um backtest client-side completo: rodar `pickSignal()` em janela deslizante sobre os dados históricos e medir o retorno futuro a cada sinal gerado.
+
+**Avisos obrigatórios (mostrar na UI):**
+- "Backtest in-sample: os mesmos critérios foram desenhados com visão do passado — os resultados reais podem ser menores."
+- "Não inclui custos de corretagem, spread ou slippage."
+- "Survivorship bias: apenas ações que existem hoje são analisadas."
+
+---
+
+**Implementação — `stock-dashboard.html`:**
+
+#### 1. Função `backtestStock(ticker, candles)`
+
+```js
+function backtestStock(ticker, candles) {
+  const WARMUP = 230; // candles needed for SMA200 + ADX stability
+  const HORIZONS = [10, 20, 30];
+  const signals = [];
+
+  // Pre-compute full indicator arrays once
+  const rsiA   = calcRSI(candles, 14);
+  const macdA  = calcMACD(candles);
+  const adxA   = calcADX(candles, 14);
+  const sma50A = calcSMA(candles, 50);
+  const sma200A= calcSMA(candles, 200);
+
+  for (let i = WARMUP; i < candles.length - 30; i++) {
+    const rsi      = rsiA[i]    ?? 50;
+    const macd     = macdA[i]   ?? 0;
+    const macdHist = (macdA[i] ?? 0) - (macdA[i-1] ?? 0);
+    const adx      = adxA[i]    ?? 20;
+    const above50  = candles[i].c > (sma50A[i]  ?? 0);
+    const above200 = candles[i].c > (sma200A[i] ?? 0);
+    // volume ratio: current vs 20-day avg
+    const volSlice = candles.slice(Math.max(0, i-19), i+1);
+    const volAvg   = volSlice.reduce((s, c) => s + c.v, 0) / volSlice.length;
+    const volRatio = candles[i].v / (volAvg || 1);
+
+    const { signal, score } = pickSignal(rsi, macd, macdHist, adx, above50, above200, volRatio);
+    if (signal !== 'buy') continue;
+
+    const entry = candles[i].c;
+    const row = { ticker, date: candles[i].d, entry, score };
+    HORIZONS.forEach(h => {
+      const exit = candles[i + h]?.c;
+      row['ret' + h] = exit != null ? parseFloat(((exit - entry) / entry * 100).toFixed(2)) : null;
+    });
+    signals.push(row);
+  }
+  return signals;
+}
+```
+
+#### 2. Função `runBacktest()`
+
+```js
+function runBacktest() {
+  const all = [];
+  (state.analyzed['brasil'] || []).forEach(d => {
+    if (d.candles && d.candles.length >= 260) {
+      backtestStock(d.ticker, d.candles).forEach(s => all.push(s));
+    }
+  });
+  return all;
+}
+```
+
+#### 3. Nova aba "📊 Backtest" no segmented control
+
+Adicionar ao `#homeModesSeg`:
+```html
+<button class="seg-btn" data-mode="backtest" onclick="setHomeMode('backtest')">📊 Backtest</button>
+```
+
+Em `renderDashboard()`, adicionar branch:
+```js
+if (state.homeMode === 'backtest') {
+  if (grid) { grid.style.display = 'none'; grid.innerHTML = ''; }
+  if (dash) dash.style.display = 'block';
+  renderBacktest();
+  return;
+}
+```
+
+#### 4. Função `renderBacktest()`
+
+Layout de 3 seções:
+
+**a) Banner de aviso**
+```
+⚠️ Backtest in-sample · Sem custos · Survivorship bias
+```
+
+**b) Cards de resumo** (calculados sobre todos os sinais de Compra):
+
+| Card | Fórmula |
+|------|---------|
+| Sinais de Compra | `all.length` |
+| Taxa de Acerto 20d | `% where ret20 > 0` |
+| Retorno Médio 20d | `mean(ret20)` |
+| Fator de Lucro | `sum(positive ret20) / abs(sum(negative ret20))` |
+| Melhor / Pior 20d | `max / min ret20` |
+
+Mostrar também cards para 10d e 30d.
+
+**c) Tabela por score tier:**
+
+Segmentar resultados em dois grupos:
+- **Alta Convicção** (score ≥ 3.5): mostrar taxa de acerto + retorno médio 20d
+- **Compra Regular** (score 2.5–3.4): idem
+
+Isso permite comparar se scores mais altos realmente têm melhor desempenho.
+
+**d) Botão "Calcular Backtest"**
+
+O cálculo não deve rodar automaticamente (pode levar 1–3s com 300 ações × 1000 dias). Mostrar:
+```
+[📊 Calcular Backtest]
+"Requer varredura completa. Analisará X anos de histórico para Y ações."
+```
+
+Após calcular, armazenar em `state.backtestResults` para não recalcular ao trocar de aba.
+
+#### 5. Persistência em `state`
+
+```js
+// Em state (linha ~263):
+state = { ..., backtestResults: null };
+```
+
+**Acceptance Criteria:**
+- [ ] Aba "📊 Backtest" aparece no segmented control ao lado de Lista, Sinais etc.
+- [ ] Antes de calcular, mostrar CTA com número de ações disponíveis para análise.
+- [ ] `backtestStock()` usa janela deslizante de 230 candles de aquecimento antes de gerar o primeiro sinal.
+- [ ] Somente sinais onde `candles[i + 30]` existe são incluídos (sem lookahead além da janela disponível).
+- [ ] Cards de resumo mostram: número de sinais, taxa de acerto (10d / 20d / 30d), retorno médio, fator de lucro.
+- [ ] Tabela por tier (≥ 3.5 vs 2.5–3.4) mostra se alta convicção supera compra regular.
+- [ ] Três avisos de disclaimer obrigatórios são visíveis acima dos resultados.
+- [ ] Resultados ficam em `state.backtestResults` — trocar de aba e voltar não recalcula.
+- [ ] Se não há varredura (< 5 ações analisadas), mostrar mensagem pedindo para varrer primeiro.
+- [ ] Sem regressão nas outras abas (Sinais, Lista, Simulador).
+
+**Depends on:** US-210 (pickSignal v2 — já shipado), US-220 (candles em state.analyzed)
+**Sprint:** 28 · **Effort:** 5h · **Priority:** 🟡 Medium · **Epic:** 50
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -1715,7 +1872,8 @@ No header da Lista (ao lado do campo de busca), adicionar um botão `"⚡ Varrer
 | 20 | 47 | US-210, US-211, US-212, US-213, US-214 | Signal Engine v2 — scoring fix, ATR exits, score display, Por que enrichment, indicator columns | ✅ Done |
 | 26 | 48 | US-215, US-216, US-217, US-218, US-219 | Education & Onboarding — Primeiros Passos, Sinal Momentum module, CDB/CDI module, Simulador scorecard, SMA50/200 split scoring | ✅ Done |
 | 23 | 43 | US-193–200 | Security & Code Quality — Critical + Major | ✅ Done |
-| 27 | 49 | US-220 | Lista: auto-scan + all signals displayed | 📋 Planned |
+| 27 | 49 | US-220 | Lista: auto-scan + all signals displayed | ✅ Done |
+| 28 | 50 | US-221 | Backtest: win rate and avg return from historical BUY signals | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | ✅ Done |
 | 25 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
 | 21 | 41 | US-183, US-184, US-189 | Admin Fase 2: Consentimento LGPD + Direitos do Titular | 🔒 Parked |
