@@ -183,7 +183,7 @@ async function handleRequest(req, res) {
       if (!authUser) return sendError(res, 401, 'Not authenticated');
       const user = findUser(authUser.email);
       if (!user) return sendError(res, 401, 'User not found');
-      return sendJSON(res, 200, { id: user.id, email: user.email, tier: user.tier, subscriptionEnd: user.subscriptionEnd, emailVerified: user.emailVerified !== false, cpf: user.cpf || null, onboardingDone: user.onboardingDone || false });
+      return sendJSON(res, 200, { id: user.id, email: user.email, name: user.name || null, tier: user.tier, subscriptionEnd: user.subscriptionEnd, emailVerified: user.emailVerified !== false, isAdmin: user.isAdmin || false, onboardingDone: user.onboardingDone || false });
     }
 
     if (pathname === '/api/auth/profile' && req.method === 'POST') {
@@ -198,6 +198,15 @@ async function handleRequest(req, res) {
       user.cpf = cpf || null;
       saveUsers(users);
       return sendJSON(res, 200, { ok: true, cpf: user.cpf });
+    }
+
+    if (pathname === '/api/user/profile' && req.method === 'GET') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      const user = findUser(authUser.email);
+      if (!user) return sendError(res, 404, 'Usuário não encontrado');
+      const { password, passwordHash, ...safe } = user;
+      return sendJSON(res, 200, safe);
     }
 
     if (pathname === '/api/user/profile' && req.method === 'PATCH') {
