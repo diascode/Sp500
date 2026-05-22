@@ -194,6 +194,38 @@ Atualmente o CPF é validado e obrigatório em `server.js` no endpoint `/api/aut
 
 ## 📋 Sprint 19 — Planned
 
+## Epic 45 — Sprint 19: UX & Localização
+
+### US-208 — Confirmação de Exclusão de Conta em Português com Double-Confirm
+**As a** usuário que deseja excluir sua conta,
+**I want** que o diálogo de confirmação de exclusão esteja em português e exija que eu digite "EXCLUIR" para confirmar,
+**so that** a ação destrutiva seja clara, intencional e localizada corretamente.
+
+**Current behaviour (bug):**
+- First dialog: `"Permanently delete <email>? This cannot be undone. All your data will be erased."` — hardcoded English.
+- Second dialog: `"Are you absolutely sure? Type OK to confirm."` — misleading: says "Type OK" but is a `confirm()` dialog, not a `prompt()`. User just clicks OK, no typing required.
+
+**Expected behaviour:**
+- Single `confirm()` in Portuguese: `"Tem certeza que deseja excluir permanentemente <email>? Esta ação não pode ser desfeita."` — first warning.
+- Followed by a `prompt()` in Portuguese: `"Digite EXCLUIR para confirmar."` — user must type the exact word `EXCLUIR` (case-insensitive). Any other input or cancel aborts.
+
+**Implementation:** `deleteMyAccount()` in `stock-dashboard.html` — replace lines 619–620:
+```js
+if (!confirm(`Tem certeza que deseja excluir permanentemente ${email}? Esta ação não pode ser desfeita. Todos os seus dados serão apagados.`)) return;
+const typed = prompt('Digite EXCLUIR para confirmar a exclusão da conta.');
+if ((typed || '').trim().toUpperCase() !== 'EXCLUIR') return;
+```
+
+**Acceptance Criteria:**
+- Both dialogs are in Portuguese.
+- Second step requires typing `EXCLUIR` (case-insensitive). Anything else — including Cancel — aborts.
+- Account is only deleted if both steps pass.
+- Supersedes US-206 (Sprint 24) — remove US-206 from backlog once shipped.
+
+**Sprint:** 19 · **Effort:** 10min · **Priority:** 🟠 Medium
+
+---
+
 ## Epic 44 — Sprint 19: Configuração de Admin via Variável de Ambiente
 
 ### US-207 — ADMIN_EMAIL Configurável via Variável de Ambiente
@@ -878,7 +910,7 @@ if (typed !== 'EXCLUIR') return;
 | Sprint | Epics | Stories | Theme | Status |
 |--------|-------|---------|-------|--------|
 | 18 | 38, 40, 43 | US-173–175, US-177, US-191, US-192, US-201 | Lista Interatividade, CPF toggle, tradução "Positions", fix DARF link, B3 watchlist prices | 🔄 In Progress |
-| 19 | 39, 44 | US-176, US-207 | Acompanhados redesign + ADMIN_EMAIL env var | 📋 Planned |
+| 19 | 39, 44, 45 | US-176, US-207, US-208 | Acompanhados redesign + ADMIN_EMAIL env var + delete account PT fix | 📋 Planned |
 | 23 | 43 | US-193–201 | Security & Code Quality — Critical + Major | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | 📋 Planned |
 | 20 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
