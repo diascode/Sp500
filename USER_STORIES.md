@@ -959,39 +959,45 @@ if (typed !== 'EXCLUIR') return;
 function pickSignal(rsi, macd, macdHist, adx, above50, above200, volRatio) {
   let s = 0;
 
-  // 1. Trend structure (SMA50 + SMA200) — max 1.5 pts
-  if (above50 && above200) s += 1.5;   // full uptrend
-  else if (above50)        s += 0.75;  // partial uptrend (above 50 only)
+  // 1. Medium-term trend (SMA50) — max 0.75 pts
+  if (above50) s += 0.75;
 
-  // 2. Momentum — MACD value + histogram direction — max 1.0 pt
+  // 2. Long-term regime (SMA200) — max 0.75 pts
+  if (above200) s += 0.75;
+
+  // 3. Momentum — MACD value + histogram direction — max 1.0 pt
   if (macd > 0 && macdHist > 0) s += 1.0;  // positive AND accelerating
   else if (macd > 0)             s += 0.5;  // positive but not accelerating
 
-  // 3. RSI — single coherent zone — max 1.0 pt
+  // 4. RSI — single coherent zone — max 1.0 pt
   if      (rsi >= 50 && rsi <= 65) s += 1.0;   // trend-confirmation zone
   else if (rsi > 65  && rsi <= 70) s += 0.25;  // strong but stretched
   else if (rsi >= 40 && rsi <  50) s -= 0.25;  // weakening momentum
 
-  // 4. Trend strength (ADX) — max 0.5 pts
+  // 5. Trend strength (ADX) — max 0.5 pts
   if (adx > 25) s += 0.5;
 
-  // 5. Volume confirmation (NEW) — max 0.5 pts
+  // 6. Volume confirmation — max 0.5 pts
   if (volRatio > 1.2) s += 0.5;   // 20%+ above 20-day average volume
 
   // Hard guards
   if (!above200) s = Math.min(s, 1.0);  // cap at HOLD in confirmed bear regime
   if (rsi > 75 || rsi < 25) s -= 1.0;  // severe extreme penalty
 
-  return s >= 2.5 ? 'buy' : s >= 1.0 ? 'neutral' : 'sell';
+  const signal = s >= 2.5 ? 'buy' : s >= 1.0 ? 'neutral' : 'sell';
+  return { signal, score: parseFloat(s.toFixed(1)) };
 }
 ```
 
-**Maximum possible score: 4.5 points.**
-- Full uptrend (SMA50+200): 1.5
+**Maximum possible score: 4.5 points — 6 independent criteria:**
+- SMA50 (medium-term trend): 0.75
+- SMA200 (long-term regime): 0.75
 - MACD positive + accelerating: 1.0
 - RSI in sweet zone (50–65): 1.0
 - ADX > 25: 0.5
 - Volume > 1.2×: 0.5
+
+> ⚠️ **Refinement vs original v2 spec:** SMA50 and SMA200 are scored as two independent criteria (+0.75 each) instead of one combined criterion (+1.5 for both, +0.75 for SMA50 only). This fixes the case where "above SMA200, below SMA50" (pullback in uptrend) scored 0 pts — it now correctly scores +0.75. The regime hard cap (`!above200 → max 1.0`) is unchanged. See US-219.
 
 **`analyze()` function:** Pass `macdHist` (last histogram value), `above200` (price > sma200), and `volRatio` (already computed) to `pickSignal`.
 
@@ -1073,20 +1079,22 @@ Natural volatility scaling — tight for blue chips, wider for small/mid caps.
 **New behaviour — structured explanation per indicator, matching the v2 scoring:**
 
 ```
-Por que: COMPRA (score 3.2/4.5)
+Por que: COMPRA (score 3.5/4.5)
 
-✅ Tendência confirmada — preço acima das médias de 50 e 200 dias (alta estrutural)
+✅ SMA50 — preço acima da média de 50 dias (tendência de médio prazo)
+✅ SMA200 — preço acima da média de 200 dias (regime de alta estrutural)
 ✅ MACD +0.43 e acelerando — momentum de compra em desenvolvimento
 ✅ RSI 57 — zona saudável de tendência (50–65), sem sobrecompra
-✅ Volume 1.8× acima da média — pressão compradora institucional
+✅ Volume 1.8× acima da média — pressão compradora presente
 ⚠️ ADX 21 — tendência ainda fraca (< 25), aguardar confirmação
 ```
 
-For HOLD:
+For HOLD (pullback in uptrend — above SMA200 but below SMA50):
 ```
 Por que: AGUARDAR (score 1.5/4.5)
 
-✅ Preço acima da SMA50, mas abaixo da SMA200 — tendência parcial
+❌ SMA50 — preço abaixo da média de 50 dias — pullback de médio prazo
+✅ SMA200 — preço acima da média de 200 dias — regime de alta preservado
 ⚠️ MACD +0.12 positivo mas sem aceleração — momentum fraco
 ⚠️ RSI 47 — abaixo de 50, momentum enfraquecendo
 ❌ Volume na média — sem convicção direcional
@@ -1095,22 +1103,24 @@ Por que: AGUARDAR (score 1.5/4.5)
 
 For SELL:
 ```
-Por que: VENDA (score 0.5/4.5)
+Por que: VENDA (score 0.2/4.5)
 
-❌ Preço abaixo das médias de 50 e 200 dias — tendência de baixa
+❌ SMA50 — preço abaixo da média de 50 dias
+❌ SMA200 — preço abaixo da média de 200 dias — bear market confirmado
 ❌ MACD −0.28 negativo — momentum de venda dominante
 ⚠️ RSI 38 — queda sem sobrevendido extremo, sem sinal de reversão
 ❌ Volume 0.9× na média — sem pressão compradora
-🔴 Regime de mercado: ativo abaixo da SMA200 — sinais de compra bloqueados
+🔴 Regime de mercado: abaixo da SMA200 — sinais de compra bloqueados
 ```
 
-**Implementation:** Replace `generateWhy()` in `server.js` (or the client-side equivalent) with a structured function that maps each scoring component to a PT-BR sentence using the actual indicator values.
+**Implementation:** Replace `feedCardWhy(d)` in `stock-dashboard.html` with a structured function that maps each of the 6 scoring components to a PT-BR sentence using the actual indicator values. SMA50 and SMA200 are shown as **two separate lines**.
 
 **Acceptance Criteria:**
-- Each indicator (SMA trend, MACD, RSI, Volume, ADX) gets its own line with ✅/⚠️/❌ icon.
+- SMA50 and SMA200 each get their own line with ✅/❌ icon (not combined into one line).
+- Each of the other 4 indicators (MACD, RSI, Volume, ADX) gets its own line with ✅/⚠️/❌ icon.
 - Values are shown numerically (RSI 57, MACD +0.43, Volume 1.8×, ADX 28).
 - The regime gate is explained if active ("sinais de compra bloqueados — ativo abaixo da SMA200").
-- Score is shown in the header line ("COMPRA · 3.2/4.5").
+- Score is shown in the header line ("COMPRA · 3.5/4.5").
 - Language is Portuguese only (matches app default language).
 
 **Sprint:** 20 · **Effort:** 2h · **Priority:** 🟠 Medium
@@ -1138,7 +1148,7 @@ Com o Signal Engine v2 (US-210), o scoring passa a ter 4.5 pts possíveis com co
 | MACD | Valor numérico + seta (ex: +0.43 ↑) | Verde se positivo, vermelho se negativo |
 | ADX | Valor numérico (ex: 28) | Destaque (cor primária) se > 25 (tendência confirmada) |
 | Volume | Ratio vs média 20d (ex: 1.8×) | Verde se > 1.2×, neutro caso contrário |
-| SMA | Tendência (ex: "50+200" / "50" / "—") | Verde se acima de ambas as médias, amarelo se só SMA50, vermelho se abaixo |
+| SMA | Tendência (ex: "50+200" / "50" / "200" / "—") | Verde se acima de ambas, amarelo se só SMA50 ou só SMA200, vermelho se abaixo de ambas |
 | Score | Pontuação numérica (ex: 3.2/4.5) | Usa escala de cor: verde ≥ 3.0, amarelo 1.5–2.9, vermelho < 1.5 |
 
 **Comportamento:**
@@ -1241,61 +1251,71 @@ icon: '🎯'
 name: 'Sinal Momentum'
 color: '#22d3ee'
 title: 'Como o Momentum Calcula os Sinais'
-subtitle: 'Entenda os 5 critérios do scoring v2 e o que significa a pontuação 3.2/4.5.'
+subtitle: 'Entenda os 6 critérios do scoring v2 e o que significa a pontuação 3.5/4.5.'
 ```
 
 **Conteúdo do módulo (corpo do texto em PT-BR):**
 
 ```
-O Momentum avalia cada ação em 5 critérios independentes e soma uma pontuação de 0 a 4.5 pontos.
+O Momentum avalia cada ação em 6 critérios independentes e soma uma pontuação de 0 a 4.5 pontos.
 Acima de 2.5 → COMPRA. Entre 1.0 e 2.5 → AGUARDAR. Abaixo de 1.0 → VENDA.
 
-─── Os 5 Critérios ───
+─── Os 6 Critérios ───
 
-1. Tendência Estrutural (SMA50 + SMA200) — até 1.5 pts
-   Preço acima de SMA50 E SMA200 = alta estrutural confirmada → +1.5
-   Preço acima apenas da SMA50 = tendência parcial → +0.75
-   Preço abaixo das duas médias = baixa → +0
+1. SMA50 — Tendência de Médio Prazo — até 0.75 pts
+   Preço acima da média de 50 dias = tendência de médio prazo confirmada → +0.75
+   Preço abaixo da SMA50 = pressão vendedora no médio prazo → +0
 
-2. Momentum — MACD + Aceleração — até 1.0 pt
+2. SMA200 — Regime de Longo Prazo — até 0.75 pts
+   Preço acima da média de 200 dias = mercado em alta estrutural → +0.75
+   Preço abaixo da SMA200 = bear market confirmado → +0
+   ⚠ Proteção: se abaixo da SMA200, o score total é limitado a 1.0
+   (nenhum sinal de COMPRA em bear market confirmado)
+
+3. Momentum — MACD + Aceleração — até 1.0 pt
    MACD positivo E acelerando (histograma crescendo) → +1.0
    MACD positivo mas estagnado → +0.5
    MACD negativo → +0
 
-3. RSI — Zona de Tendência — até 1.0 pt
+4. RSI — Zona de Tendência — até 1.0 pt
    RSI entre 50 e 65 = zona saudável de tendência → +1.0
    RSI entre 65 e 70 = forte mas esticado → +0.25
    RSI entre 40 e 50 = momentum enfraquecendo → −0.25
+   ⚠ Proteção: RSI > 75 ou < 25 aplica penalidade de −1.0 ponto
 
-4. Força da Tendência — ADX — até 0.5 pt
+5. Força da Tendência — ADX — até 0.5 pt
    ADX > 25 = tendência definida → +0.5
+   ADX ≤ 25 = mercado lateral, sem direção clara → +0
 
-5. Confirmação de Volume — até 0.5 pt
+6. Confirmação de Volume — até 0.5 pt
    Volume atual > 1.2× a média de 20 dias → +0.5
+   Volume na média ou abaixo → +0
 
-─── Proteções Adicionais ───
+─── Por que SMA50 e SMA200 são critérios separados? ───
 
-• Gate de regime (SMA200): se o preço estiver abaixo da SMA200,
-  o score é limitado a 1.0 — nenhum sinal de COMPRA em bear market confirmado.
-
-• RSI extremo: RSI > 75 ou < 25 aplica penalidade de −1.0 ponto.
+A SMA50 mede a tendência de médio prazo (últimos ~2 meses).
+A SMA200 mede o regime estrutural do ativo (últimos ~10 meses).
+Um ativo pode estar em pullback de curto prazo (abaixo da SMA50)
+mas ainda em alta estrutural (acima da SMA200) — esse cenário
+antes pontuava 0; agora recebe +0.75 por preservar o regime de alta.
 
 ─── Exemplo Real ───
 
 PETR4: RSI 57, MACD +0.43 acelerando, ADX 28, Volume 1.8×, acima de SMA50 e SMA200
-→ Tendência: +1.5 | MACD: +1.0 | RSI: +1.0 | ADX: +0.5 | Volume: +0.5
+→ SMA50: +0.75 | SMA200: +0.75 | MACD: +1.0 | RSI: +1.0 | ADX: +0.5 | Volume: +0.5
 → Score: 4.5/4.5 → COMPRA (convicção máxima)
 
-VALE3: RSI 47, MACD +0.12 estagnado, ADX 19, Volume 0.9×, acima só da SMA50
-→ Tendência: +0.75 | MACD: +0.5 | RSI: −0.25 | ADX: +0 | Volume: +0
-→ Score: 1.0/4.5 → AGUARDAR (momentum fraco)
+VALE3: RSI 47, MACD +0.12 estagnado, ADX 19, Volume 0.9×, acima só da SMA200
+→ SMA50: +0 | SMA200: +0.75 | MACD: +0.5 | RSI: −0.25 | ADX: +0 | Volume: +0
+→ Score: 1.0/4.5 → AGUARDAR (pullback em uptrend, aguardar retomada da SMA50)
 ```
 
 **Implementation:** Add the new lesson object to the `eduLessons` array in `stock-dashboard.html` and add the corresponding `edu_momentumSignalBody` key to `static/i18n.js` (PT-BR only — English version can be same content for now).
 
 **Acceptance Criteria:**
 - [ ] Módulo aparece na lista de lições da Educação.
-- [ ] Conteúdo explica os 5 critérios com pontuação e exemplos reais.
+- [ ] Conteúdo explica os **6 critérios** com pontuação e exemplos reais.
+- [ ] SMA50 e SMA200 são explicados como critérios separados com motivação clara.
 - [ ] Regime gate e RSI extremo são explicados.
 - [ ] Exemplo numérico com ação real (PETR4 ou similar) incluído.
 - [ ] Módulo acessível via filtro/categoria "Sinais" ou "Análise Técnica".
@@ -1469,13 +1489,14 @@ Exibir acima dos cenários (TP/SL), após o resumo de quantidade comprada:
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  CONVICÇÃO DO SINAL — PETR4                             │
-│  ████████████████░░░  3.8 / 4.5   Alta convicção        │
+│  ████████████████████  4.5 / 4.5   Alta convicção       │
 │                                                         │
-│  ✅ Tendência SMA50+200    +1.5 pts                     │
-│  ✅ MACD positivo acelerando   +1.0 pts                 │
-│  ✅ RSI 57 — zona saudável     +1.0 pts                 │
-│  ✅ Volume 1.8× média          +0.5 pts                 │
-│  ⚠️ ADX 21 — tendência fraca   +0.0 pts                 │
+│  ✅ SMA50 — tendência de médio prazo     +0.75 pts      │
+│  ✅ SMA200 — regime de alta estrutural   +0.75 pts      │
+│  ✅ MACD positivo acelerando             +1.0 pts       │
+│  ✅ RSI 57 — zona saudável               +1.0 pts       │
+│  ✅ Volume 1.8× média                    +0.5 pts       │
+│  ⚠️ ADX 21 — tendência fraca             +0.0 pts       │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -1491,7 +1512,8 @@ Exibir acima dos cenários (TP/SL), após o resumo de quantidade comprada:
 
 | Critério | Condição | Pontos |
 |----------|----------|--------|
-| Tendência SMA | `pA50 && pA200` → +1.5, `pA50` → +0.75 | dinâmico |
+| SMA50 | `pA50` → +0.75 | dinâmico |
+| SMA200 | `pA200` → +0.75 | dinâmico |
 | MACD | `macd > 0 && macdHist > 0` → +1.0, `macd > 0` → +0.5 | dinâmico |
 | RSI | zona 50–65 → +1.0, 65–70 → +0.25, 40–50 → −0.25 | dinâmico |
 | Volume | `volRatio > 1.2` → +0.5 | dinâmico |
@@ -1516,7 +1538,7 @@ Cor e texto conforme a mesma escala acima.
 **Acceptance Criteria:**
 - [ ] Ativos ordenados por score decrescente (maior convicção primeiro).
 - [ ] Cada ticker pill mostra score com cor (verde/amarelo/cinza).
-- [ ] Painel Scorecard aparece para o ativo selecionado mostrando os 5 critérios com pontos e ícone.
+- [ ] Painel Scorecard aparece para o ativo selecionado mostrando os **6 critérios** (SMA50 e SMA200 como linhas separadas) com pontos e ícone.
 - [ ] Barra de progresso visual mostra score/4.5.
 - [ ] Label de convicção (Alta/Moderada/Fraco) aparece no painel e no cenário TP.
 - [ ] Valores "N/D" para campos ausentes — sem crash.
@@ -1527,6 +1549,91 @@ Cor e texto conforme a mesma escala acima.
 
 ---
 
+### US-219 — Signal Scoring: SMA50 e SMA200 como Critérios Independentes
+
+**Como** usuário que lê os sinais do Momentum,
+**Quero** que SMA50 e SMA200 sejam avaliados separadamente no scoring,
+**Para que** uma ação em pullback de médio prazo (abaixo da SMA50) mas em alta estrutural (acima da SMA200) receba crédito pelo regime de longo prazo — em vez de pontuar zero como se estivesse em bear market completo.
+
+**Contexto:**
+No Signal Engine v2 (US-210), SMA50 e SMA200 eram avaliados de forma combinada: ambos acima = +1.5, só SMA50 = +0.75, nenhum = +0. O caso "acima da SMA200, abaixo da SMA50" — pullback em uptrend, um setup clássico — pontuava 0, incorretamente equiparando-o a um bear market confirmado. Com critérios separados (+0.75 cada), esse setup passa a pontuar +0.75, refletindo que o regime de longo prazo está preservado.
+
+**Mudanças de implementação:**
+
+#### 1. `pickSignal()` em `stock-dashboard.html`
+
+Substituir o bloco de tendência combinada:
+```js
+// ANTES (combinado):
+if (above50 && above200) s += 1.5;
+else if (above50)        s += 0.75;
+
+// DEPOIS (independente):
+if (above50)  s += 0.75;  // 1. Medium-term trend (SMA50)
+if (above200) s += 0.75;  // 2. Long-term regime (SMA200)
+```
+
+O hard guard de regime permanece inalterado:
+```js
+if (!above200) s = Math.min(s, 1.0);  // cap at HOLD in bear regime
+```
+
+Score máximo permanece 4.5 pts. Thresholds BUY (≥ 2.5) e HOLD (≥ 1.0) inalterados.
+
+#### 2. `feedCardWhy(d)` em `stock-dashboard.html`
+
+Substituir o bloco de tendência combinada (uma linha) por **duas linhas independentes**:
+
+```js
+// SMA50
+if (d.pA50) {
+  lines.push('✅ SMA50 — preço acima da média de 50 dias (tendência de médio prazo)');
+} else {
+  lines.push('❌ SMA50 — preço abaixo da média de 50 dias — pressão vendedora no médio prazo');
+}
+
+// SMA200
+if (d.pA200) {
+  lines.push('✅ SMA200 — preço acima da média de 200 dias (regime de alta estrutural)');
+} else {
+  lines.push('❌ SMA200 — preço abaixo da média de 200 dias — bear market confirmado');
+}
+```
+
+O bloco de regime gate ao final permanece (só aparece quando `d.pA200 === false`).
+
+#### 3. Lista SMA column — `renderHomeLista()` em `stock-dashboard.html`
+
+Adicionar o caso "acima só da SMA200" que antes mostrava "—":
+```js
+// ANTES:
+const smaLabel = (d?.pA50 && d?.pA200) ? '50+200' : d?.pA50 ? '50' : '—';
+const smaColor = (d?.pA50 && d?.pA200) ? 'var(--buy)' : d?.pA50 ? 'var(--hold)' : 'var(--sell)';
+
+// DEPOIS:
+const smaLabel = (d?.pA50 && d?.pA200) ? '50+200'
+               : d?.pA50  ? '50'
+               : d?.pA200 ? '200'
+               : '—';
+const smaColor = (d?.pA50 && d?.pA200) ? 'var(--buy)'
+               : (d?.pA50 || d?.pA200) ? 'var(--hold)'
+               : 'var(--sell)';
+```
+
+**Acceptance Criteria:**
+- [ ] `pickSignal()` avalia SMA50 e SMA200 em linhas independentes (+0.75 cada).
+- [ ] Score máximo permanece 4.5 pts. Thresholds BUY/HOLD inalterados.
+- [ ] Hard guard de regime (`!above200 → max 1.0`) inalterado.
+- [ ] "Por que:" mostra duas linhas separadas: uma para SMA50, uma para SMA200.
+- [ ] Coluna SMA na Lista mostra "200" quando ativo está acima da SMA200 mas abaixo da SMA50.
+- [ ] Scorecard do Simulador (US-218) mostra 6 linhas: SMA50 e SMA200 separadas.
+- [ ] Sem regressão nos sinais existentes — verificar que COMPRA/AGUARDAR/VENDA ainda funcionam para filtros.
+
+**Depends on:** US-210 (já shipado), US-218 (scorecard — pode ser implementado em conjunto)
+**Sprint:** 26 · **Effort:** 1h · **Priority:** 🔴 High (corrige modelo de scoring)
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -1534,7 +1641,7 @@ Cor e texto conforme a mesma escala acima.
 | 18 | 38, 40, 43 | US-173–175, US-177, US-191, US-192, US-201 | Lista Interatividade, CPF toggle, tradução "Positions", fix DARF link, B3 watchlist prices | ✅ Done |
 | 19 | 39, 44, 45, 46 | US-176, US-207, US-208, US-209 | Acompanhados redesign + ADMIN_EMAIL env var + delete account PT fix + signup 500 fix | ✅ Done |
 | 20 | 47 | US-210, US-211, US-212, US-213, US-214 | Signal Engine v2 — scoring fix, ATR exits, score display, Por que enrichment, indicator columns | ✅ Done |
-| 26 | 48 | US-215, US-216, US-217, US-218 | Education & Onboarding — Primeiros Passos, Sinal Momentum module, CDB/CDI module, Simulador scorecard | 📋 Planned |
+| 26 | 48 | US-215, US-216, US-217, US-218, US-219 | Education & Onboarding — Primeiros Passos, Sinal Momentum module, CDB/CDI module, Simulador scorecard, SMA50/200 split scoring | 📋 Planned |
 | 23 | 43 | US-193–201 | Security & Code Quality — Critical + Major | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | 📋 Planned |
 | 25 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
