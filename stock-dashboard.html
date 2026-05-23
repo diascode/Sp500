@@ -108,6 +108,7 @@
     <button class="seg-btn" data-mode="sinais" onclick="setHomeMode('sinais')">⚡ Sinais</button>
     <button class="seg-btn" data-mode="lista"  onclick="setHomeMode('lista')">📋 Lista</button>
     <button class="seg-btn" data-mode="padroes" onclick="setHomeMode('padroes')">🕯 Padrões</button>
+    <button class="seg-btn" data-mode="historico" onclick="setHomeMode('historico')">📊 Histórico</button>
   </div>
 
   <!-- Sinais controls (shown only in sinais mode) -->
@@ -261,7 +262,7 @@
 <script src="/static/fx.js"></script>
 <script>
 // ─── STATE ─────────────────────────────────────────────────────────────
-let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, displayedStocks: [], homeMode: localStorage.getItem('momentum_home_mode') || 'sinais' };
+let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, displayedStocks: [], homeMode: localStorage.getItem('momentum_home_mode') || 'sinais', backtestResults: null };
 let _portfolioMonthFilter = 'all';
 let _portfolioSaveTimer = null;
 let _trackedSaveTimer = null;
@@ -1568,6 +1569,14 @@ function renderDashboard() {
     renderPatternFinder();
     return;
   }
+  if (state.homeMode === 'historico') {
+    if (grid) { grid.style.display = 'none'; grid.innerHTML = ''; }
+    if (sidebar) sidebar.style.display = 'none';
+    if (calSec) calSec.style.display = 'none';
+    if (dash) dash.style.display = 'block';
+    renderBacktest();
+    return;
+  }
 
   // Default: sinais mode
   if (sidebar) sidebar.style.display = '';
@@ -1615,6 +1624,254 @@ let _listaSort = 'ticker';
 let _listaSortDir = 1;
 let _listaFilter = '';
 let _listaScanning = false;
+
+// ─── HISTÓRICO / BACKTEST ──────────────────────────────────────────────────
+
+function btStats(sigs, horizon) {
+  const key = 'ret' + horizon;
+  const valid = sigs.filter(s => s[key] != null);
+  if (!valid.length) return null;
+  const wins   = valid.filter(s => s[key] > 0);
+  const losses = valid.filter(s => s[key] <= 0);
+  const sumWin  = wins.reduce((a, s) => a + s[key], 0);
+  const sumLoss = Math.abs(losses.reduce((a, s) => a + s[key], 0));
+  return {
+    n:      valid.length,
+    winPct: (wins.length / valid.length * 100).toFixed(1),
+    avgRet: (valid.reduce((a, s) => a + s[key], 0) / valid.length).toFixed(2),
+    pf:     sumLoss > 0 ? (sumWin / sumLoss).toFixed(2) : '∞',
+    best:   Math.max(...valid.map(s => s[key])).toFixed(1),
+    worst:  Math.min(...valid.map(s => s[key])).toFixed(1),
+  };
+}
+
+function backtestStock(ticker, candles) {
+  const WARMUP = 230;
+  const signals = [];
+  const rsiA    = calcRSI(candles, 14);
+  const macdA   = calcMACD(candles);
+  const adxA    = calcADX(candles, 14);
+  const sma50A  = calcSMA(candles, 50);
+  const sma200A = calcSMA(candles, 200);
+  const atrA    = calcATR(candles, 14);
+
+  for (let i = WARMUP; i < candles.length - 30; i++) {
+    const rsi      = rsiA[i]   ?? 50;
+    const macd     = macdA[i]  ?? 0;
+    const macdHist = (macdA[i] ?? 0) - (macdA[i-1] ?? 0);
+    const adx      = adxA[i]   ?? 20;
+    const above50  = candles[i].c > (sma50A[i]  ?? 0);
+    const above200 = candles[i].c > (sma200A[i] ?? 0);
+    const volSlice = candles.slice(Math.max(0, i-19), i+1);
+    const volAvg   = volSlice.reduce((s, c) => s + c.v, 0) / volSlice.length;
+    const volRatio = candles[i].v / (volAvg || 1);
+    // v3 inputs
+    const max52w       = Math.max(...candles.slice(Math.max(0, i-251), i+1).map(x => x.c));
+    const distFromHigh = parseFloat(((max52w - candles[i].c) / (max52w || 1)).toFixed(3));
+    const sma200Rising = (sma200A[i] ?? 0) > (sma200A[i-20] ?? 0);
+    const rsiSlope     = parseFloat(((rsiA[i] ?? 50) - (rsiA[Math.max(0, i-5)] ?? 50)).toFixed(1));
+    const atrPctNow    = parseFloat(((atrA[i] ?? 0) / (candles[i].c || 1)).toFixed(4));
+    const atrSlice     = atrA.slice(Math.max(0, i-49), i+1).filter(v => v != null);
+    const atrPctAvg    = parseFloat((atrSlice.reduce((s, v) => s + v / (candles[i].c || 1), 0) / (atrSlice.length || 1)).toFixed(4));
+
+    const { signal, score } = pickSignal(rsi, macd, macdHist, adx, above50, above200, volRatio, distFromHigh, sma200Rising, rsiSlope, atrPctNow, atrPctAvg);
+    if (signal !== 'buy' && signal !== 'watchlist') continue;
+
+    const entry = candles[i].c;
+    const row = { ticker, score, signal };
+    for (const h of [10, 20, 30]) {
+      const exit = candles[i + h]?.c;
+      row['ret' + h] = exit != null ? parseFloat(((exit - entry) / entry * 100).toFixed(2)) : null;
+    }
+    signals.push(row);
+  }
+  return signals;
+}
+
+function runBacktest() {
+  const all = [];
+  (state.analyzed['brasil'] || []).forEach(d => {
+    if (d.candles && d.candles.length >= 260) {
+      backtestStock(d.ticker, d.candles).forEach(s => all.push(s));
+    }
+  });
+  return all;
+}
+
+function renderBacktest() {
+  const container = document.getElementById('dashboard');
+  const scanned   = (state.analyzed['brasil'] || []).filter(d => d.candles && d.candles.length >= 260);
+  const total     = scanned.length;
+  const res       = state.backtestResults;
+
+  let html = `<div class="shell" style="padding-top:var(--s-5);padding-bottom:var(--s-8)">`;
+
+  // Header
+  html += `<h1 class="hed1" style="margin-top:0;margin-bottom:var(--s-2)">📊 <span style="color:var(--primary)">Histórico</span> de Sinais</h1>`;
+
+  // Explanation panel (always visible)
+  html += `<div class="card" style="padding:var(--s-5);margin-bottom:var(--s-4);border-left:3px solid var(--primary)">`;
+  html += `<h3 class="hed3" style="margin-top:0;margin-bottom:var(--s-3)">O que é o Histórico?</h3>`;
+  html += `<p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0 0 var(--s-3) 0">O Histórico aplica os critérios do Momentum (RSI, MACD, ADX, Volume, SMA50, SMA200, proximidade de topo, slope do RSI e regime de volatilidade) sobre todos os pregões disponíveis, identificando cada data em que uma ação teria gerado um sinal. Em seguida, mede o retorno real da ação nos <strong>10, 20 e 30 pregões seguintes</strong>.</p>`;
+  html += `<p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0 0 var(--s-3) 0">O resultado mostra a <strong>taxa de acerto histórica</strong> — quantas vezes o sinal foi seguido de valorização — e o <strong>retorno médio</strong>, indicando se os ganhos compensaram as perdas.</p>`;
+  html += `<p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0">Use o Histórico para calibrar sua confiança: sinais de <strong style="color:var(--buy)">Alta Convicção</strong> (score ≥ 3.5) tendem a ter taxa de acerto e retorno médio maiores do que sinais de <strong style="color:#ca8a04">Monitorar</strong> (score 2.5–3.4).</p>`;
+  html += `</div>`;
+
+  // Disclaimers
+  html += `<div style="font-size:12px;color:var(--ink-3);margin-bottom:var(--s-5);line-height:1.8">`;
+  html += `⚠️ <strong>Backtest in-sample</strong> · Os critérios foram calibrados com visão do passado — resultados reais podem ser menores.<br>`;
+  html += `⚠️ <strong>Não inclui</strong> custos de corretagem, spread, IR ou slippage.<br>`;
+  html += `⚠️ <strong>Survivorship bias</strong>: apenas ações que existem hoje são analisadas.`;
+  html += `</div>`;
+
+  if (!res) {
+    // CTA: not yet calculated
+    if (total === 0) {
+      html += `<div class="card" style="text-align:center;padding:var(--s-7) var(--s-5)">`;
+      html += `<div style="font-size:40px;margin-bottom:var(--s-3)">📡</div>`;
+      html += `<h3 class="hed3">Nenhuma ação varrida ainda</h3>`;
+      html += `<p style="color:var(--ink-3);font-size:13px;margin:var(--s-2) 0 var(--s-4) 0">Vá em ⚡ Sinais e faça uma varredura primeiro para que o Histórico possa analisar os dados históricos.</p>`;
+      html += `<button class="btn-primary" onclick="setHomeMode('sinais')">Ir para Sinais →</button>`;
+      html += `</div>`;
+    } else {
+      html += `<div class="card" style="text-align:center;padding:var(--s-6) var(--s-5)">`;
+      html += `<div style="font-size:40px;margin-bottom:var(--s-3)">📈</div>`;
+      html += `<h3 class="hed3">Pronto para calcular</h3>`;
+      html += `<p style="color:var(--ink-3);font-size:13px;margin:var(--s-2) 0 var(--s-4) 0">${total} ${total !== 1 ? 'ações' : 'ação'} com histórico disponível. O cálculo aplica o motor de sinais em janela deslizante sobre todos os pregões dos últimos 5 anos.</p>`;
+      html += `<button class="btn-primary" onclick="calcBacktest()">📊 Calcular Backtest</button>`;
+      html += `</div>`;
+    }
+  } else {
+    // Results
+    const all       = res;
+    const buyAll    = all.filter(s => s.signal === 'buy');
+    const watchAll  = all.filter(s => s.signal === 'watchlist');
+
+    // Recalc button
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--s-4)">`;
+    html += `<span style="font-size:13px;color:var(--ink-3)">${total} ações · ${all.length} sinais totais</span>`;
+    html += `<button class="btn" onclick="state.backtestResults=null;renderBacktest()" style="font-size:12px;padding:4px 12px;min-height:28px">↻ Recalcular</button>`;
+    html += `</div>`;
+
+    // Summary cards by horizon
+    for (const h of [10, 20, 30]) {
+      const s = btStats(all, h);
+      if (!s) continue;
+      const retColor = parseFloat(s.avgRet) >= 0 ? 'var(--buy)' : 'var(--sell)';
+      const pfColor  = parseFloat(s.pf) >= 1 ? 'var(--buy)' : 'var(--sell)';
+      html += `<div style="margin-bottom:var(--s-2)"><span style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em">Horizonte ${h} dias — todos os sinais</span></div>`;
+      html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:var(--s-3);margin-bottom:var(--s-5)">`;
+      html += btStatCard('Sinais', s.n, 'var(--ink)');
+      html += btStatCard('Taxa de Acerto', s.winPct + '%', s.winPct >= 55 ? 'var(--buy)' : s.winPct >= 45 ? 'var(--hold)' : 'var(--sell)');
+      html += btStatCard('Retorno Médio', (parseFloat(s.avgRet) >= 0 ? '+' : '') + s.avgRet + '%', retColor);
+      html += btStatCard('Fator de Lucro', s.pf + '×', pfColor);
+      html += btStatCard('Melhor 20d', '+' + s.best + '%', 'var(--buy)');
+      html += btStatCard('Pior 20d', s.worst + '%', 'var(--sell)');
+      html += `</div>`;
+    }
+
+    // Tier comparison table (20d)
+    const hc = btStats(buyAll, 20), wl = btStats(watchAll, 20);
+    if (hc || wl) {
+      html += `<div class="card-flush" style="overflow-x:auto;margin-bottom:var(--s-5)">`;
+      html += `<div style="padding:var(--s-4) var(--s-4) var(--s-2)"><span style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em">Comparação por Tier — Horizonte 20 dias</span></div>`;
+      html += `<table class="tracked-table"><thead><tr>`;
+      html += `<th>Tier</th><th>Sinais</th><th>Taxa Acerto</th><th>Ret. Médio</th><th>Fator Lucro</th><th>Melhor</th><th>Pior</th>`;
+      html += `</tr></thead><tbody>`;
+      if (hc) {
+        const rc = parseFloat(hc.avgRet) >= 0 ? 'var(--buy)' : 'var(--sell)';
+        html += `<tr>`;
+        html += `<td><span class="status-badge active" style="white-space:nowrap">⭐ Alta Convicção ≥3.5</span></td>`;
+        html += `<td style="font-family:var(--font-mono)">${hc.n}</td>`;
+        html += `<td style="font-family:var(--font-mono);color:${parseFloat(hc.winPct)>=55?'var(--buy)':parseFloat(hc.winPct)>=45?'var(--hold)':'var(--sell)'}">${hc.winPct}%</td>`;
+        html += `<td style="font-family:var(--font-mono);color:${rc}">${parseFloat(hc.avgRet)>=0?'+':''}${hc.avgRet}%</td>`;
+        html += `<td style="font-family:var(--font-mono);color:${parseFloat(hc.pf)>=1?'var(--buy)':'var(--sell)'}">${hc.pf}×</td>`;
+        html += `<td style="font-family:var(--font-mono);color:var(--buy)">+${hc.best}%</td>`;
+        html += `<td style="font-family:var(--font-mono);color:var(--sell)">${hc.worst}%</td>`;
+        html += `</tr>`;
+      }
+      if (wl) {
+        const rw = parseFloat(wl.avgRet) >= 0 ? 'var(--buy)' : 'var(--sell)';
+        html += `<tr>`;
+        html += `<td><span class="status-badge watchlist" style="white-space:nowrap">👁 Monitorar 2.5–3.4</span></td>`;
+        html += `<td style="font-family:var(--font-mono)">${wl.n}</td>`;
+        html += `<td style="font-family:var(--font-mono);color:${parseFloat(wl.winPct)>=55?'var(--buy)':parseFloat(wl.winPct)>=45?'var(--hold)':'var(--sell)'}">${wl.winPct}%</td>`;
+        html += `<td style="font-family:var(--font-mono);color:${rw}">${parseFloat(wl.avgRet)>=0?'+':''}${wl.avgRet}%</td>`;
+        html += `<td style="font-family:var(--font-mono);color:${parseFloat(wl.pf)>=1?'var(--buy)':'var(--sell)'}">${wl.pf}×</td>`;
+        html += `<td style="font-family:var(--font-mono);color:var(--buy)">+${wl.best}%</td>`;
+        html += `<td style="font-family:var(--font-mono);color:var(--sell)">${wl.worst}%</td>`;
+        html += `</tr>`;
+      }
+      html += `</tbody></table></div>`;
+    }
+
+    // Per-stock breakdown (20d, sorted by Alta Convicção signal count)
+    const byStock = {};
+    buyAll.forEach(s => {
+      if (!byStock[s.ticker]) byStock[s.ticker] = { buy: [], watch: [] };
+      byStock[s.ticker].buy.push(s);
+    });
+    watchAll.forEach(s => {
+      if (!byStock[s.ticker]) byStock[s.ticker] = { buy: [], watch: [] };
+      byStock[s.ticker].watch.push(s);
+    });
+    const stockRows = Object.entries(byStock)
+      .map(([t, g]) => ({ t, buy: g.buy, watch: g.watch, n: g.buy.length + g.watch.length }))
+      .sort((a, b) => b.buy.length - a.buy.length);
+
+    if (stockRows.length > 0) {
+      html += `<div class="card-flush" style="overflow-x:auto">`;
+      html += `<div style="padding:var(--s-4) var(--s-4) var(--s-2)"><span style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em">Por Ação — Alta Convicção (20 dias)</span></div>`;
+      html += `<table class="tracked-table"><thead><tr>`;
+      html += `<th>Ticker</th><th>Alta Conv.</th><th>Acerto%</th><th>Ret. Médio</th><th>Monitorar</th><th>Acerto%</th><th>Ret. Médio</th>`;
+      html += `</tr></thead><tbody>`;
+      stockRows.forEach(({ t, buy, watch }) => {
+        const bs = btStats(buy,   20);
+        const ws = btStats(watch, 20);
+        const bRet = bs ? parseFloat(bs.avgRet) : null;
+        const wRet = ws ? parseFloat(ws.avgRet) : null;
+        html += `<tr>`;
+        html += `<td class="tkr">${t}</td>`;
+        if (bs) {
+          html += `<td style="font-family:var(--font-mono)">${bs.n}</td>`;
+          html += `<td style="font-family:var(--font-mono);color:${parseFloat(bs.winPct)>=55?'var(--buy)':parseFloat(bs.winPct)>=45?'var(--hold)':'var(--sell)'}">${bs.winPct}%</td>`;
+          html += `<td style="font-family:var(--font-mono);color:${bRet>=0?'var(--buy)':'var(--sell)'}">${bRet>=0?'+':''}${bs.avgRet}%</td>`;
+        } else {
+          html += `<td colspan="3" style="color:var(--ink-4);font-size:11px">—</td>`;
+        }
+        if (ws) {
+          html += `<td style="font-family:var(--font-mono)">${ws.n}</td>`;
+          html += `<td style="font-family:var(--font-mono);color:${parseFloat(ws.winPct)>=55?'var(--buy)':parseFloat(ws.winPct)>=45?'var(--hold)':'var(--sell)'}">${ws.winPct}%</td>`;
+          html += `<td style="font-family:var(--font-mono);color:${wRet>=0?'var(--buy)':'var(--sell)'}">${wRet>=0?'+':''}${ws.avgRet}%</td>`;
+        } else {
+          html += `<td colspan="3" style="color:var(--ink-4);font-size:11px">—</td>`;
+        }
+        html += `</tr>`;
+      });
+      html += `</tbody></table></div>`;
+    }
+  }
+
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+function btStatCard(label, value, color) {
+  return `<div class="card" style="padding:var(--s-3) var(--s-4)">
+    <div style="font-size:10px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">${label}</div>
+    <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:${color}">${value}</div>
+  </div>`;
+}
+
+function calcBacktest() {
+  const container = document.getElementById('dashboard');
+  container.innerHTML = `<div class="shell" style="padding-top:var(--s-8);text-align:center"><div style="font-size:32px;margin-bottom:var(--s-3)">⏳</div><p style="color:var(--ink-3);font-size:14px">Calculando backtest…</p></div>`;
+  // Defer to next tick so browser paints the loading state first
+  setTimeout(() => {
+    state.backtestResults = runBacktest();
+    renderBacktest();
+  }, 50);
+}
 
 function renderHomeLista() {
   const container = document.getElementById('dashboard');
