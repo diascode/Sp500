@@ -955,29 +955,49 @@ function calcADX(c,p){const dx=[];for(let i=p;i<c.length;i++){const up=c[i].h-c[
 function calcBB(c,p,mult){const sma=calcSMA(c,p),u=[],l=[];for(let i=0;i<c.length;i++){if(sma[i]===null){u.push(null);l.push(null);continue}let sq=0,cnt=0;for(let j=i-p+1;j<=i;j++){sq+=(c[j].c-sma[i])**2;cnt++}const std=Math.sqrt(sq/cnt);u.push(sma[i]+mult*std);l.push(sma[i]-mult*std)}return{upper:u,lower:l,mid:sma}}
 function calcATR(c,p){const a=[];for(let i=0;i<c.length;i++){if(i<p){a.push(null);continue}let s=0;for(let j=i-p+1;j<=i;j++)s+=Math.max(c[j].h-c[j].l,Math.abs(c[j].h-c[j-1].c),Math.abs(c[j].l-c[j-1].c));a.push(s/p)}return a}
 
-function pickSignal(rsi, macd, macdHist, adx, above50, above200, volRatio) {
+function pickSignal(rsi, macd, macdHist, adx, above50, above200, volRatio, distFromHigh, sma200Rising, rsiSlope, atrPctNow, atrPctAvg) {
+  // Structural health gate — hard block before scoring
+  if (distFromHigh != null && sma200Rising != null) {
+    if (!sma200Rising || distFromHigh > 0.35) {
+      return { signal: 'neutral', score: 0.0, structuralWeak: true };
+    }
+  }
   let s = 0;
   // 1. Medium-term trend (SMA50) — max 0.75 pts
-  if (above50) s += 0.75;
-
+  if (above50)  s += 0.75;
   // 2. Long-term regime (SMA200) — max 0.75 pts
   if (above200) s += 0.75;
-  // 2. Momentum — MACD value + direction — max 1.0 pt
+  // 3. Momentum — MACD value + direction — max 1.0 pt
   if (macd > 0 && macdHist > 0) s += 1.0;
   else if (macd > 0)             s += 0.5;
-  // 3. RSI coherent zone — max 1.0 pt
+  // 4. RSI coherent zone — max 1.0 pt
   if      (rsi >= 50 && rsi <= 65) s += 1.0;
   else if (rsi > 65  && rsi <= 70) s += 0.25;
   else if (rsi >= 40 && rsi <  50) s -= 0.25;
-  // 4. Trend strength — max 0.5 pts
+  // 5. Trend strength — max 0.5 pts
   if (adx > 25) s += 0.5;
-  // 5. Volume confirmation — max 0.5 pts
+  // 6. Volume confirmation — max 0.5 pts
   if (volRatio > 1.2) s += 0.5;
+  // 7. Distance from 52-week high — proximity = leadership
+  if (distFromHigh != null) {
+    if      (distFromHigh <= 0.05) s += 0.75;
+    else if (distFromHigh <= 0.15) s += 0.50;
+    else if (distFromHigh >  0.40) s -= 1.00;
+  }
+  // 8. RSI slope — momentum accelerating vs decaying
+  if (rsiSlope != null) {
+    if      (rsiSlope >= 5)               s += 0.50;
+    else if (rsiSlope <= -5 && rsi < 60)  s -= 0.50;
+  }
+  // 9. ATR volatility regime — penalise chaos
+  if (atrPctNow != null && atrPctAvg != null && atrPctAvg > 0) {
+    if (atrPctNow > 1.5 * atrPctAvg) s -= 0.50;
+  }
   // Hard guards
   if (!above200) s = Math.min(s, 1.0);
   if (rsi > 75 || rsi < 25) s -= 1.0;
-  const signal = s >= 2.5 ? 'buy' : s >= 1.0 ? 'neutral' : 'sell';
-  return { signal, score: parseFloat(s.toFixed(1)) };
+  const signal = s >= 3.5 ? 'buy' : s >= 2.5 ? 'watchlist' : s >= 1.0 ? 'neutral' : 'sell';
+  return { signal, score: parseFloat(s.toFixed(1)), structuralWeak: false };
 }
 
 function analyze(ticker, name, sector, candles) {
@@ -995,12 +1015,21 @@ function analyze(ticker, name, sector, candles) {
   const res1=parseFloat((Math.max(...recent.map(x=>x.h))*1.005).toFixed(2)), res2=parseFloat((res1*1.03).toFixed(2));
   const rsiD=rsi>55?'bull':rsi<40?'bear':'neutral', macdD=macd>0?'bull':'bear', adxD=adx>25?'bull':'neutral';
   const pA9=price>sma9, pA20=price>sma20, pA50=price>sma50, pA200=price>sma200;
-  const { signal, score } = pickSignal(rsi, macd, macdHist, adx, pA50, pA200, volRatio);
+  // New v3 inputs
+  const max52w = c.length >= 252 ? Math.max(...c.slice(-252).map(x=>x.c)) : Math.max(...c.map(x=>x.c));
+  const distFromHigh = parseFloat(((max52w - price) / (max52w||1)).toFixed(3));
+  const sma200_20dAgo = s200.length > 21 ? (s200[s200.length-21] ?? sma200) : sma200;
+  const sma200Rising = sma200 > sma200_20dAgo;
+  const rsiSlope = parseFloat(((rsiA[rsiA.length-1]??50) - (rsiA[rsiA.length-6]??50)).toFixed(1));
+  const atrPctNow = parseFloat((atr / (price||1)).toFixed(4));
+  const atrSlice = atrA.slice(-50).filter(v => v != null);
+  const atrPctAvg = parseFloat((atrSlice.reduce((sum,v) => sum + v/(price||1), 0) / (atrSlice.length||1)).toFixed(4));
+  const { signal, score, structuralWeak } = pickSignal(rsi, macd, macdHist, adx, pA50, pA200, volRatio, distFromHigh, sma200Rising, rsiSlope, atrPctNow, atrPctAvg);
   const masAbove=[pA9,pA20,pA50,pA200].filter(Boolean).length;
   const maAlign=masAbove>=3?'ALTA ALINHADA':masAbove===0?'BAIXA ALINHADA':masAbove>=2?'PARCIAL ALTA':'PARCIAL BAIXA';
   const tp = parseFloat((price + 3.0 * atr).toFixed(2));
   const sl = parseFloat((price - 1.5 * atr).toFixed(2));
-  return { ticker, name, sector, candles:c, price, sma9,sma20,sma50,sma200,maAlign,masAbove, rsi,macd,adx, bbU,bbM,bbL,atr, volAvg,volCur,volRatio, sup1,sup2,res1,res2, signal, score, macdHist, rsiDir:rsiD,macdDir:macdD,adxDir:adxD, tp, sl, pA9,pA20,pA50,pA200 };
+  return { ticker, name, sector, candles:c, price, sma9,sma20,sma50,sma200,maAlign,masAbove, rsi,macd,adx, bbU,bbM,bbL,atr, volAvg,volCur,volRatio, sup1,sup2,res1,res2, signal, score, macdHist, rsiDir:rsiD,macdDir:macdD,adxDir:adxD, tp, sl, pA9,pA20,pA50,pA200, distFromHigh, sma200Rising, rsiSlope, atrPctNow, atrPctAvg, structuralWeak };
 }
 
 function drawChart(canvas, candles, extra) {
