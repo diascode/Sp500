@@ -114,7 +114,8 @@
   <div class="scan-controls" id="sinaisControls">
     <div id="regionSeg" style="display:none"></div>
     <div class="filter-chips" id="signalFilterChips">
-      <button class="chip chip-active" data-signal="buy" onclick="filterSignal('buy')">Compra</button>
+      <button class="chip chip-active" data-signal="buy" onclick="filterSignal('buy')">⭐ Alta Convicção</button>
+      <button class="chip" data-signal="watchlist" onclick="filterSignal('watchlist')">👁 Monitorar</button>
       <button class="chip" data-signal="neutral" onclick="filterSignal('neutral')">Aguardar</button>
       <button class="chip" data-signal="sell" onclick="filterSignal('sell')">Venda</button>
       <button class="chip" data-signal="all" onclick="filterSignal('all')">Todos</button>
@@ -1159,8 +1160,13 @@ function stockFlag(d) {
 function feedCardWhy(d) {
   const sig = d.signal;
   const score = d.score != null ? d.score : '?';
-  const sigLabel = sig === 'buy' ? 'COMPRA' : sig === 'sell' ? 'VENDA' : 'AGUARDAR';
+  const sigLabel = sig === 'buy' ? 'ALTA CONVICÇÃO' : sig === 'watchlist' ? 'MONITORAR' : sig === 'sell' ? 'VENDA' : 'AGUARDAR';
   const lines = [];
+
+  // Structural health gate
+  if (d.structuralWeak) {
+    lines.push(`🔴 Saúde estrutural fraca — SMA200 em queda ou preço >35% abaixo da máxima de 52 semanas. Sinal bloqueado automaticamente.`);
+  }
 
   // 1. SMA50
   if (d.pA50) {
@@ -1228,20 +1234,55 @@ function feedCardWhy(d) {
     }
   }
 
-  // 6. Regime gate warning
+  // 6. Regime gate warning (below SMA200 caps score)
   if (d.pA200 === false) {
     lines.push(`🔴 Regime de mercado: ativo abaixo da SMA200 — sinais de compra bloqueados`);
   }
 
-  const header = `<strong>${sigLabel} · ${score}/4.5</strong>`;
+  // 7. 52-week high proximity
+  if (d.distFromHigh != null) {
+    const pct = (d.distFromHigh * 100).toFixed(0);
+    if (d.distFromHigh <= 0.05) {
+      lines.push(`✅ Máx 52s: ${pct}% abaixo — ativo próximo do topo, força de breakout (+0.75)`);
+    } else if (d.distFromHigh <= 0.15) {
+      lines.push(`✅ Máx 52s: ${pct}% abaixo — próximo do topo, momentum estrutural (+0.50)`);
+    } else if (d.distFromHigh > 0.40) {
+      lines.push(`❌ Máx 52s: ${pct}% abaixo — colapso estrutural, penalidade (−1.0)`);
+    } else {
+      lines.push(`⚠️ Máx 52s: ${pct}% abaixo da máxima de 52 semanas (+0)`);
+    }
+  }
+
+  // 8. RSI slope
+  if (d.rsiSlope != null) {
+    if (d.rsiSlope >= 5) {
+      lines.push(`✅ Slope RSI: +${d.rsiSlope.toFixed(1)} pts em 5 dias — momentum acelerando (+0.50)`);
+    } else if (d.rsiSlope <= -5 && rsiVal != null && rsiVal < 60) {
+      lines.push(`❌ Slope RSI: ${d.rsiSlope.toFixed(1)} pts em 5 dias — momentum deteriorando (−0.50)`);
+    } else {
+      lines.push(`⚠️ Slope RSI: ${d.rsiSlope >= 0 ? '+' : ''}${d.rsiSlope.toFixed(1)} pts — neutro (+0)`);
+    }
+  }
+
+  // 9. ATR regime
+  if (d.atrPctNow != null && d.atrPctAvg != null && d.atrPctAvg > 0) {
+    const ratio = d.atrPctNow / d.atrPctAvg;
+    if (ratio > 1.5) {
+      lines.push(`❌ Volatilidade ${ratio.toFixed(1)}× acima da média — regime de pânico, penalidade (−0.50)`);
+    } else {
+      lines.push(`✅ Volatilidade normal (${ratio.toFixed(1)}× média) — ambiente favorável (+0)`);
+    }
+  }
+
+  const header = `<strong>${sigLabel} · ${score}/6.0</strong>`;
   return header + '<br>' + lines.map(l => `<span style="display:block;margin-top:4px">${l}</span>`).join('');
 }
-function feedCardPillLabel(sig) { return sig === 'buy' ? 'Compra' : sig === 'sell' ? 'Venda' : 'Aguardar'; }
+function feedCardPillLabel(sig) { return sig === 'buy' ? 'Alta Convicção' : sig === 'watchlist' ? 'Monitorar' : sig === 'sell' ? 'Venda' : 'Aguardar'; }
 function signalBadgeHtml(sig, score) {
-  const label = sig === 'buy' ? 'Compra' : sig === 'sell' ? 'Venda' : 'Aguardar';
-  const cls = sig === 'buy' ? 'buy' : sig === 'sell' ? 'sell' : 'hold';
+  const label = sig === 'buy' ? 'Alta Convicção' : sig === 'watchlist' ? 'Monitorar' : sig === 'sell' ? 'Venda' : 'Aguardar';
+  const cls = sig === 'buy' ? 'buy' : sig === 'watchlist' ? 'watchlist' : sig === 'sell' ? 'sell' : 'hold';
   const scoreStr = (score != null) ? ` · ${parseFloat(score).toFixed(1)}` : '';
-  const titleAttr = (score != null) ? ` title="Score: ${parseFloat(score).toFixed(1)} / 4.5 máximo"` : '';
+  const titleAttr = (score != null) ? ` title="Score: ${parseFloat(score).toFixed(1)} / 6.0 máximo"` : '';
   return `<span class="signal-pill ${cls}"${titleAttr}>${label}${scoreStr}</span>`;
 }
 
@@ -1339,9 +1380,16 @@ function updateScanHed(stocks) {
   const hed = document.getElementById('scanHed');
   if (!hed) return;
   const buyCount = (stocks || []).filter(s => s.signal === 'buy').length;
-  hed.innerHTML = buyCount > 0
-    ? `${buyCount} ${buyCount !== 1 ? 'ações' : 'ação'} com sinal de <span class="text-primary">compra</span>.`
-    : 'Nenhum sinal de compra no momento.';
+  const watchCount = (stocks || []).filter(s => s.signal === 'watchlist').length;
+  if (buyCount > 0 || watchCount > 0) {
+    let msg = '';
+    if (buyCount > 0) msg += `<span class="text-primary">⭐ ${buyCount} Alta Convicção</span>`;
+    if (buyCount > 0 && watchCount > 0) msg += ' · ';
+    if (watchCount > 0) msg += `<span style="color:#ca8a04">👁 ${watchCount} Monitorar</span>`;
+    hed.innerHTML = msg + '.';
+  } else {
+    hed.innerHTML = 'Nenhum sinal de compra no momento.';
+  }
 }
 
 function filterRegion(region) {
@@ -1504,8 +1552,9 @@ function renderDashboard() {
   }
 
   let display = _signalFilter === 'all' ? results
-    : _signalFilter === 'neutral' ? results.filter(d => d.signal === 'neutral')
-    : _signalFilter === 'sell'    ? results.filter(d => d.signal === 'sell')
+    : _signalFilter === 'neutral'   ? results.filter(d => d.signal === 'neutral')
+    : _signalFilter === 'sell'      ? results.filter(d => d.signal === 'sell')
+    : _signalFilter === 'watchlist' ? results.filter(d => d.signal === 'watchlist')
     : results.filter(d => d.signal === 'buy');
 
   state.displayedStocks = display;
@@ -1576,8 +1625,9 @@ function renderHomeLista() {
 
   const sigBadge = (s) => {
     if (!s) return '<span style="color:var(--ink-4)">—</span>';
-    if (s === 'buy')     return `<span class="status-badge active">Compra</span>`;
-    if (s === 'sell')    return `<span class="status-badge sl">Venda</span>`;
+    if (s === 'buy')       return `<span class="status-badge active">Alta Convicção</span>`;
+    if (s === 'watchlist') return `<span class="status-badge watchlist">Monitorar</span>`;
+    if (s === 'sell')      return `<span class="status-badge sl">Venda</span>`;
     return `<span style="font-size:10px;color:var(--hold);font-weight:600">Aguardar</span>`;
   };
 
@@ -1601,7 +1651,7 @@ function renderHomeLista() {
     html += `</div>`;
   } else {
     html += `<div class="card-flush" style="overflow-x:auto"><table class="tracked-table">`;
-    html += `<thead><tr>${th('ticker','TICKER')}${th('nome','NOME')}${th('setor','SETOR')}${th('preco','PREÇO')}${th('var','VAR %')}<th title="Índice de Força Relativa — zona saudável 50–65" style="cursor:pointer" onclick="sortLista('rsi')">RSI</th><th title="Moving Average Convergence Divergence — positivo = momentum de compra" style="cursor:pointer" onclick="sortLista('macd')">MACD</th><th class="hide-mobile" title="Average Directional Index — > 25 = tendência forte" style="cursor:pointer" onclick="sortLista('adx')">ADX</th><th class="hide-mobile" title="Volume atual vs média de 20 dias" style="cursor:pointer" onclick="sortLista('vol')">Volume</th><th title="Posição relativa às médias SMA50 e SMA200" style="cursor:pointer" onclick="sortLista('sma')">SMA</th><th title="Pontuação do sinal (máximo 4.5)" style="cursor:pointer" onclick="sortLista('score')">Score</th>${th('sinal','SINAL')}<th></th></tr></thead><tbody>`;
+    html += `<thead><tr>${th('ticker','TICKER')}${th('nome','NOME')}${th('setor','SETOR')}${th('preco','PREÇO')}${th('var','VAR %')}<th title="Índice de Força Relativa — zona saudável 50–65" style="cursor:pointer" onclick="sortLista('rsi')">RSI</th><th title="Moving Average Convergence Divergence — positivo = momentum de compra" style="cursor:pointer" onclick="sortLista('macd')">MACD</th><th class="hide-mobile" title="Average Directional Index — > 25 = tendência forte" style="cursor:pointer" onclick="sortLista('adx')">ADX</th><th class="hide-mobile" title="Volume atual vs média de 20 dias" style="cursor:pointer" onclick="sortLista('vol')">Volume</th><th title="Posição relativa às médias SMA50 e SMA200" style="cursor:pointer" onclick="sortLista('sma')">SMA</th><th title="Pontuação do sinal (máximo 6.0)" style="cursor:pointer" onclick="sortLista('score')">Score</th>${th('sinal','SINAL')}<th></th></tr></thead><tbody>`;
     rows.forEach(s => {
       const d = sigMap[s.t];
       const unanalyzed = !d;
@@ -1646,8 +1696,8 @@ function renderHomeLista() {
       }
       html += `<td style="font-family:var(--font-mono);color:${smaColor}">${smaLabel}</td>`;
       const scoreVal = d?.score != null ? +d.score : null;
-      const scoreColor = scoreVal != null ? (scoreVal >= 3.0 ? 'var(--buy)' : scoreVal >= 1.5 ? 'var(--hold)' : 'var(--sell)') : 'var(--ink-3)';
-      html += `<td style="font-family:var(--font-mono);color:${scoreColor}">${scoreVal != null ? scoreVal.toFixed(1) + '/4.5' : ndCell()}</td>`;
+      const scoreColor = scoreVal != null ? (scoreVal >= 3.5 ? 'var(--buy)' : scoreVal >= 2.5 ? '#ca8a04' : scoreVal >= 1.5 ? 'var(--hold)' : 'var(--sell)') : 'var(--ink-3)';
+      html += `<td style="font-family:var(--font-mono);color:${scoreColor}">${scoreVal != null ? scoreVal.toFixed(1) + '/6.0' : ndCell()}</td>`;
       html += `<td>${sigBadge(d?.signal)}</td>`;
       const _isTracked = state.trackedPicks.some(p => p.ticker === s.t);
       html += `<td style="white-space:nowrap" onclick="event.stopPropagation()">
@@ -2377,8 +2427,8 @@ function showSimulatorView() {
 }
 
 function simConvictionLabel(score) {
-  if (score >= 3.5) return { text: 'Alta convicção', color: 'var(--buy)' };
-  if (score >= 2.5) return { text: 'Convicção moderada', color: 'var(--buy)' };
+  if (score >= 3.5) return { text: 'Alta Convicção', color: 'var(--buy)' };
+  if (score >= 2.5) return { text: 'Monitorar — confirmar antes de entrar', color: '#ca8a04' };
   if (score >= 1.5) return { text: 'Sinal fraco', color: 'var(--hold)' };
   return { text: 'Aguardar — sinal muito fraco', color: 'var(--ink-3)' };
 }
@@ -2491,7 +2541,7 @@ function renderSimulator() {
     if (stock && stock.score != null) {
       const scoreVal = +stock.score;
       const conviction = simConvictionLabel(scoreVal);
-      const pct = Math.min((scoreVal / 4.5) * 100, 100).toFixed(1);
+      const pct = Math.min((scoreVal / 6.0) * 100, 100).toFixed(1);
 
       html += `<div class="card" style="padding:var(--s-4);margin-bottom:var(--s-4)">`;
       html += `<div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:var(--s-3)">Convicção do Sinal — ${stock.ticker}</div>`;
@@ -2499,7 +2549,7 @@ function renderSimulator() {
       // Progress bar
       html += `<div style="display:flex;align-items:center;gap:12px;margin-bottom:var(--s-3)">`;
       html += `<div style="flex:1;height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${conviction.color};border-radius:4px;transition:width 0.3s"></div></div>`;
-      html += `<span style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:${conviction.color};white-space:nowrap">${scoreVal.toFixed(1)} / 4.5</span>`;
+      html += `<span style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:${conviction.color};white-space:nowrap">${scoreVal.toFixed(1)} / 6.0</span>`;
       html += `<span style="font-size:13px;color:${conviction.color};white-space:nowrap">${conviction.text}</span>`;
       html += `</div>`;
 
@@ -2534,6 +2584,36 @@ function renderSimulator() {
       const adx = stock.adx != null ? +stock.adx : null;
       const adxPts = adx != null && adx > 25 ? 0.5 : 0;
       criteria.push({ icon: adxPts > 0 ? '✅' : '⚠️', label: adx != null ? `ADX ${adx.toFixed(0)} — ${adxPts > 0 ? 'tendência forte' : 'tendência fraca (< 25)'}` : 'ADX — sem dados', pts: adxPts, positive: adxPts > 0 });
+      // Criterion 7: 52-week high proximity
+      const dist = stock.distFromHigh != null ? +stock.distFromHigh : null;
+      let distPts = 0, distIcon = '⚠️', distDesc = '52w máxima — sem dados';
+      if (dist != null) {
+        const distPct = (dist * 100).toFixed(0);
+        if (dist <= 0.05)       { distPts = 0.75; distIcon = '✅'; distDesc = `${distPct}% abaixo da máx 52s — breakout (+0.75)`; }
+        else if (dist <= 0.15)  { distPts = 0.50; distIcon = '✅'; distDesc = `${distPct}% abaixo da máx 52s — próximo do topo (+0.50)`; }
+        else if (dist > 0.40)   { distPts = -1.0; distIcon = '❌'; distDesc = `${distPct}% abaixo da máx 52s — colapso estrutural (−1.0)`; }
+        else                    { distPts = 0;    distIcon = '⚠️'; distDesc = `${distPct}% abaixo da máx 52s — neutro (+0)`; }
+      }
+      criteria.push({ icon: distIcon, label: distDesc, pts: distPts, positive: distPts > 0 });
+      // Criterion 8: RSI slope
+      const slope = stock.rsiSlope != null ? +stock.rsiSlope : null;
+      let slopePts = 0, slopeIcon = '⚠️', slopeDesc = 'Slope RSI — sem dados';
+      if (slope != null) {
+        if (slope >= 5)                         { slopePts = 0.50; slopeIcon = '✅'; slopeDesc = `Slope RSI +${slope.toFixed(1)} pts — momentum acelerando (+0.50)`; }
+        else if (slope <= -5 && rsi != null && rsi < 60) { slopePts = -0.50; slopeIcon = '❌'; slopeDesc = `Slope RSI ${slope.toFixed(1)} pts — momentum deteriorando (−0.50)`; }
+        else                                    { slopePts = 0; slopeIcon = '⚠️'; slopeDesc = `Slope RSI ${slope >= 0 ? '+' : ''}${slope.toFixed(1)} pts — neutro (+0)`; }
+      }
+      criteria.push({ icon: slopeIcon, label: slopeDesc, pts: slopePts, positive: slopePts > 0 });
+      // Criterion 9: ATR regime
+      const atrNow = stock.atrPctNow != null ? +stock.atrPctNow : null;
+      const atrAvg = stock.atrPctAvg != null ? +stock.atrPctAvg : null;
+      let atrPts = 0, atrIcon = '✅', atrDesc = 'Regime ATR — sem dados';
+      if (atrNow != null && atrAvg != null && atrAvg > 0) {
+        const ratio = atrNow / atrAvg;
+        if (ratio > 1.5) { atrPts = -0.50; atrIcon = '❌'; atrDesc = `Volatilidade ${ratio.toFixed(1)}× média — regime de pânico (−0.50)`; }
+        else             { atrPts = 0;     atrIcon = '✅'; atrDesc = `Volatilidade normal (${ratio.toFixed(1)}× média) — ambiente estável (+0)`; }
+      }
+      criteria.push({ icon: atrIcon, label: atrDesc, pts: atrPts, positive: atrPts >= 0 });
 
       criteria.forEach(c => {
         const ptsStr = c.pts > 0 ? `+${c.pts.toFixed(2)}` : c.pts < 0 ? c.pts.toFixed(2) : '+0.00';
@@ -2555,7 +2635,7 @@ function renderSimulator() {
         <div style="font-family:var(--font-mono);font-size:11px;color:var(--buy);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Cenário otimista — TP atingido</div>
         <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--buy)">+${sym} ${Math.abs(gainTP).toFixed(2)}</div>
         <div style="font-size:13px;color:var(--ink-3);margin-top:4px">${qty} ações × ${sym} ${tp.toFixed(2)} = ${sym} ${(qty*tp).toFixed(2)} · ganho de +${pctTP.toFixed(1)}%</div>
-        ${stock && stock.score != null ? (() => { const cv = simConvictionLabel(+stock.score); return `<div style="font-size:12px;color:${cv.color};margin-top:6px;font-family:var(--font-mono)">Confiança do sinal: ${cv.text} · ${(+stock.score).toFixed(1)}/4.5</div>`; })() : ''}
+        ${stock && stock.score != null ? (() => { const cv = simConvictionLabel(+stock.score); return `<div style="font-size:12px;color:${cv.color};margin-top:6px;font-family:var(--font-mono)">Confiança do sinal: ${cv.text} · ${(+stock.score).toFixed(1)}/6.0</div>`; })() : ''}
       </div>
     </div>`;
 
@@ -4391,7 +4471,7 @@ function renderEdu() {
     { id:'tesouro',         icon:'🏛️', name:'Tesouro Direto',           color:'#22d3ee', title:'Tesouro Direto — A Renda Fixa do Governo', subtitle:'Selic, IPCA+ e Prefixado: qual escolher e quando.', body:t('edu_tesouроBody') },
     { id:'lci_lca',         icon:'🌾', name:'LCI e LCA',                color:'#4caf50', title:'LCI e LCA — Renda Fixa Isenta de IR',      subtitle:'Por que a isenção importa e quando compensa mais que o Tesouro.', body:t('edu_lciLcaBody') },
     { id:'juros_compostos', icon:'📐', name:'Juros Compostos',          color:'#ff6a00', title:'O Poder dos Juros Compostos',               subtitle:'A força que transforma disciplina em patrimônio ao longo do tempo.', body:t('edu_jurosCompostosBody') },
-    { id:'momentum_signal', icon:'🎯', name:'Sinal Momentum', color:'#22d3ee', title:'Como o Momentum Calcula os Sinais', subtitle:'Entenda os 6 critérios do scoring v2 e o que significa a pontuação 3.5/4.5.', body:t('edu_momentumSignalBody') },
+    { id:'momentum_signal', icon:'🎯', name:'Sinal Momentum', color:'#22d3ee', title:'Como o Momentum Calcula os Sinais', subtitle:'Entenda os 9 critérios do scoring v3, o tier Monitorar e a pontuação máxima de 6.0.', body:t('edu_momentumSignalBody') },
     { id:'cdb_cdi', icon:'🏦', name:'CDB e CDI', color:'#4caf50', title:'CDB e CDI — Renda Fixa Bancária', subtitle:'O que é CDI, como o CDB rende sobre ele, e quando compensa mais que o Tesouro.', body:t('edu_cdbCdiBody') },
   ];
 
@@ -4821,7 +4901,7 @@ init();
       </div>
       <div style="display:flex;gap:12px;align-items:flex-start">
         <span style="font-size:22px;flex-shrink:0">📚</span>
-        <div><strong style="color:var(--ink)">Passo 4 — Aprenda os indicadores</strong><br><span style="font-size:13px;color:var(--ink-3)">Vá em Educação para entender RSI, MACD, ADX, DARF, CDB/CDI e mais. Inclui o módulo <strong>🎯 Sinal Momentum</strong> — como o score de 0 a 4.5 é calculado — e <strong>🏦 CDB e CDI</strong> — renda fixa bancária explicada.</span></div>
+        <div><strong style="color:var(--ink)">Passo 4 — Aprenda os indicadores</strong><br><span style="font-size:13px;color:var(--ink-3)">Vá em Educação para entender RSI, MACD, ADX, DARF, CDB/CDI e mais. Inclui o módulo <strong>🎯 Sinal Momentum</strong> — como o score de 0 a 6.0 é calculado — e <strong>🏦 CDB e CDI</strong> — renda fixa bancária explicada.</span></div>
       </div>
     </div>
     <div style="display:flex;gap:12px">

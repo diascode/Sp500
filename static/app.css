@@ -890,6 +890,7 @@ input, select, textarea { font-family: inherit; }
 .status-badge { display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--r-pill);text-transform:uppercase;letter-spacing:0.05em; }
 .status-badge.active { background:color-mix(in srgb,var(--buy) 12%,transparent);color:var(--buy);border:1px solid color-mix(in srgb,var(--buy) 30%,transparent); }
 .status-badge.tp,.status-badge.sl { background:color-mix(in srgb,var(--ink-3) 12%,transparent);color:var(--ink-3);border:1px solid var(--line); }
+.status-badge.watchlist { background:color-mix(in srgb,#ca8a04 12%,transparent);color:#ca8a04;border:1px solid color-mix(in srgb,#ca8a04 30%,transparent); }
 
 /* ===== mobile bottom nav ===== */
 .bn {
@@ -1421,6 +1422,7 @@ body[data-fontsize="large"] { font-size:17px; }
 .signal-pill.buy { background:#00C853;color:#fff; }
 .signal-pill.hold { background:#FFB300;color:#1a1200; }
 .signal-pill.sell { background:#FF1744;color:#fff; }
+.signal-pill.watchlist { background:#ca8a04;color:#1a1200; }
 .price-block { display:flex;align-items:baseline;gap:var(--s-2);flex-wrap:wrap; }
 .price-main { font-family:var(--font-mono);font-size:22px;font-weight:600;color:var(--ink); }
 .price-chg { font-family:var(--font-mono);font-size:13px;font-weight:500; }
