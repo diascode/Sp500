@@ -2584,7 +2584,7 @@ Este é o módulo mais poderoso e mais ignorado da educação financeira. A maio
 | 27 | 49 | US-220 | Lista: auto-scan + all signals displayed | ✅ Done |
 | 29 | 51 | US-222 | Signal v3: Monitorar tier, 3 quality criteria, full app consistency | ✅ Done |
 | 28 | 50 | US-221 | Backtest: Histórico tab — win rate and avg return from historical BUY signals | ✅ Done |
-| 30 | 52, 53 | US-223, US-227 | Saída Inteligente: trailing stop + 20-day exit + training module | 📋 Planned |
+| 30 | 52, 53 | US-223, US-227 | Saída Inteligente: trailing stop + 20-day exit + training module | ✅ Done |
 | 31 | 52, 53 | US-224, US-228 | Regime de Mercado: IBOV filter + training module | 📋 Planned |
 | 32 | 52, 53 | US-225, US-226, US-229 | Capital: compounding + CDI accounting + position sizing + sector cap + training module | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | ✅ Done |
