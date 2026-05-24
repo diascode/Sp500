@@ -2943,6 +2943,550 @@ Energia: ████░░░░░░  18% alocado  (limite: 25%)
 
 ## Sprint Roadmap
 
+---
+
+## Epic 54 — Education Excellence Program
+
+*Source: 5-agent training review (Professor Ana · Carlos · Roberto · Mariana · Julia) — May 2026.*
+*Agents rated the curriculum 5.5–7.2/10. Top consensus issues: code/education mismatches in RSI/MACD/structural-gate, missing PT-BR translations, fear-first tone, curriculum prerequisite inversions, mobile UX failures.*
+
+---
+
+### Sprint 35 — Critical Bug Fixes (Code-Education Mismatches)
+
+---
+
+### US-241 — Corrigir bug de caractere Cirílico em edu_tesouroBody
+
+**Como** usuário que acessa o módulo Tesouro Direto,
+**Quero** que o conteúdo seja exibido corretamente —
+**Para que** eu não veja uma tela em branco ou o nome da chave crua.
+
+**Contexto técnico:**
+A chave `edu_tesouроBody` em `static/i18n.js` contém um caractere Cirílico "р" (U+0440) no lugar do "r" latino na palavra "tesour**o**". A função `t()` usa correspondência exata de propriedade de objeto JS — qualquer referência com o "r" latino correto retorna `undefined`. O módulo Tesouro Direto provavelmente renderiza vazio em produção.
+
+**Fix:**
+- `static/i18n.js`: renomear a chave de `edu_tesouроBody` → `edu_tesouroBody` (ambos os blocos EN e PT)
+- `stock-dashboard.html`: atualizar a referência em `allTopics` de `t('edu_tesouроBody')` → `t('edu_tesouroBody')`
+
+**Acceptance Criteria:**
+- [ ] A chave usa apenas caracteres ASCII latinos em ambos os arquivos.
+- [ ] O módulo Tesouro Direto exibe conteúdo corretamente em PT-BR e EN.
+- [ ] `node --check static/i18n.js` passa sem erros.
+
+**Sprint:** 35 · **Effort:** 30min · **Priority:** 🔴 Critical · **Epic:** 54
+
+---
+
+### US-242 — Corrigir thresholds de RSI em edu_rsiBody
+
+**Como** usuário aprendendo sobre RSI,
+**Quero** que os valores ensinados correspondam exatamente ao que o motor de sinais calcula —
+**Para que** eu não tome decisões baseadas em regras erradas.
+
+**Discrepâncias identificadas (Roberto — Technical Review):**
+
+| O que edu_rsiBody diz | O que pickSignal() faz |
+|---|---|
+| RSI 45–65 = +1 ponto ("sweet spot") | RSI **50–65** = +1.0 |
+| RSI abaixo de 35 = +0.5 ("oversold bounce") | RSI < 35 = **0 pts** de zona RSI (pode ser -1.0 se < 25) |
+| RSI > 70 ou < 25 = **-0.5** | RSI > 75 ou < 25 = **-1.0** |
+| RSI 65–70 não mencionado | RSI 65–70 = **+0.25** |
+| RSI 40–50 não mencionado | RSI 40–50 = **-0.25** |
+
+**Fix:** Reescrever a tabela/explicação de scoring em `edu_rsiBody` (PT-BR e EN) com os valores corretos. Adicionar nota: "Para a tabela completa de todos os 9 critérios, veja o módulo Sinal Momentum."
+
+**Acceptance Criteria:**
+- [ ] `edu_rsiBody` usa "50–65" como sweet spot (não "45–65").
+- [ ] Nenhuma menção de "+0.5 para oversold bounce" — o motor não tem essa regra.
+- [ ] Penalidade de extremos corrigida para "-1.0" (não "-0.5").
+- [ ] RSI 65–70 (+0.25) e RSI 40–50 (-0.25) mencionados.
+- [ ] Consistente com `edu_momentumSignalBody`.
+
+**Sprint:** 35 · **Effort:** 1h · **Priority:** 🔴 Critical · **Epic:** 54
+
+---
+
+### US-243 — Corrigir descrição do histograma MACD
+
+**Como** usuário que aprende MACD,
+**Quero** que a explicação do histograma corresponda ao que o app realmente calcula —
+**Para que** eu não fique confuso ao comparar com outras plataformas.
+
+**Discrepância (Roberto):**
+`edu_macdBody` descreve: "Signal Line = média de 9 dias do MACD" e "histograma = distância entre as duas linhas."
+O código em `calcMACD()` não calcula nenhuma Signal Line de 9 dias. O `macdHist` em `pickSignal()` é `macdA[i] - macdA[i-1]` — variação dia a dia da linha MACD.
+
+**Fix:** Reescrever a seção do histograma em `edu_macdBody` (PT-BR e EN):
+> "Neste app, o histograma mede se o MACD está acelerando dia a dia — diferente do MACD clássico de plataformas como TradingView, que usa uma Signal Line de 9 dias. A lógica é equivalente mas o cálculo é simplificado."
+
+**Acceptance Criteria:**
+- [ ] Nenhuma menção de "Signal Line de 9 dias" como algo que o app calcula.
+- [ ] Histograma descrito como variação diária do MACD (não MACD menos Signal Line).
+- [ ] Nota de transparência sobre diferença vs. TradingView incluída.
+- [ ] Alteração em PT-BR e EN.
+
+**Sprint:** 35 · **Effort:** 1h · **Priority:** 🔴 High · **Epic:** 54
+
+---
+
+### US-244 — Corrigir descrição do gate estrutural em edu_momentumSignalBody
+
+**Como** usuário que quer entender quando sinais são bloqueados,
+**Quero** uma descrição precisa do gate estrutural —
+**Para que** eu entenda por que certos ativos nunca aparecem como COMPRA.
+
+**Discrepância (Roberto):**
+Education diz: "3 ou mais fraquezas → score limitado a 1.0."
+Código real: se `!sma200Rising OR distFromHigh > 0.35` → score **imediatamente 0.0** (não 1.0). Isso é uma única condição, não três. Separadamente, `!above200` → score cap em 1.0.
+
+**Fix:** Reescrever seção do gate em `edu_momentumSignalBody` com dois layers:
+- **Layer 1 (Bloqueio total):** SMA200 caindo OU queda > 35% do topo → score = 0.0, sem sinal gerado.
+- **Layer 2 (Cap suave):** Preço abaixo da SMA200 → score máximo = 1.0.
+
+**Acceptance Criteria:**
+- [ ] Dois layers claramente separados na descrição.
+- [ ] "0.0 imediato" (não "1.0") para SMA200 caindo ou drawdown > 35%.
+- [ ] "Uma condição" (não "3 fraquezas") ativa o Layer 1.
+- [ ] Alteração em PT-BR e EN.
+
+**Sprint:** 35 · **Effort:** 45min · **Priority:** 🔴 High · **Epic:** 54
+
+---
+
+### US-245 — Corrigir tabela de Critério 8 (distância do topo)
+
+**Como** usuário que lê a tabela de scoring do Sinal Momentum,
+**Quero** os thresholds corretos para distância do topo —
+**Para que** eu entenda quando um ativo está em zona de liderança vs. capitulação.
+
+**Discrepância (Roberto):**
+Tabela atual: "Distância do topo < 20% → +0.5"
+Código real:
+- ≤ 5% do topo → **+0.75**
+- 5–15% → **+0.50**
+- 15–40% → **0 pts**
+- > 40% → **-1.0** (penalidade não mencionada)
+
+**Fix:** Substituir a linha do critério 8 na tabela por 3 sub-linhas mostrando a escala graduada, incluindo a penalidade de -1.0 para drawdown > 40%.
+
+**Acceptance Criteria:**
+- [ ] Tabela mostra +0.75 (≤5%), +0.50 (5–15%), 0 (15–40%), -1.0 (>40%).
+- [ ] Threshold "20%" removido — não existe no código.
+- [ ] Penalidade de -1.0 para drawdown profundo incluída.
+- [ ] Alteração em PT-BR e EN.
+
+**Sprint:** 35 · **Effort:** 30min · **Priority:** 🟡 Medium · **Epic:** 54
+
+---
+
+### US-246 — Corrigir total de tópicos hardcoded (16 → dinâmico)
+
+**Como** usuário completando o curso,
+**Quero** que a barra de progresso mostre "22/22" e não "22/16 — 138%" —
+**Para que** minha conclusão seja celebrada corretamente.
+
+**Fix técnico (Julia):**
+- `stock-dashboard.html`, linha ~5041: `const total = 16` → `const total = COURSE_MODULES.reduce((acc, m) => acc + m.topics.length, 0);`
+- Atualizar o texto do toast de conclusão para usar o total dinâmico.
+- Atualizar `isComplete = prog.length >= total`.
+
+**Acceptance Criteria:**
+- [ ] Barra de progresso mostra N/N com N correto após qualquer adição de tópicos.
+- [ ] Toast "🎉 Curso concluído!" dispara apenas após completar todos os tópicos reais.
+- [ ] Nenhum valor hardcoded "16" restante na função `renderEdu()`.
+
+**Sprint:** 35 · **Effort:** 30min · **Priority:** 🔴 High · **Epic:** 54
+
+---
+
+### Sprint 36 — Linguagem, Tom e Lacunas de Conteúdo
+
+---
+
+### US-247 — Adicionar traduções PT-BR para edu_capitalMgmtBody e edu_atrBody
+
+**Como** usuário brasileiro do app,
+**Quero** que os módulos "Gestão de Capital" e "ATR" apareçam em português —
+**Para que** eu possa aprender sem barreira de idioma.
+
+**Contexto (Professor Ana, Carlos):**
+Os módulos `capital_mgmt` e `atr` existem apenas no bloco `en:{}` de `i18n.js`. O bloco `pt:{}` não tem essas chaves. Usuários em PT-BR leem o conteúdo em inglês — o módulo de Gestão de Capital está em Estratégia (Módulo 4) e é essencial para usar o app.
+
+**Fix:** Criar `edu_capitalMgmtBody` e `edu_atrBody` no bloco `pt:{}`, com tradução completa e exemplos em PT-BR (WEGE3, PETR4, valores em R$).
+
+**Acceptance Criteria:**
+- [ ] Ambas as chaves existem no bloco `pt:{}` com conteúdo completo.
+- [ ] Exemplos numéricos em R$ (não $ ou £).
+- [ ] Vocabulário consistente com outros módulos PT-BR (posição, volatilidade, stop móvel).
+- [ ] `node --check static/i18n.js` passa.
+
+**Sprint:** 36 · **Effort:** 2h · **Priority:** 🔴 High · **Epic:** 54
+
+---
+
+### US-248 — Corrigir termos não traduzidos e inconsistências de idioma
+
+**Como** usuário brasileiro com ensino médio,
+**Quero** ler o conteúdo sem encontrar palavras em inglês sem explicação —
+**Para que** o conteúdo seja acessível independente do nível de inglês.
+
+**Problemas identificados (Carlos, Professor Ana):**
+1. `edu_rsiBody` PT-BR: "quase **coiled**, pronto para explodir" → "enrolado como mola"
+2. `edu_brazilstatsBody` PT-BR: "**paper trading**" → "operações simuladas (sem dinheiro real)"
+3. `edu_smaBody` PT-BR: labels "**BULL ALIGNED**" / "**BEAR ALIGNED**" em blocos de código → "ALINHAMENTO DE ALTA" / "ALINHAMENTO DE BAIXA"
+4. `edu_cdbCdiBody` PT-BR: "empréstimos **overnight**" → "empréstimos de um dia para o outro"
+5. Adicionar nota sobre "walking the band" em `edu_bollingerBody` — o termo técnico existe em inglês e o usuário merece saber.
+
+**Acceptance Criteria:**
+- [ ] Nenhuma palavra em inglês sem tradução ou explicação em módulos PT-BR.
+- [ ] "coiled" substituído em edu_rsiBody PT.
+- [ ] "paper trading" substituído em edu_brazilstatsBody PT.
+- [ ] Labels dos blocos SMA traduzidos.
+- [ ] "overnight" explicado em edu_cdbCdiBody PT.
+
+**Sprint:** 36 · **Effort:** 1.5h · **Priority:** 🔴 High · **Epic:** 54
+
+---
+
+### US-249 — Definir termos financeiros na primeira utilização
+
+**Como** usuário sem experiência financeira,
+**Quero** que toda sigla e jargão seja explicado na primeira vez que aparece —
+**Para que** eu não precise sair do app para pesquisar o significado.
+
+**Termos sem definição (Carlos):** `pregão`, `FGC`, `come-cotas`, `CDI` (em contextos que assumem familiaridade prévia).
+
+**Fix por módulo:**
+- `edu_darfBody`: definir "pregão" na primeira ocorrência e manter ao longo.
+- `edu_lciLcaBody` / `edu_cdbCdiBody`: adicionar nota sobre FGC global cap de R$1M (além do R$250k por instituição).
+- `edu_brazilstatsBody`: definir "come-cotas" na primeira menção.
+
+**Acceptance Criteria:**
+- [ ] "Pregão" definido na primeira ocorrência como "dia de negociação na B3".
+- [ ] FGC explicado como garantia do governo, R$250k por instituição e R$1M global por CPF.
+- [ ] "Come-cotas" explicado como antecipação semestral de IR em fundos.
+- [ ] Nenhum jargão usado antes de ser definido nos módulos afetados.
+
+**Sprint:** 36 · **Effort:** 1.5h · **Priority:** 🟡 Medium · **Epic:** 54
+
+---
+
+### US-250 — Reescrever abertura de edu_whyBody (medo → empoderamento)
+
+**Como** usuário cético abrindo o app pela primeira vez,
+**Quero** que o módulo "Por Que Investir?" comece com validação e esperança —
+**Para que** eu não feche o app antes de receber a informação que preciso.
+
+**Problema (Mariana):**
+Abertura atual: "A realidade brutal: parado, você está perdendo." — A palavra "brutal" e o frame de perda imediata ativam resposta de ameaça em usuários com trauma financeiro (geração do Plano Real, Collor). A ordem atual é: Perda → Crescimento → Objeções. A ordem correta é: Validação → Crescimento → Custo-de-não-agir.
+
+**Reescrita sugerida (abertura):**
+> "Guardar na poupança sempre pareceu a coisa responsável. E no Brasil dos anos 90, era mesmo. Mas o cenário mudou — e existe uma informação que a maioria das pessoas nunca recebeu."
+
+**Também:** Reformular a tabela "custo de esperar" — de "R$810.000 perdidos" (vermelho/shame) para "R$810.000 que você ainda pode construir" (verde/agência).
+
+**Acceptance Criteria:**
+- [ ] Abertura PT-BR e EN removem "brutal" e o frame de perda na primeira frase.
+- [ ] Validação da skepticismo histórico presente antes do argumento financeiro.
+- [ ] Tabela "custo de esperar" reformulada com frame de ganho potencial.
+- [ ] Tom mantido cálido e direto, sem perder o argumento econômico.
+
+**Sprint:** 36 · **Effort:** 2h · **Priority:** 🔴 High · **Epic:** 54
+
+---
+
+### US-251 — Adicionar parágrafo de recuperação do Carlos em edu_realcasesBody
+
+**Como** usuário que pode ter vivido uma perda financeira,
+**Quero** ver que o Carlos — que perdeu R$18.900 — recomeçou —
+**Para que** o módulo termine com esperança em vez de trauma sem resolução.
+
+**Problema (Mariana):**
+O caso do Carlos termina em: "Perda de R$18.900 — quase tudo" com a lição mecânica em seguida. Não há recuperação narrativa. Para o público-alvo que já perdeu dinheiro (frequente na Classe C), essa conclusão confirma o medo sem oferecer saída.
+
+**Fix:** Adicionar após a tabela de resultado, antes de "O que aprendemos":
+> "Carlos não desapareceu. Dois anos depois, voltou com R$150/mês divididos entre cinco empresas. Não para recuperar rápido — mas porque entendeu o erro e quis fazer diferente. Hoje tem uma carteira pequena e saudável. A lição cara que ele pagou é o que você está aprendendo aqui, de graça."
+
+**Acceptance Criteria:**
+- [ ] Parágrafo de recuperação adicionado em PT-BR e EN.
+- [ ] Tom não minimiza a perda — reconhece e mostra o caminho.
+- [ ] Posicionado entre o resultado e a seção "O que aprendemos".
+
+**Sprint:** 36 · **Effort:** 30min · **Priority:** 🔴 High · **Epic:** 54
+
+---
+
+### US-252 — Substituir linguagem FOMO em edu_brazilstatsBody
+
+**Como** usuário cético de comunicação financeira,
+**Quero** que o módulo não use pressão de urgência —
+**Para que** eu não associe o app a esquemas financeiros que usam a mesma linguagem.
+
+**Problema (Carlos, Mariana):**
+> "A oportunidade é AGORA — não daqui a 10 anos quando todo mundo já estiver dentro e o óbvio já tiver passado."
+
+Essa frase usa: urgência ("AGORA" em maiúsculas), FOMO ("quando todo mundo estiver dentro"), e escassez percebida. É o padrão linguístico de grupos de WhatsApp de investimento que causaram perdas ao público-alvo.
+
+**Fix:**
+> "O Brasil ainda está nos primeiros capítulos da sua história como país de investidores. Começar agora não é apressar nada — é chegar com tempo numa jornada que você tem décadas para percorrer."
+
+**Acceptance Criteria:**
+- [ ] Linguagem de urgência/FOMO removida de edu_brazilstatsBody PT e EN.
+- [ ] Tom substituto é de pertencimento e agência, não escassez.
+- [ ] Nenhuma palavra em maiúsculas para ênfase emocional.
+
+**Sprint:** 36 · **Effort:** 30min · **Priority:** 🟡 Medium · **Epic:** 54
+
+---
+
+### Sprint 37 — Reestruturação Curricular e Novo Conteúdo
+
+---
+
+### US-253 — Reordenar módulo Fundamentos: why → strategy → diversify
+
+**Como** usuário abrindo o app pela primeira vez,
+**Quero** que o primeiro módulo comece com "Por Que Investir?" —
+**Para que** eu tenha motivação antes de aprender método.
+
+**Problema (Professor Ana, Mariana):**
+Ordem atual: `['strategy','why','diversify']` — O usuário começa aprendendo a pirâmide de alocação (Estratégia) antes de ter qualquer razão para se importar com investimentos.
+
+**Fix:** Alterar `COURSE_MODULES` em `stock-dashboard.html`:
+`['why','strategy','diversify']`
+
+**Acceptance Criteria:**
+- [ ] "Por Que Investir?" é o primeiro tópico do primeiro módulo.
+- [ ] "Sua Estratégia" é o segundo tópico.
+- [ ] Barra de progresso e navegação "próximo" refletem a nova ordem.
+- [ ] Nenhuma outra lógica de currículo afetada.
+
+**Sprint:** 37 · **Effort:** 15min · **Priority:** 🔴 High · **Epic:** 54
+
+---
+
+### US-254 — Reordenar Análise Técnica: SMA antes do MACD
+
+**Como** usuário aprendendo análise técnica em ordem,
+**Quero** aprender o conceito de médias móveis antes de estudar MACD —
+**Para que** o MACD faça sentido quando chegar nele.
+
+**Problema (Carlos, Professor Ana):**
+Ordem atual: `['rsi','macd','adx','atr','sma','bb','patterns','momentum_signal']`
+O MACD usa "média de 12 dias" e "média de 26 dias" como conceito central — mas SMA só é ensinado 3 lições depois.
+
+**Fix:** Reordenar para:
+`['rsi','sma','macd','adx','bb','atr','patterns','momentum_signal']`
+
+**Acceptance Criteria:**
+- [ ] SMA imediatamente após RSI no módulo Análise Técnica.
+- [ ] MACD após SMA.
+- [ ] Ordem refletida corretamente na navegação e progresso.
+
+**Sprint:** 37 · **Effort:** 15min · **Priority:** 🔴 High · **Epic:** 54
+
+---
+
+### US-255 — Criar lição "Como Ler um Gráfico" antes da Análise Técnica
+
+**Como** usuário sem experiência em gráficos financeiros,
+**Quero** uma lição introdutória de 200–300 palavras antes de estudar RSI —
+**Para que** eu entenda o que é um candlestick, eixo de tempo e tendência antes de qualquer indicador.
+
+**Conteúdo:** O que é um candlestick (abertura, fechamento, máxima, mínima), o que o eixo horizontal representa (tempo), o que o eixo vertical representa (preço), o que é "tendência" visualmente.
+
+**Implementação:** Novo topic `chart_basics` em `allTopics` e `COURSE_MODULES` (primeiro em Análise Técnica). Novo key `edu_chartBasicsBody` em EN e PT-BR em `i18n.js`.
+
+**Acceptance Criteria:**
+- [ ] Novo tópico `chart_basics` registrado em COURSE_MODULES antes de RSI.
+- [ ] Conteúdo PT-BR e EN com 200–350 palavras cada.
+- [ ] Menciona candlestick, eixos, tendência de alta/baixa.
+- [ ] Tom: "você não precisa saber nada de finanças para entender o que segue."
+- [ ] Progresso do curso atualizado (total aumenta em 1).
+
+**Sprint:** 37 · **Effort:** 2h · **Priority:** 🟡 Medium · **Epic:** 54
+
+---
+
+### US-256 — Reescrever edu_patternsBody com profundidade equivalente aos outros módulos
+
+**Como** usuário que completa o módulo de Análise Técnica,
+**Quero** que Padrões Gráficos tenha a mesma riqueza que RSI, MACD e ADX —
+**Para que** eu entenda como aplicar padrões na prática com o motor de sinais.
+
+**Problema (Professor Ana):**
+`edu_patternsBody` atual: 3 frases e uma lista de tipos. Sem exemplo concreto, sem cenário de aplicação, sem explicação de como padrões interagem com o score.
+
+**Conteúdo mínimo a adicionar:**
+- O que é um padrão gráfico (definição em 1 frase)
+- 1 exemplo bullish (ex: Fundo Duplo) com cenário WEGE3 ou PETR4
+- 1 exemplo bearish com cenário de conflito com sinal de COMPRA
+- Regra prática: "padrão confirmando sinal = alta convicção; padrão contradizendo = espere confirmação"
+
+**Acceptance Criteria:**
+- [ ] edu_patternsBody PT-BR e EN reescritos com mínimo 400 palavras cada.
+- [ ] Pelo menos 1 exemplo bullish e 1 bearish com tickers brasileiros.
+- [ ] Explicação de como padrão + sinal do motor = decisão.
+- [ ] Tom consistente com RSI e MACD (conversa direta, exemplos concretos).
+
+**Sprint:** 37 · **Effort:** 2.5h · **Priority:** 🟡 Medium · **Epic:** 54
+
+---
+
+### US-257 — Adicionar declaração de segurança no modal de onboarding
+
+**Como** usuário abrindo o app pela primeira vez,
+**Quero** ver explicitamente que não há risco de perder dinheiro real —
+**Para que** eu me sinta seguro para explorar sem medo.
+
+**Problema (Mariana):**
+O modal de onboarding lista 4 ações diretas ("Clique em Varrer Agora", "Acompanhe picks"...) sem nenhuma frase que diga explicitamente que tudo é simulado.
+
+**Fix:** Entre o subtítulo e os 4 passos, inserir:
+> "Tudo aqui é simulado — você não perde nem compromete dinheiro real em nenhum momento."
+
+**Acceptance Criteria:**
+- [ ] Frase de segurança visível antes dos 4 passos de ação.
+- [ ] Em PT-BR e EN.
+- [ ] Estilo visual: fundo levemente colorido (verde/azul) para se destacar.
+
+**Sprint:** 37 · **Effort:** 30min · **Priority:** 🔴 High · **Epic:** 54
+
+---
+
+### Sprint 38 — UX Mobile e Interação
+
+---
+
+### US-258 — Adicionar overflow-x:auto em tabelas do conteúdo educacional
+
+**Como** usuário mobile em tela de 375px,
+**Quero** que as tabelas de scoring e comparação sejam legíveis —
+**Para que** eu não veja conteúdo comprimido ilegível ou cortado.
+
+**Problema (Julia):**
+10 tabelas injetadas nos corpos de lições (momentum_signal, capitalMgmt, atr, marketRegime, smartExit, cdbCdi...) usam `width:100%` sem wrapper de overflow. Em 320px, a tabela de 4 colunas do Sinal Momentum comprime a coluna "Lógica" para ~60px.
+
+**Fix:** Adicionar ao `static/app.css`:
+```css
+#dashboard table {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+```
+
+**Acceptance Criteria:**
+- [ ] Tabelas de edu conteúdo têm scroll horizontal em telas < 480px.
+- [ ] Layout desktop não afetado.
+- [ ] Testado em 375px e 320px viewport.
+
+**Sprint:** 38 · **Effort:** 30min · **Priority:** 🔴 High · **Epic:** 54
+
+---
+
+### US-259 — Elevar tamanho mínimo de fonte no conteúdo educacional (mobile)
+
+**Como** usuário em Android de baixo custo,
+**Quero** ler o conteúdo sem precisar dar zoom —
+**Para que** a experiência de aprendizado seja confortável no meu aparelho.
+
+**Problema (Julia):**
+`edu_patternsBody` usa `font-size:9px` em cards de padrão e `font-size:10px` em instrução. Blocos monospace usam `font-size:11px`. Em Android com densidade 1x, isso representa ~2.4–2.9mm de altura física — abaixo do mínimo confortável de 4.5mm.
+
+**Fix:** Adicionar ao `static/app.css`:
+```css
+@media (max-width: 768px) {
+  #dashboard [style*="font-size:11px"],
+  #dashboard [style*="font-size: 11px"] { font-size: 13px !important; }
+  #dashboard [style*="font-size:10px"],
+  #dashboard [style*="font-size:9px"]   { font-size: 12px !important; }
+}
+```
+
+Também: aumentar tap target de `.course-topic-btn` para mínimo 44px de altura.
+
+**Acceptance Criteria:**
+- [ ] Nenhum texto de conteúdo educacional abaixo de 12px em mobile.
+- [ ] Botões de tópico têm `min-height: 44px`.
+- [ ] Layout desktop preservado.
+
+**Sprint:** 38 · **Effort:** 45min · **Priority:** 🟡 Medium · **Epic:** 54
+
+---
+
+### US-260 — Auto-avançar para o próximo tópico após "Marcar como concluído"
+
+**Como** usuário completando uma lição,
+**Quero** ser automaticamente levado ao próximo tópico ao marcar como concluído —
+**Para que** eu não precise rolar até o fundo e clicar um segundo botão.
+
+**Problema (Julia):**
+O fluxo atual: (1) usuário marca concluído → (2) página rerenderiza do topo → (3) usuário rola até o fundo → (4) clica "→ Próximo". São 3 ações onde deveria haver 1.
+
+**Fix em `toggleTopicComplete()`:**
+Quando o tópico é marcado como concluído (não desmarcado), chamar automaticamente `switchEduTopic(nextIncompleteId)`.
+
+**Acceptance Criteria:**
+- [ ] Marcar como concluído avança automaticamente ao próximo tópico incompleto.
+- [ ] Comportamento de desmarcar (toggle off) NÃO avança — apenas salva.
+- [ ] Toast "Parabéns!" ainda aparece ao completar o último tópico.
+- [ ] Funciona em mobile e desktop.
+
+**Sprint:** 38 · **Effort:** 1h · **Priority:** 🟡 Medium · **Epic:** 54
+
+---
+
+### US-261 — Restaurar cabeçalhos de módulo no mobile (formato compacto)
+
+**Como** usuário mobile navegando no currículo,
+**Quero** ver a qual módulo cada tópico pertence —
+**Para que** eu entenda a estrutura do curso mesmo em tela pequena.
+
+**Problema (Julia):**
+`app.css` oculta `.course-module-hdr` em mobile. Os 22 tópicos aparecem como uma nuvem indiferenciada de pills. Sem os cabeçalhos, "RSI, MACD, ADX, ATR, SMA, Bollinger, Padrões, Sinal Momentum" não comunicam que fazem parte do mesmo módulo.
+
+**Fix:** Em vez de `display:none`, exibir cabeçalhos em formato compacto inline:
+```css
+@media (max-width: 768px) {
+  .course-module { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:4px; }
+  .course-module-hdr { font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-4); white-space:nowrap; flex-shrink:0; }
+}
+```
+
+**Acceptance Criteria:**
+- [ ] Cabeçalhos de módulo visíveis em 375px (compactos, não bloqueiam pills).
+- [ ] Cada grupo de pills visualmente ancorado ao seu módulo.
+- [ ] Desktop layout preservado.
+
+**Sprint:** 38 · **Effort:** 30min · **Priority:** 🟡 Medium · **Epic:** 54
+
+---
+
+### US-262 — Substituir confirm() nativo por modal próprio no reset do curso
+
+**Como** usuário Android usando o app,
+**Quero** que "Recomeçar curso" mostre uma confirmação funcional —
+**Para que** eu não perca progresso por acidente nem veja um botão sem resposta.
+
+**Problema (Julia):**
+`window.confirm()` é bloqueado ou silenciado em muitos Android WebViews. Usuários que clicam em "Recomeçar" podem não ver nenhum diálogo — e o reset não acontece, ou acontece sem confirmação.
+
+**Fix:** Substituir o `confirm()` em `renderEdu()` por um inline confirmation (mini card no DOM) ou pelo sistema de toast já existente no app.
+
+**Acceptance Criteria:**
+- [ ] "Recomeçar curso" exibe confirmação via UI própria (não `window.confirm`).
+- [ ] Confirmação tem botões "Confirmar" e "Cancelar".
+- [ ] Funciona em Android Chrome, WebView, e iOS Safari.
+
+**Sprint:** 38 · **Effort:** 1h · **Priority:** 🟡 Medium · **Epic:** 54
+
+---
+
+## Sprint Roadmap
+
 | Sprint | Epics | Stories | Theme | Status |
 |--------|-------|---------|-------|--------|
 | 18 | 38, 40, 43 | US-173–175, US-177, US-191, US-192, US-201 | Lista Interatividade, CPF toggle, tradução "Positions", fix DARF link, B3 watchlist prices | ✅ Done |
@@ -2958,6 +3502,10 @@ Energia: ████░░░░░░  18% alocado  (limite: 25%)
 | 32 | 52, 53 | US-225, US-226, US-229 | Capital: compounding + CDI accounting + position sizing + sector cap + training module | ✅ Done |
 | 33 | 48, 50, 52, 53 | US-230, US-231, US-232, US-233, US-234, US-235 | UX Polish & Education Completeness: % position sizing, sim capital input, mobile Histórico fix, ATR edu, Signal v3 full criteria, Acompanhados table view | ✅ Done |
 | 34 | 49, 52 | US-236, US-237, US-238, US-239, US-240 | Performance Dashboard & Discovery: closed trades log, price target on cards, portfolio analytics, manual stock lookup, sector exposure bar | 📋 Planned |
+| 35 | 54 | US-241–246 | Education Critical Fixes: Cyrillic key bug, RSI thresholds, MACD histogram, structural gate, criterion 8, dynamic topic count | 📋 Planned |
+| 36 | 54 | US-247–252 | Education Language & Tone: PT-BR translations, untranslated terms, jargon definitions, fear→empowerment rewrite, Carlos recovery, FOMO removal | 📋 Planned |
+| 37 | 54 | US-253–257 | Education Curriculum Restructuring: module reordering, chart basics intro lesson, patterns depth rewrite, onboarding trust statement | 📋 Planned |
+| 38 | 54 | US-258–262 | Education Mobile UX: table overflow fix, font size floor, auto-advance, mobile module headers, confirm() replacement | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | ✅ Done |
 | 25 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
 | 21 | 41 | US-183, US-184, US-189 | Admin Fase 2: Consentimento LGPD + Direitos do Titular | 🔒 Parked |
