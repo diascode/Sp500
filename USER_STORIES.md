@@ -2769,6 +2769,178 @@ A tabela mostra por linha:
 
 ---
 
+## Sprint 34 — Performance Dashboard & Discovery
+
+### US-236 — Histórico de Operações Encerradas (Closed Trades Log)
+
+**Como** usuário que acompanha picks,
+**Quero** ver um registro de todas as operações encerradas com resultado —
+**Para que** eu possa avaliar minha performance real ao longo do tempo.
+
+**O que muda:**
+
+Quando um pick sai por stop ou prazo, em vez de desaparecer, é movido para uma lista `state.closedTrades`. A seção Acompanhados ganha uma terceira aba: **Abertas | Encerradas | Resumo**.
+
+A aba **Encerradas** exibe uma tabela:
+
+| Ticker | Entrada | Saída | P. Entrada | P. Saída | P&L% | Motivo |
+|--------|---------|-------|------------|----------|------|--------|
+| WEGE3  | 12/mai  | 01/jun | R$42,10   | R$46,30  | +10.0% | ⏱ Prazo |
+| MGLU3  | 05/mai  | 18/mai | R$18,30   | R$16,10  | −12.0% | 🔴 Stop |
+
+- P&L% colorido (verde/vermelho)
+- Motivo: "⏱ Prazo" ou "🔴 Stop Móvel"
+- Linha de totais no rodapé: N operações · X% win rate · Y% P&L médio
+
+**Implementação:**
+- `state.closedTrades = JSON.parse(localStorage.getItem('momentum_closed') || '[]')`
+- Em `updateTrackedExits()`, quando um pick recebe `exitSignal`, em vez de apenas marcar, mover para `closedTrades` com `{ ...pick, exitPrice: currentPrice, exitDate: today }`
+- `renderClosedTrades()` gera a tabela; `renderTrackedPicks()` mostra as abas
+
+**Acceptance Criteria:**
+- [ ] Picks encerrados movidos para `state.closedTrades` com `exitPrice` e `exitDate`.
+- [ ] Aba "Encerradas" mostra tabela com todas as colunas.
+- [ ] P&L% calculado como `(exitPrice − entryPrice) / entryPrice × 100`.
+- [ ] Rodapé mostra: N operações, win rate%, P&L médio%.
+- [ ] Dados persistidos em localStorage.
+- [ ] Aba "Abertas" mantém o comportamento atual (cards + tabela toggle).
+
+**Sprint:** 34 · **Effort:** 3h · **Priority:** 🔴 High · **Epic:** 52
+
+---
+
+### US-237 — Alvo de Preço no Card de Sinal
+
+**Como** usuário que avalia um sinal,
+**Quero** ver um alvo de preço estimado junto com o stop —
+**Para que** eu possa avaliar a relação risco/retorno antes de entrar na operação.
+
+**O que muda:**
+
+No card de sinal (buy/watchlist), abaixo do "Posição: X% do capital", adicionar:
+
+```
+Alvo: R$47,20 (+8.3%)  ·  Stop inicial: R$42,10 (−3.1%)  ·  R/R: 2.7×
+```
+
+- **Alvo** = preço atual + 2 × ATR (retorno esperado em condição favorável)
+- **Stop inicial** = preço atual − 2 × ATR (perda máxima no stop)
+- **R/R** (Reward/Risk) = (alvo − preço) / (preço − stop)
+
+**Acceptance Criteria:**
+- [ ] Alvo, stop inicial e R/R exibidos no card para sinais buy/watchlist.
+- [ ] Alvo em R$ e percentual positivo (verde).
+- [ ] Stop inicial em R$ e percentual negativo (vermelho).
+- [ ] R/R arredondado a 1 casa decimal.
+- [ ] Linha oculta quando ATR não disponível.
+
+**Sprint:** 34 · **Effort:** 1h · **Priority:** 🟡 Medium · **Epic:** 52
+
+---
+
+### US-238 — Resumo de Performance (Portfolio Analytics)
+
+**Como** usuário com histórico de operações,
+**Quero** ver um painel de performance consolidado —
+**Para que** eu entenda se a estratégia está funcionando para mim especificamente.
+
+**O que muda:**
+
+Aba **Resumo** na seção Acompanhados:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Operações encerradas: 12        Abertas: 3             │
+│  Win rate:  58.3%                P&L médio: +4.2%       │
+│  Melhor:  WEGE3 +18.4%           Pior: MGLU3 −14.1%    │
+│  Encerradas por prazo: 7         Por stop: 5            │
+└─────────────────────────────────────────────────────────┘
+Exposição aberta por setor:
+  ████████░░  Energia     40%  ⚠️ próximo do limite
+  ████░░░░░░  Financeiro  20%
+  ██░░░░░░░░  Consumo     10%
+```
+
+**Implementação:**
+- Calcular a partir de `state.closedTrades` e `state.trackedPicks`
+- Barra de exposição por setor usa `SECTOR_MAP` e `state.trackedPicks`
+- Aviso visual quando setor ≥ 20% (amarelo) ou ≥ 25% (vermelho)
+
+**Acceptance Criteria:**
+- [ ] Painel mostra: total encerradas, abertas, win rate, P&L médio, melhor, pior.
+- [ ] Breakdown por motivo de saída (prazo vs stop).
+- [ ] Barra de exposição por setor das posições abertas.
+- [ ] Aviso de concentração quando setor ≥ 20% (amarelo) ou ≥ 25% (vermelho).
+- [ ] Painel vazio mostra mensagem "Nenhuma operação encerrada ainda".
+
+**Depends on:** US-236 (closedTrades), US-226 (SECTOR_MAP)
+**Sprint:** 34 · **Effort:** 2h · **Priority:** 🟡 Medium · **Epic:** 52
+
+---
+
+### US-239 — Buscador de Ativo (Manual Stock Lookup)
+
+**Como** usuário que quer analisar uma ação específica,
+**Quero** digitar o ticker de qualquer ativo e ver seu sinal imediatamente —
+**Para que** eu não precise aguardar o scan completo do universo.
+
+**O que muda:**
+
+Um campo de busca no topo da tela principal (ou no modo Lista):
+
+```
+🔍 Buscar ativo...   [PETR4]   [Analisar]
+```
+
+Ao clicar em Analisar:
+1. `fetchHistory(ticker + '.SA')` busca os candles
+2. Roda `analyze()` e `pickSignal()` normalmente
+3. Exibe um card de resultado idêntico aos do scan (com score, Por quê, posição, alvo, stop)
+4. O resultado aparece no topo da lista ou num modal, com badge "🔍 Busca manual"
+
+**Acceptance Criteria:**
+- [ ] Campo de busca aceita qualquer ticker (com ou sem `.SA`).
+- [ ] Resultado exibido em até 3 segundos com spinner durante fetch.
+- [ ] Card idêntico ao do scan normal (score, sinal, Por quê, posição %, alvo, stop).
+- [ ] Badge "🔍 Busca manual" diferencia do scan.
+- [ ] Erro amigável se ticker não encontrado ("Ativo não encontrado ou sem dados suficientes").
+- [ ] Funciona mesmo sem scan prévio.
+
+**Sprint:** 34 · **Effort:** 3h · **Priority:** 🟡 Medium · **Epic:** 49
+
+---
+
+### US-240 — Exposição por Setor Visível nos Cards de Sinal
+
+**Como** usuário que está montando posições,
+**Quero** ver no card de sinal quanto do meu capital já está alocado naquele setor —
+**Para que** eu tome a decisão de entrar ou não com contexto de concentração.
+
+**O que muda:**
+
+No card de sinal (buy/watchlist), junto à linha de posição sugerida:
+
+```
+Posição: 15% do capital  ·  Score 4.3 · Setor: energia  (?)
+Energia: ████░░░░░░  18% alocado  (limite: 25%)
+```
+
+- Barra preenchida proporcionalmente (18/25 = 72% da barra)
+- Verde se < 15%, amarelo se 15–24%, vermelho se ≥ 25% (bloqueado)
+- Só aparece se o usuário tiver picks abertos naquele setor
+
+**Acceptance Criteria:**
+- [ ] Barra de setor aparece no card apenas quando há posições abertas naquele setor.
+- [ ] Percentual calculado como `(exposição_setor / simCapital) × 100`.
+- [ ] Cores: verde < 15%, amarelo 15–24%, vermelho ≥ 25%.
+- [ ] Barra e percentual atualizados a cada render.
+- [ ] Nenhuma barra exibida se setor sem posições abertas.
+
+**Depends on:** US-226 (SECTOR_MAP, calcAdjustedSize), US-236 (trackedPicks equity base)
+**Sprint:** 34 · **Effort:** 2h · **Priority:** 🟡 Medium · **Epic:** 52
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -2784,7 +2956,8 @@ A tabela mostra por linha:
 | 30 | 52, 53 | US-223, US-227 | Saída Inteligente: trailing stop + 20-day exit + training module | ✅ Done |
 | 31 | 52, 53 | US-224, US-228 | Regime de Mercado: IBOV filter + training module | 📋 Planned |
 | 32 | 52, 53 | US-225, US-226, US-229 | Capital: compounding + CDI accounting + position sizing + sector cap + training module | ✅ Done |
-| 33 | 48, 50, 52, 53 | US-230, US-231, US-232, US-233, US-234, US-235 | UX Polish & Education Completeness: % position sizing, sim capital input, mobile Histórico fix, ATR edu, Signal v3 full criteria, Acompanhados table view | 📋 Planned |
+| 33 | 48, 50, 52, 53 | US-230, US-231, US-232, US-233, US-234, US-235 | UX Polish & Education Completeness: % position sizing, sim capital input, mobile Histórico fix, ATR edu, Signal v3 full criteria, Acompanhados table view | ✅ Done |
+| 34 | 49, 52 | US-236, US-237, US-238, US-239, US-240 | Performance Dashboard & Discovery: closed trades log, price target on cards, portfolio analytics, manual stock lookup, sector exposure bar | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | ✅ Done |
 | 25 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
 | 21 | 41 | US-183, US-184, US-189 | Admin Fase 2: Consentimento LGPD + Direitos do Titular | 🔒 Parked |
