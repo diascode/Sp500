@@ -2572,6 +2572,203 @@ Este é o módulo mais poderoso e mais ignorado da educação financeira. A maio
 
 ---
 
+## Sprint 33 — UX Polish & Education Completeness
+
+### US-230 — Posição Sugerida como Percentual (não R$)
+
+**Como** usuário que vê os cards de sinal,
+**Quero** que a posição sugerida seja exibida como percentual do capital —
+**Para que** a recomendação seja útil independentemente do tamanho do meu portfólio real.
+
+**O que muda:**
+
+Hoje o card exibe `"Posição sugerida: R$ 200,00"`, que pressupõe que o usuário tem o mesmo capital do Simulador. Após esta story:
+
+```
+Posição: 12% do capital  ·  Score 4.3 · Setor: consumo  (?)
+```
+
+O percentual é derivado do multiplicador ajustado: `adjMult = scoreMult × volMult` (sem o sectorMult, que bloqueia e já tem aviso próprio). Exemplos:
+- Score 4.5, vol baixa (1.4×): `1.50 × 1.4 = 2.1×` → base 10% × 2.1 = 21% → arredondar para 20%
+- Score 3.5, vol alta (0.7×): `0.70 × 0.7 = 0.49×` → base 10% × 0.49 = 4.9% → arredondar para 5%
+- Clamp final: mínimo 5%, máximo 20%
+
+```js
+function calcPositionPct(score, atrPct) {
+  const scoreMult = score >= 4.5 ? 1.50 : score >= 4.0 ? 1.20 : score >= 3.75 ? 1.00 : 0.70;
+  const volMult   = Math.min(Math.max(0.022 / (atrPct || 0.022), 0.6), 1.4);
+  const pct       = Math.round(10 * scoreMult * volMult / 5) * 5; // nearest 5%
+  return Math.min(20, Math.max(5, pct));
+}
+```
+
+**Acceptance Criteria:**
+- [ ] Card mostra `"Posição: X% do capital"` em vez de valor em R$.
+- [ ] Percentual arredondado ao múltiplo de 5% mais próximo (5%, 10%, 15%, 20%).
+- [ ] Setor e (?) tooltip mantidos.
+- [ ] Aviso de setor no limite mantido (⚠️ Setor X no limite de 25%).
+- [ ] Nenhum valor em R$ exibido no card de sinal.
+
+**Sprint:** 33 · **Effort:** 1h · **Priority:** 🔴 High · **Epic:** 52
+
+---
+
+### US-231 — Capital Inicial Configurável no Simulador
+
+**Como** usuário do Simulador,
+**Quero** digitar o valor real do meu capital para simular —
+**Para que** os resultados reflitam meu portfólio real e não um valor fictício padrão.
+
+**O que muda:**
+
+No topo do painel do Simulador, um campo editável:
+
+```
+Capital inicial: R$ [_________]   [Simular]
+```
+
+Ao clicar em Simular (ou pressionar Enter), o campo persiste em `localStorage` e recalcula toda a simulação com o novo capital base.
+
+**Implementação:**
+- Novo state: `simCapital` — lido de `localStorage.getItem('momentum_sim_capital') || 1000`
+- Input numérico no topo do Simulador com label "Capital inicial (R$)"
+- Ao mudar: `state.simCapital = val; localStorage.setItem('momentum_sim_capital', val); renderSimulator()`
+- `calcPositionSize` usa `state.simCapital` como base ao invés de `_simAmount`
+
+**Acceptance Criteria:**
+- [ ] Campo de capital inicial visível no topo do Simulador.
+- [ ] Valor padrão: R$ 1.000.
+- [ ] Valor persiste entre sessões via localStorage.
+- [ ] Painel de capital e posição sugerida recalculam ao alterar o valor.
+- [ ] Input aceita valores entre R$ 100 e R$ 1.000.000.
+
+**Sprint:** 33 · **Effort:** 1h · **Priority:** 🔴 High · **Epic:** 52
+
+---
+
+### US-232 — Histórico Responsivo no Mobile
+
+**Como** usuário mobile,
+**Quero** que a aba Histórico seja legível em telas pequenas (375px) —
+**Para que** eu possa consultar os dados de backtest no celular sem conteúdo cortado.
+
+**O que muda:**
+
+Os cards de estatística (Win rate, Avg return, etc.) e a tabela de breakdown por ação estão sendo cortados horizontalmente no mobile. Correções:
+
+1. **Stat cards**: usar `flex-wrap: wrap` e `min-width: 140px` para quebrarem em 2×2 em vez de 1×4.
+2. **Tabela per-stock**: envolver em `<div style="overflow-x:auto">` para scroll horizontal.
+3. **Tabela de tier comparison**: mesmo tratamento de overflow-x.
+4. **Texto de explicação**: garantir `word-break: break-word` e padding adequado.
+
+**Acceptance Criteria:**
+- [ ] Em 375px, stat cards quebram em grade 2×2 sem overflow.
+- [ ] Tabela per-stock tem scroll horizontal quando necessária.
+- [ ] Nenhum conteúdo cortado na aba Histórico em mobile.
+- [ ] Layout desktop não afetado.
+
+**Sprint:** 33 · **Effort:** 1h · **Priority:** 🟡 Medium · **Epic:** 50
+
+---
+
+### US-233 — Módulo Educacional: ATR (Average True Range)
+
+**Como** usuário que vê referências a ATR nos cards e no Simulador,
+**Quero** um módulo educacional que explique o que é ATR —
+**Para que** eu entenda por que ele é usado para dimensionar posições e definir stops.
+
+**Conteúdo do módulo:**
+
+- O que é ATR: medida de volatilidade diária em R$ ou %
+- Como é calculado: True Range = max(High–Low, |High–Close anterior|, |Low–Close anterior|); ATR = média de 14 dias
+- Como o Momentum usa ATR: (a) trailing stop = highSince − 2×ATR; (b) dimensionamento de posição — ações com ATR% alto recebem posição menor
+- Exemplo concreto: PETR4 com ATR de R$1,20 sobre preço de R$38 = 3.1% → posição reduzida; WEGE3 com ATR de R$0,60 sobre R$40 = 1.5% → posição normal
+- Por que 2×ATR para o stop: captura ruído normal sem sair cedo demais
+
+**Acceptance Criteria:**
+- [ ] Módulo registrado em COURSE_MODULES sob "Análise Técnica" (após ADX).
+- [ ] Ícone: 📏, nome: "ATR".
+- [ ] Conteúdo em PT-BR e EN (keys `edu_atrBody` em `static/i18n.js`).
+- [ ] Exemplo PETR4 vs WEGE3 incluído.
+- [ ] Fórmula do True Range explicada visualmente.
+- [ ] Ligação com trailing stop e dimensionamento de posição explicitada.
+
+**Sprint:** 33 · **Effort:** 2h · **Priority:** 🟡 Medium · **Epic:** 48
+
+---
+
+### US-234 — Sinal Momentum: Todos os 9 Critérios Explicados
+
+**Como** usuário que quer entender como o app decide comprar ou aguardar,
+**Quero** que o módulo "Sinal Momentum" explique todos os 9 critérios do scoring v3 —
+**Para que** eu saiba exatamente o que está por trás de cada recomendação.
+
+**O que muda:**
+
+O módulo atual (`edu_momentumSignalBody`) menciona os critérios de forma genérica. Esta story reescreve o corpo para cobrir todos os 9 explicitamente, com pontuação e lógica:
+
+| # | Critério | Pontos | Lógica |
+|---|----------|--------|--------|
+| 1 | Preço > SMA50 | +0.75 | Tendência de curto prazo favorável |
+| 2 | Preço > SMA200 | +0.75 | Tendência de longo prazo favorável |
+| 3 | MACD > 0 e histograma > 0 | +1.0 (ou +0.5) | Momentum de alta confirmado |
+| 4 | RSI 50–65 | +1.0 | Zona ideal: subindo sem sobrecompra |
+| 5 | ADX > 25 | +0.5 | Tendência com força |
+| 6 | Volume > 1.2× média | +0.5 | Confirmação institucional |
+| 7 | SMA200 subindo (slope) | +0.5 | Saúde estrutural de longo prazo |
+| 8 | Distância do topo < 20% | +0.5 | Não está em zona de esgotamento |
+| 9 | RSI slope positivo | +0.5 | Momentum de RSI acelerando |
+| Gate | Weaknesses ≥ 3 | Score limitado a 1.0 | Proteção estrutural |
+
+Thresholds: ≥ 3.5 = Alta Convicção 🟢; 2.5–3.4 = Monitorar 👁; < 2.5 = Aguardar/Venda.
+
+**Acceptance Criteria:**
+- [ ] Todos os 9 critérios listados com pontuação e lógica.
+- [ ] Structural gate explicado (weaknesses ≥ 3 → score cap 1.0).
+- [ ] Tabela de thresholds incluída (≥3.5, 2.5–3.4, <2.5).
+- [ ] RSI "zona ideal" (50–65) e penalidades (>75, <25) explicadas.
+- [ ] ATR% e volume ratio explicados como critérios 8 e 9 (com link para módulo ATR).
+- [ ] Conteúdo atualizado em PT-BR e EN.
+
+**Sprint:** 33 · **Effort:** 2h · **Priority:** 🔴 High · **Epic:** 53
+
+---
+
+### US-235 — Acompanhados: Visualização em Tabela
+
+**Como** usuário que acompanha múltiplos picks simultaneamente,
+**Quero** alternar entre a visualização em cards e em tabela nos Acompanhados —
+**Para que** eu possa escanear rapidamente todas as posições abertas numa única visão compacta.
+
+**O que muda:**
+
+Um toggle no cabeçalho de Acompanhados: `[🃏 Cards] [📋 Tabela]`
+
+A tabela mostra por linha:
+| Ticker | Entrada | Preço entrada | Preço atual | P&L% | Stop móvel | Dias | Status |
+|--------|---------|---------------|-------------|------|------------|------|--------|
+| WEGE3  | 12/mai  | R$42,10       | R$44,80     | +6.4%| R$41,20    | 8/20 | 🟢 Em curso |
+| MGLU3  | 05/mai  | R$18,30       | R$16,90     | -7.7%| R$16,10    | 15/20| ⚠️ Prazo |
+
+- P&L% em verde se positivo, vermelho se negativo
+- Dias: `8/20` com barra de progresso mini (inline)
+- Status: replica o badge dos cards (Em curso / ⚠️ Prazo / 🔴 Stop)
+- Toggle persiste em localStorage (`momentum_tracked_view`)
+- Em mobile: tabela usa scroll horizontal
+
+**Acceptance Criteria:**
+- [ ] Toggle [Cards] / [Tabela] visível no header de Acompanhados.
+- [ ] Tabela mostra todas as colunas: Ticker, Entrada, P. Entrada, P. Atual, P&L%, Stop, Dias, Status.
+- [ ] P&L% colorido (verde/vermelho).
+- [ ] Dias exibe `N/20` com mini barra inline.
+- [ ] Toggle persiste em localStorage.
+- [ ] Mobile: tabela com overflow-x scroll.
+- [ ] Nenhuma funcionalidade removida dos cards.
+
+**Sprint:** 33 · **Effort:** 2h · **Priority:** 🟡 Medium · **Epic:** 52
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -2586,7 +2783,8 @@ Este é o módulo mais poderoso e mais ignorado da educação financeira. A maio
 | 28 | 50 | US-221 | Backtest: Histórico tab — win rate and avg return from historical BUY signals | ✅ Done |
 | 30 | 52, 53 | US-223, US-227 | Saída Inteligente: trailing stop + 20-day exit + training module | ✅ Done |
 | 31 | 52, 53 | US-224, US-228 | Regime de Mercado: IBOV filter + training module | 📋 Planned |
-| 32 | 52, 53 | US-225, US-226, US-229 | Capital: compounding + CDI accounting + position sizing + sector cap + training module | 📋 Planned |
+| 32 | 52, 53 | US-225, US-226, US-229 | Capital: compounding + CDI accounting + position sizing + sector cap + training module | ✅ Done |
+| 33 | 48, 50, 52, 53 | US-230, US-231, US-232, US-233, US-234, US-235 | UX Polish & Education Completeness: % position sizing, sim capital input, mobile Histórico fix, ATR edu, Signal v3 full criteria, Acompanhados table view | 📋 Planned |
 | 24 | 43 | US-202–206 | Security & Code Quality — Minor | ✅ Done |
 | 25 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
 | 21 | 41 | US-183, US-184, US-189 | Admin Fase 2: Consentimento LGPD + Direitos do Titular | 🔒 Parked |

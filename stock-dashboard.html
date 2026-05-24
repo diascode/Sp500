@@ -264,7 +264,7 @@
 <script src="/static/fx.js"></script>
 <script>
 // ─── STATE ─────────────────────────────────────────────────────────────
-let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, displayedStocks: [], homeMode: localStorage.getItem('momentum_home_mode') || 'sinais', backtestResults: null, marketRegime: 'risk_on' };
+let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, displayedStocks: [], homeMode: localStorage.getItem('momentum_home_mode') || 'sinais', backtestResults: null, marketRegime: 'risk_on', simCapital: parseInt(localStorage.getItem('momentum_sim_capital') || '1000', 10), trackedView: localStorage.getItem('momentum_tracked_view') || 'cards' };
 function businessDaysBetween(d1str, d2str) {
   const ms = Date.parse(d2str) - Date.parse(d1str);
   const calDays = ms / (1000 * 60 * 60 * 24);
@@ -315,6 +315,13 @@ function calcAdjustedSize(baseSize, score, atrPct, ticker, openPositions, equity
     .reduce((s, p) => s + p.cost, 0);
   const sectorMult = equity > 0 && (sectorExp / equity) >= 0.25 ? 0.0 : 1.0;
   return Math.round(baseSize * scoreMult * volMult * sectorMult / 10) * 10;
+}
+
+function calcPositionPct(score, atrPct) {
+  const scoreMult = score >= 4.5 ? 1.50 : score >= 4.0 ? 1.20 : score >= 3.75 ? 1.00 : 0.70;
+  const volMult   = Math.min(Math.max(0.022 / (atrPct || 0.022), 0.6), 1.4);
+  const raw       = Math.round(10 * scoreMult * volMult / 5) * 5;
+  return Math.min(20, Math.max(5, raw));
 }
 
 // ─── FEATURE FLAGS ───────────────────────────────────────────────────────
@@ -1442,20 +1449,20 @@ function buildFeedCard(d, idx) {
       </div>
       <canvas class="sparkline-canvas" id="spark-${idx}" height="56"></canvas>
       <p class="why-text"><strong>Por quê:</strong> ${feedCardWhy(d)}</p>
-      ${(() => {
-        if ((d.signal === 'buy' || d.signal === 'watchlist') && state.market === 'brasil') {
-          const _baseSize = calcPositionSize(state.simEquity ?? _simAmount ?? 1000);
-          const _atrPct = d.atr / (d.price || 1);
-          const _adjSize = calcAdjustedSize(_baseSize, d.score ?? 0, _atrPct, d.ticker, state.portfolio ?? [], state.simEquity ?? _simAmount ?? 1000);
-          return `<div style="font-size:.78rem;color:var(--ink-3);margin-top:4px">
-  Posição sugerida: <strong style="color:var(--ink)">${fmtBRL(_adjSize)}</strong>
-  <span style="margin-left:6px;opacity:.6">Score ${(d.score??0).toFixed(1)} · Setor: ${SECTOR_MAP[d.ticker]??'—'}</span>
-  <span onclick="setState('_eduTopic','capital_mgmt')" style="cursor:pointer;margin-left:6px;opacity:.5;font-size:.75rem" title="Como calculamos o tamanho?">(?)</span>
-  ${_adjSize === 0 ? '<br><span style="color:#ef4444;font-size:.75rem">⚠️ Setor no limite de 25% — posição postergada</span>' : ''}
-</div>`;
-        }
-        return '';
-      })()}
+      ${(d.signal === 'buy' || d.signal === 'watchlist') && state.market === 'brasil' ? (() => {
+  const _atrPct  = (d.atr ?? 0) / (d.price || 1);
+  const _pct     = calcPositionPct(d.score ?? 0, _atrPct);
+  const _sector  = (typeof SECTOR_MAP !== 'undefined' ? SECTOR_MAP[d.ticker] : null) ?? '—';
+  const _equity  = state.simCapital ?? 1000;
+  const _base    = calcPositionSize(_equity);
+  const _adjSize = calcAdjustedSize(_base, d.score ?? 0, _atrPct, d.ticker, state.portfolio ?? [], _equity);
+  return `<div style="font-size:.78rem;color:var(--ink-3);margin-top:4px">
+    Posição: <strong style="color:var(--ink)">${_pct}% do capital</strong>
+    <span style="margin-left:6px;opacity:.6">Score ${(d.score??0).toFixed(1)} · Setor: ${_sector}</span>
+    <span onclick="setState('_eduTopic','capital_mgmt')" style="cursor:pointer;margin-left:6px;opacity:.5;font-size:.75rem" title="Como calculamos o tamanho?">(?)</span>
+    ${_adjSize === 0 ? '<br><span style="color:#ef4444;font-size:.75rem">⚠️ Setor no limite de 25% — posição postergada</span>' : ''}
+  </div>`;
+})() : ''}
       <div class="chip-row">
         <span class="chip">RSI ${d.rsi.toFixed(1)}</span>
         <span class="chip">MACD ${d.macd > 0 ? '+' : ''}${d.macd.toFixed(2)}</span>
@@ -1839,7 +1846,7 @@ function renderBacktest() {
   html += `<h1 class="hed1" style="margin-top:0;margin-bottom:var(--s-2)">📊 <span style="color:var(--primary)">Histórico</span> de Sinais</h1>`;
 
   // Explanation panel (always visible)
-  html += `<div class="card" style="padding:var(--s-5);margin-bottom:var(--s-4);border-left:3px solid var(--primary)">`;
+  html += `<div class="card" style="padding:var(--s-5);margin-bottom:var(--s-4);border-left:3px solid var(--primary);word-break:break-word">`;
   html += `<h3 class="hed3" style="margin-top:0;margin-bottom:var(--s-3)">O que é o Histórico?</h3>`;
   html += `<p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0 0 var(--s-3) 0">O Histórico aplica os critérios do Momentum (RSI, MACD, ADX, Volume, SMA50, SMA200, proximidade de topo, slope do RSI e regime de volatilidade) sobre todos os pregões disponíveis, identificando cada data em que uma ação teria gerado um sinal. Em seguida, mede o retorno real da ação nos <strong>10, 20 e 30 pregões seguintes</strong>.</p>`;
   html += `<p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0 0 var(--s-3) 0">O resultado mostra a <strong>taxa de acerto histórica</strong> — quantas vezes o sinal foi seguido de valorização — e o <strong>retorno médio</strong>, indicando se os ganhos compensaram as perdas.</p>`;
@@ -1889,7 +1896,7 @@ function renderBacktest() {
       const retColor = parseFloat(s.avgRet) >= 0 ? 'var(--buy)' : 'var(--sell)';
       const pfColor  = parseFloat(s.pf) >= 1 ? 'var(--buy)' : 'var(--sell)';
       html += `<div style="margin-bottom:var(--s-2)"><span style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em">Horizonte ${h} dias — todos os sinais</span></div>`;
-      html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:var(--s-3);margin-bottom:var(--s-5)">`;
+      html += `<div style="display:flex;flex-wrap:wrap;gap:var(--s-3);margin-bottom:var(--s-5)">`;
       html += btStatCard('Sinais', s.n, 'var(--ink)');
       html += btStatCard('Taxa de Acerto', s.winPct + '%', s.winPct >= 55 ? 'var(--buy)' : s.winPct >= 45 ? 'var(--hold)' : 'var(--sell)');
       html += btStatCard('Retorno Médio', (parseFloat(s.avgRet) >= 0 ? '+' : '') + s.avgRet + '%', retColor);
@@ -1986,7 +1993,7 @@ function renderBacktest() {
 }
 
 function btStatCard(label, value, color) {
-  return `<div class="card" style="padding:var(--s-3) var(--s-4)">
+  return `<div class="card" style="padding:var(--s-3) var(--s-4);min-width:140px;flex:1 1 140px">
     <div style="font-size:10px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">${label}</div>
     <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:${color}">${value}</div>
   </div>`;
@@ -2781,12 +2788,18 @@ function renderTrackedPicks() {
     : null;
   const exitRows = rows.filter(r => r.pick.exitSignal);
 
-  // Summary bar
-  html += '<div style="display:flex;gap:var(--s-4);flex-wrap:wrap;margin-top:var(--s-3);margin-bottom:var(--s-5);padding:var(--s-3) var(--s-4);background:var(--bg-2);border-radius:var(--r);border:1px solid var(--line)">';
+  // Summary bar + view toggle
+  html += '<div style="display:flex;gap:var(--s-4);flex-wrap:wrap;align-items:center;margin-top:var(--s-3);margin-bottom:var(--s-5);padding:var(--s-3) var(--s-4);background:var(--bg-2);border-radius:var(--r);border:1px solid var(--line)">';
   html += '<div><span style="color:var(--ink-3);font-size:11px">TOTAL</span><br><strong style="font-size:18px">' + state.trackedPicks.length + '</strong></div>';
   html += '<div><span style="color:var(--ink-3);font-size:11px">COMPRA</span><br><strong style="font-size:18px;color:var(--buy)">' + buyRows.length + '</strong></div>';
   if (exitRows.length > 0) html += '<div><span style="color:var(--ink-3);font-size:11px">SAÍDA SUGERIDA</span><br><strong style="font-size:18px;color:var(--sell)">' + exitRows.length + '</strong></div>';
   if (avgPnl !== null) html += '<div><span style="color:var(--ink-3);font-size:11px">RESULTADO</span><br><strong style="font-size:18px;color:' + (avgPnl >= 0 ? 'var(--buy)' : 'var(--sell)') + '">' + (avgPnl >= 0 ? '+' : '') + avgPnl.toFixed(1) + '%</strong></div>';
+  html += `<div style="display:flex;gap:var(--s-2);margin-left:auto">
+    <button onclick="state.trackedView='cards';localStorage.setItem('momentum_tracked_view','cards');renderTrackedPicks()"
+      style="padding:var(--s-1) var(--s-3);border-radius:6px;border:1px solid rgba(255,255,255,.15);background:${state.trackedView==='cards'?'rgba(255,255,255,.12)':'transparent'};color:var(--ink);font-size:.8rem;cursor:pointer">🃏 Cards</button>
+    <button onclick="state.trackedView='table';localStorage.setItem('momentum_tracked_view','table');renderTrackedPicks()"
+      style="padding:var(--s-1) var(--s-3);border-radius:6px;border:1px solid rgba(255,255,255,.15);background:${state.trackedView==='table'?'rgba(255,255,255,.12)':'transparent'};color:var(--ink);font-size:.8rem;cursor:pointer">📋 Tabela</button>
+  </div>`;
   html += '</div>';
 
   // Exit alerts banner
@@ -2798,6 +2811,60 @@ function renderTrackedPicks() {
       html += '<div style="margin-top:4px;color:var(--ink-2)">' + pick.ticker + ' — ' + reason + '</div>';
     });
     html += '</div>';
+  }
+
+  if (state.trackedView === 'table') {
+    const today = new Date().toISOString().slice(0,10);
+    const tableRows = state.trackedPicks.filter(p => !p.exitSignal || p.exitSignal).map(p => {
+      const currentPrice = (state.stocks[p.ticker]?.price) ?? p.entryPrice;
+      const pnlPct = ((currentPrice - p.entryPrice) / p.entryPrice * 100);
+      const pnlColor = pnlPct >= 0 ? '#22c55e' : '#ef4444';
+      const daysHeld = typeof businessDaysBetween === 'function'
+        ? businessDaysBetween(p.entryDate, today) : 0;
+      const holdDays = p.holdDays ?? 20;
+      const barW = Math.min(100, Math.round(daysHeld / holdDays * 100));
+      const statusBadge = p.exitSignal === 'stop_movel' ? '🔴 Stop'
+        : p.exitSignal === 'prazo' ? '⚠️ Prazo'
+        : '🟢 Em curso';
+      const trailStop = p.trailStop ?? (p.highSinceEntry - 2 * (p.atrAtEntry ?? p.entryPrice * 0.02));
+      return `<tr style="border-bottom:1px solid rgba(255,255,255,.06)">
+        <td style="padding:.5rem .75rem;font-weight:600">${p.ticker.replace('.SA','')}</td>
+        <td style="padding:.5rem .75rem;color:var(--ink-3);font-size:.82rem">${p.entryDate?.slice(5).replace('-','/')??'—'}</td>
+        <td style="padding:.5rem .75rem">${fmtBRL(p.entryPrice)}</td>
+        <td style="padding:.5rem .75rem">${fmtBRL(currentPrice)}</td>
+        <td style="padding:.5rem .75rem;color:${pnlColor};font-weight:600">${pnlPct>=0?'+':''}${pnlPct.toFixed(1)}%</td>
+        <td style="padding:.5rem .75rem;font-size:.82rem">${fmtBRL(trailStop)}</td>
+        <td style="padding:.5rem .75rem;font-size:.82rem">
+          <span>${daysHeld}/${holdDays}</span>
+          <div style="height:3px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:3px;width:40px">
+            <div style="width:${barW}%;height:3px;background:#ca8a04;border-radius:2px"></div>
+          </div>
+        </td>
+        <td style="padding:.5rem .75rem;font-size:.82rem">${statusBadge}</td>
+      </tr>`;
+    }).join('');
+
+    html += `<div style="overflow-x:auto;margin-top:var(--s-4)">
+      <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+        <thead>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.12);color:var(--ink-3);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">
+            <th style="padding:.4rem .75rem;text-align:left">Ticker</th>
+            <th style="padding:.4rem .75rem;text-align:left">Entrada</th>
+            <th style="padding:.4rem .75rem;text-align:left">P. Entrada</th>
+            <th style="padding:.4rem .75rem;text-align:left">P. Atual</th>
+            <th style="padding:.4rem .75rem;text-align:left">P&L%</th>
+            <th style="padding:.4rem .75rem;text-align:left">Stop</th>
+            <th style="padding:.4rem .75rem;text-align:left">Dias</th>
+            <th style="padding:.4rem .75rem;text-align:left">Status</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>`;
+
+    html += '</div>'; // shell
+    container.innerHTML = html;
+    return;
   }
 
   // Cards grid
@@ -2946,7 +3013,8 @@ function renderSimulator() {
   container.style.display = 'block';
 
   // US-225: expose simEquity on state so signal cards can reference it
-  state.simEquity = _simAmount;
+  // US-231: use simCapital as the equity base
+  state.simEquity = state.simCapital;
 
   const amounts = [100, 250, 500, 1000, 2500];
   const allStocksRaw = Object.values(state.analyzed).flat().filter(s => s && s.ticker && s.price > 0);
@@ -2975,6 +3043,16 @@ function renderSimulator() {
   html += '<div class="kicker">🎲 Simulador</div>';
   html += '<h1 class="hed1" style="margin-top:8px">E se você <span style="color:var(--primary)">investisse</span> agora?</h1>';
   html += '<p class="dek" style="margin-top:var(--s-3)">Escolha um valor e um ativo para ver os cenários possíveis. Apenas simulação — não é recomendação de investimento.</p>';
+
+  // US-231: capital input
+  html += `<div style="display:flex;align-items:center;gap:var(--s-3);margin-bottom:var(--s-4);flex-wrap:wrap">
+  <label style="font-size:.85rem;color:var(--ink-3)">Capital inicial (R$)</label>
+  <input type="number" id="simCapitalInput" min="100" max="1000000" step="100"
+    value="${state.simCapital}"
+    style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:var(--s-1) var(--s-3);color:var(--ink);font-size:.9rem;width:140px"
+    onchange="state.simCapital=Math.max(100,Math.min(1000000,+this.value||1000));localStorage.setItem('momentum_sim_capital',state.simCapital);renderSimulator()"
+  />
+</div>`;
 
   if (allStocksRaw.length === 0) {
     html += '<div class="card" style="padding:40px;text-align:center;margin-top:var(--s-6)">';
@@ -3037,9 +3115,9 @@ function renderSimulator() {
   });
   html += '</div></div>';
 
-  // US-225: Capital panel — always shown, treats _simAmount as equity and all cash as idle
+  // US-225: Capital panel — always shown, treats simCapital as equity and all cash as idle
   {
-    const _simEquity = _simAmount;
+    const _simEquity = state.simCapital;
     const _deployed = 0; // single-trade simulator has no open portfolio positions
     const _idle = _simEquity - _deployed;
     const _openCount = 0;
@@ -4977,7 +5055,7 @@ function renderEdu() {
   const COURSE_MODULES = [
     { icon:'🌱', name:'Fundamentos',      topics:['strategy','why','diversify'] },
     { icon:'🌎', name:'O Mercado',        topics:['brazilstats','sectors','realcases'] },
-    { icon:'📊', name:'Análise Técnica',  topics:['rsi','macd','adx','sma','bb','patterns','momentum_signal'] },
+    { icon:'📊', name:'Análise Técnica',  topics:['rsi','macd','adx','atr','sma','bb','patterns','momentum_signal'] },
     { icon:'🛡️', name:'Estratégia',       topics:['smart_exit', 'market_regime', 'capital_mgmt'] },
     { icon:'🇧🇷', name:'Impostos',        topics:['darf'] },
     { icon:'🏦', name:'Renda Fixa',       topics:['tesouro','lci_lca','juros_compostos','cdb_cdi'] },
@@ -4993,6 +5071,7 @@ function renderEdu() {
     { id:'rsi',             icon:'📈', name:'RSI',                      color:'#22d3ee', title:t('edu_rsiTitle'),           subtitle:t('edu_rsiSubtitle'),           body:t('edu_rsiBody') },
     { id:'macd',            icon:'🔄', name:'MACD',                     color:'#4caf50', title:t('edu_macdTitle'),          subtitle:t('edu_macdSubtitle'),          body:t('edu_macdBody') },
     { id:'adx',             icon:'📊', name:'ADX',                      color:'#e8a846', title:t('edu_adxTitle'),           subtitle:t('edu_adxSubtitle'),           body:t('edu_adxBody') },
+    { id:'atr',             icon:'📏', name:'ATR',                      color:'#f59e0b', title:'ATR — Volatilidade Diária e Como Usamos', subtitle:'O que é Average True Range, como é calculado e como o Momentum usa ATR para stops e posições.', body:t('edu_atrBody') },
     { id:'sma',             icon:'〰️', name:'SMA',                      color:'#ff6a00', title:t('edu_smaTitle'),           subtitle:t('edu_smaSubtitle'),           body:t('edu_smaBody') },
     { id:'bb',              icon:'📉', name:'Bollinger',                color:'#c85a17', title:t('edu_bollingerTitle'),     subtitle:t('edu_bollingerSubtitle'),     body:t('edu_bollingerBody') },
     { id:'patterns',        icon:'📐', name:t('edu_patternsTab'),       color:'#4caf50', title:t('edu_patternsTitle'),      subtitle:t('edu_patternsSubtitle'),      body:t('edu_patternsBody') },
