@@ -263,6 +263,11 @@
 <script>
 // ─── STATE ─────────────────────────────────────────────────────────────
 let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, displayedStocks: [], homeMode: localStorage.getItem('momentum_home_mode') || 'sinais', backtestResults: null };
+function businessDaysBetween(d1str, d2str) {
+  const ms = Date.parse(d2str) - Date.parse(d1str);
+  const calDays = ms / (1000 * 60 * 60 * 24);
+  return Math.max(0, Math.round(calDays * 5 / 7));
+}
 let _portfolioMonthFilter = 'all';
 let _portfolioSaveTimer = null;
 let _trackedSaveTimer = null;
@@ -2416,12 +2421,20 @@ document.addEventListener('click', function(e) {
 
 function trackPick(ticker, market, entryPrice, tp, sl) {
   if (state.trackedPicks.find(p => p.ticker === ticker && p.status === 'active')) return;
+  const analyzed = (state.analyzed[market] || []).find(s => s.ticker === ticker);
+  const atrAtEntry = analyzed?.atr ?? parseFloat((entryPrice * 0.02).toFixed(2));
   state.trackedPicks.unshift({
     ticker, market, entryPrice, tp, sl,
     entryDate: new Date().toISOString().slice(0,10),
     status: 'active',
     checkedAt: null,
     hitPrice: null,
+    atrAtEntry,
+    highSinceEntry: entryPrice,
+    holdDays: 20,
+    exitRule: 'time_or_trail',
+    exitSignal: null,
+    exitPrice: null,
   });
   if (state.trackedPicks.length > 9999) state.trackedPicks.length = 9999;
   saveTrackedPicks();
@@ -2435,6 +2448,36 @@ function trackPick(ticker, market, entryPrice, tp, sl) {
     tab.textContent = '📋 TRACKED (' + state.trackedPicks.length + ') ✓';
     tab.style.borderColor = 'var(--buy)';
     setTimeout(() => { tab.style.borderColor = ''; tab.textContent = '📋 TRACKED (' + state.trackedPicks.length + ')'; }, 1500);
+  }
+}
+
+function updateTrackedExits() {
+  const today = new Date().toISOString().slice(0, 10);
+  for (const pick of state.trackedPicks) {
+    if (pick.status !== 'active') continue;
+    if (!pick.atrAtEntry) continue; // legacy pick without v3 fields
+    let currPrice = null;
+    for (const m of ['brasil', 'us', 'europe', 'emerging']) {
+      const d = (state.analyzed[m] || []).find(s => s.ticker === pick.ticker);
+      if (d?.price) { currPrice = d.price; break; }
+    }
+    if (currPrice === null) continue;
+    // Update high since entry
+    if (currPrice > (pick.highSinceEntry ?? pick.entryPrice)) {
+      pick.highSinceEntry = currPrice;
+    }
+    // Evaluate exit conditions
+    const daysHeld  = businessDaysBetween(pick.entryDate, today);
+    const trailStop = (pick.highSinceEntry ?? pick.entryPrice) - 2 * pick.atrAtEntry;
+    const timeExit  = daysHeld >= (pick.holdDays ?? 20);
+    const stopHit   = currPrice <= trailStop && (pick.highSinceEntry ?? pick.entryPrice) > pick.entryPrice;
+    if (timeExit || stopHit) {
+      pick.exitSignal = timeExit ? 'prazo' : 'stop_movel';
+      pick.exitPrice  = currPrice;
+    } else {
+      pick.exitSignal = null;
+      pick.exitPrice  = null;
+    }
   }
 }
 
@@ -2558,6 +2601,9 @@ function showTrackedView() {
 
 function renderTrackedPicks() {
   if (!state.showTracked) return;
+  // Update exit signals from current prices before rendering
+  updateTrackedExits();
+
   const scanHdr = document.getElementById('scanHeader');
   const grid = document.getElementById('resultsGrid');
   const sidebar = document.getElementById('legacySidebar');
@@ -2593,7 +2639,6 @@ function renderTrackedPicks() {
     const priceStr = price !== null ? sym + price.toFixed(2) : '—';
     const signal = d?.signal || null;
     const rsi = d?.rsi ?? null;
-    const tp = d?.tp ?? pick.tp ?? null;
     const changePercent = d?.changePercent ?? null;
     const macd = d?.macd ?? null;
     const adx = d?.adx ?? null;
@@ -2601,7 +2646,7 @@ function renderTrackedPicks() {
       ? (price - pick.entryPrice) / pick.entryPrice * 100
       : null;
     const score = d?.score ?? null;
-    return { pick, i, d, price, sym, priceStr, signal, rsi, tp, changePercent, macd, adx, pnl, score };
+    return { pick, i, d, price, sym, priceStr, signal, rsi, changePercent, macd, adx, pnl, score };
   });
 
   // Totals
@@ -2610,54 +2655,106 @@ function renderTrackedPicks() {
   const avgPnl = pnlRows.length > 0
     ? pnlRows.reduce((s, r) => s + r.pnl, 0) / pnlRows.length
     : null;
+  const exitRows = rows.filter(r => r.pick.exitSignal);
 
   // Summary bar
   html += '<div style="display:flex;gap:var(--s-4);flex-wrap:wrap;margin-top:var(--s-3);margin-bottom:var(--s-5);padding:var(--s-3) var(--s-4);background:var(--bg-2);border-radius:var(--r);border:1px solid var(--line)">';
   html += '<div><span style="color:var(--ink-3);font-size:11px">TOTAL</span><br><strong style="font-size:18px">' + state.trackedPicks.length + '</strong></div>';
   html += '<div><span style="color:var(--ink-3);font-size:11px">COMPRA</span><br><strong style="font-size:18px;color:var(--buy)">' + buyRows.length + '</strong></div>';
+  if (exitRows.length > 0) html += '<div><span style="color:var(--ink-3);font-size:11px">SAÍDA SUGERIDA</span><br><strong style="font-size:18px;color:var(--sell)">' + exitRows.length + '</strong></div>';
   if (avgPnl !== null) html += '<div><span style="color:var(--ink-3);font-size:11px">RESULTADO</span><br><strong style="font-size:18px;color:' + (avgPnl >= 0 ? 'var(--buy)' : 'var(--sell)') + '">' + (avgPnl >= 0 ? '+' : '') + avgPnl.toFixed(1) + '%</strong></div>';
   html += '</div>';
 
-  // Table
-  html += '<div class="card-flush" style="overflow-x:auto"><table class="tracked-table"><thead><tr>';
-  html += '<th>#</th><th>TICKER</th><th>PREÇO</th><th>VAR%</th><th>P&L%</th><th>SINAL</th><th>RSI</th><th>MACD</th><th>ADX</th><th>ALVO (TP)</th><th></th>';
-  html += '</tr></thead><tbody>';
+  // Exit alerts banner
+  if (exitRows.length > 0) {
+    html += '<div style="background:color-mix(in srgb,var(--sell) 10%,var(--bg-2));border:1px solid color-mix(in srgb,var(--sell) 30%,transparent);border-radius:var(--r);padding:var(--s-3) var(--s-4);margin-bottom:var(--s-4);font-size:13px">';
+    html += '<strong style="color:var(--sell)">⚠️ ' + exitRows.length + (exitRows.length === 1 ? ' posição com' : ' posições com') + ' saída recomendada</strong>';
+    exitRows.forEach(({ pick }) => {
+      const reason = pick.exitSignal === 'prazo' ? 'prazo de 20 pregões atingido' : 'stop móvel atingido';
+      html += '<div style="margin-top:4px;color:var(--ink-2)">' + pick.ticker + ' — ' + reason + '</div>';
+    });
+    html += '</div>';
+  }
 
-  rows.forEach(({ pick, i, priceStr, signal, rsi, tp, sym, changePercent, macd, adx, pnl, score }) => {
-    const sigLabel = signal === 'buy' ? signalBadgeHtml('buy', score)
-      : signal === 'sell' ? signalBadgeHtml('sell', score)
-      : signal === 'neutral' ? signalBadgeHtml('hold', score)
-      : '<span style="color:var(--ink-4)">—</span>';
-    const rsiStr = rsi !== null ? rsi.toFixed(0) : '—';
-    const tpStr = tp ? sym + tp.toFixed(2) : '—';
+  // Cards grid
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:var(--s-4)">';
+
+  rows.forEach(({ pick, i, price, sym, priceStr, signal, rsi, changePercent, macd, adx, pnl, score }) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const daysHeld = businessDaysBetween(pick.entryDate || today, today);
+    const holdDays = pick.holdDays ?? 20;
+    const daysLeft = Math.max(0, holdDays - daysHeld);
+    const hasTrail  = !!pick.atrAtEntry;
+    const highSince = pick.highSinceEntry ?? pick.entryPrice;
+    const trailStop = hasTrail ? parseFloat((highSince - 2 * pick.atrAtEntry).toFixed(2)) : null;
+    const exitSig   = pick.exitSignal;
+
+    const cardBorder = exitSig === 'stop_movel' ? 'var(--sell)' : exitSig === 'prazo' ? 'var(--hold)' : 'var(--line)';
+    html += '<div class="card" style="padding:var(--s-4);border-left:3px solid ' + cardBorder + ';cursor:pointer" onclick="openStockDetailByTicker(\'' + pick.ticker + '\')">';
+
+    // Card header
+    const sigHtml = signal ? signalBadgeHtml(signal === 'neutral' ? 'hold' : signal, score) : '';
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--s-3)">';
+    html += '<div>';
+    html += '<div class="tkr" style="font-size:16px;margin-bottom:2px">' + pick.ticker + '</div>';
+    html += '<div style="font-size:12px;color:var(--ink-3)">Entrada: ' + sym + (pick.entryPrice || 0).toFixed(2) + ' · ' + (pick.entryDate || '—') + '</div>';
+    html += '</div>';
+    html += '<div style="display:flex;align-items:center;gap:8px">' + sigHtml;
+    html += '<span style="cursor:pointer;color:var(--ink-4);font-size:14px;line-height:1" onclick="event.stopPropagation();listaTrack(\'' + pick.ticker + '\',0,0,0)" title="Remover">✕</span>';
+    html += '</div></div>';
+
+    // Price row
     const varStr = changePercent !== null
       ? '<span style="color:' + (changePercent >= 0 ? 'var(--buy)' : 'var(--sell)') + '">' + (changePercent >= 0 ? '+' : '') + changePercent.toFixed(2) + '%</span>'
-      : '—';
+      : '';
     const pnlStr = pnl !== null
-      ? '<span style="color:' + (pnl >= 0 ? 'var(--buy)' : 'var(--sell)') + '">' + (pnl >= 0 ? '+' : '') + pnl.toFixed(2) + '%</span>'
-      : '—';
-    const macdStr = macd !== null
-      ? '<span style="color:' + (macd > 0 ? 'var(--buy)' : 'var(--sell)') + '">' + (macd >= 0 ? '+' : '') + macd.toFixed(2) + '</span>'
-      : '—';
-    const adxStr = adx !== null
-      ? '<span style="color:' + (adx > 25 ? 'var(--primary)' : 'var(--ink-3)') + '">' + adx.toFixed(1) + '</span>'
-      : '—';
-    html += '<tr style="cursor:pointer" onclick="openStockDetailByTicker(\'' + pick.ticker + '\')">';
-    html += '<td style="color:var(--ink-3)">' + (i + 1) + '</td>';
-    html += '<td class="tkr">' + pick.ticker + '</td>';
-    html += '<td style="font-family:var(--font-mono)">' + priceStr + '</td>';
-    html += '<td style="font-family:var(--font-mono)">' + varStr + '</td>';
-    html += '<td style="font-family:var(--font-mono)">' + pnlStr + '</td>';
-    html += '<td>' + sigLabel + '</td>';
-    html += '<td style="font-family:var(--font-mono)">' + rsiStr + '</td>';
-    html += '<td style="font-family:var(--font-mono)">' + macdStr + '</td>';
-    html += '<td style="font-family:var(--font-mono)">' + adxStr + '</td>';
-    html += '<td style="font-family:var(--font-mono)">' + tpStr + '</td>';
-    html += '<td onclick="event.stopPropagation()"><span style="cursor:pointer;color:var(--sell);font-size:14px" onclick="listaTrack(\'' + pick.ticker + '\',0,0,0)" title="Remover">✕</span></td>';
-    html += '</tr>';
+      ? '<span style="font-size:13px;font-weight:600;color:' + (pnl >= 0 ? 'var(--buy)' : 'var(--sell)') + '">' + (pnl >= 0 ? '+' : '') + pnl.toFixed(2) + '% P&L</span>'
+      : '';
+    html += '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:var(--s-3)">';
+    html += '<span style="font-family:var(--font-mono);font-size:18px;font-weight:700">' + priceStr + '</span>';
+    html += varStr;
+    html += pnlStr;
+    html += '</div>';
+
+    // Days progress bar
+    const barPct = Math.min(100, (daysHeld / holdDays) * 100).toFixed(0);
+    const barColor = exitSig === 'prazo' ? 'var(--sell)' : daysLeft <= 3 ? 'var(--hold)' : 'var(--primary)';
+    html += '<div style="margin-bottom:var(--s-3)">';
+    html += '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink-3);margin-bottom:4px">';
+    html += '<span>Prazo</span>';
+    html += '<span style="font-family:var(--font-mono)">' + daysHeld + ' / ' + holdDays + ' pregões' + (daysLeft > 0 ? ' · ' + daysLeft + ' restantes' : ' · prazo atingido') + '</span>';
+    html += '</div>';
+    html += '<div style="height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden">';
+    html += '<div style="width:' + barPct + '%;height:100%;background:' + barColor + ';border-radius:3px;transition:width 0.3s"></div>';
+    html += '</div></div>';
+
+    // Trailing stop
+    if (hasTrail && trailStop !== null) {
+      const stopColor = exitSig === 'stop_movel' ? 'var(--sell)' : 'var(--ink-2)';
+      const trailRaised = highSince > pick.entryPrice;
+      html += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:var(--s-2) var(--s-3);background:var(--bg-2);border-radius:var(--r-sm);margin-bottom:var(--s-2)">';
+      html += '<span style="color:var(--ink-3)">🛡️ Stop Móvel</span>';
+      html += '<span style="font-family:var(--font-mono);font-weight:600;color:' + stopColor + '">' + sym + trailStop.toFixed(2);
+      if (trailRaised) html += ' <span style="font-size:10px;color:var(--buy)">↑ de ' + sym + (pick.entryPrice - 2 * pick.atrAtEntry).toFixed(2) + '</span>';
+      html += '</span></div>';
+    }
+
+    // Exit signal badge
+    if (exitSig) {
+      if (exitSig === 'prazo') {
+        html += '<div style="padding:var(--s-2) var(--s-3);background:color-mix(in srgb,var(--hold) 12%,var(--bg-2));border-radius:var(--r-sm);font-size:12px;font-weight:600;color:var(--hold)">⚠️ Saída recomendada — prazo de 20 pregões atingido</div>';
+      } else {
+        html += '<div style="padding:var(--s-2) var(--s-3);background:color-mix(in srgb,var(--sell) 12%,var(--bg-2));border-radius:var(--r-sm);font-size:12px;font-weight:600;color:var(--sell)">🔴 Saída recomendada — stop móvel atingido</div>';
+      }
+    } else if (hasTrail) {
+      html += '<div style="font-size:11px;color:var(--ink-3)">✅ Dentro do prazo — stop ativo</div>';
+    }
+
+    html += '</div>'; // card
   });
 
-  html += '</tbody></table></div></div>';
+  html += '</div>'; // grid
+  html += '</div>'; // shell
   container.innerHTML = html;
 }
 
@@ -4736,6 +4833,7 @@ function renderEdu() {
     { icon:'🌱', name:'Fundamentos',      topics:['strategy','why','diversify'] },
     { icon:'🌎', name:'O Mercado',        topics:['brazilstats','sectors','realcases'] },
     { icon:'📊', name:'Análise Técnica',  topics:['rsi','macd','adx','sma','bb','patterns','momentum_signal'] },
+    { icon:'🛡️', name:'Estratégia',       topics:['smart_exit'] },
     { icon:'🇧🇷', name:'Impostos',        topics:['darf'] },
     { icon:'🏦', name:'Renda Fixa',       topics:['tesouro','lci_lca','juros_compostos','cdb_cdi'] },
   ];
@@ -4758,7 +4856,8 @@ function renderEdu() {
     { id:'lci_lca',         icon:'🌾', name:'LCI e LCA',                color:'#4caf50', title:'LCI e LCA — Renda Fixa Isenta de IR',      subtitle:'Por que a isenção importa e quando compensa mais que o Tesouro.', body:t('edu_lciLcaBody') },
     { id:'juros_compostos', icon:'📐', name:'Juros Compostos',          color:'#ff6a00', title:'O Poder dos Juros Compostos',               subtitle:'A força que transforma disciplina em patrimônio ao longo do tempo.', body:t('edu_jurosCompostosBody') },
     { id:'momentum_signal', icon:'🎯', name:'Sinal Momentum', color:'#22d3ee', title:'Como o Momentum Calcula os Sinais', subtitle:'Entenda os 9 critérios do scoring v3, o tier Monitorar e a pontuação máxima de 6.0.', body:t('edu_momentumSignalBody') },
-    { id:'cdb_cdi', icon:'🏦', name:'CDB e CDI', color:'#4caf50', title:'CDB e CDI — Renda Fixa Bancária', subtitle:'O que é CDI, como o CDB rende sobre ele, e quando compensa mais que o Tesouro.', body:t('edu_cdbCdiBody') },
+    { id:'cdb_cdi',    icon:'🏦', name:'CDB e CDI',        color:'#4caf50', title:'CDB e CDI — Renda Fixa Bancária',                subtitle:'O que é CDI, como o CDB rende sobre ele, e quando compensa mais que o Tesouro.', body:t('edu_cdbCdiBody') },
+    { id:'smart_exit', icon:'🛡️', name:'Saída Inteligente', color:'#ef5350', title:'Saída Inteligente — Stop Móvel e o Prazo de 20 Dias', subtitle:'Por que sair em 20 dias, como o stop móvel protege seus ganhos e quando sair antes do prazo.', body:t('edu_smartExitBody') },
   ];
 
   const current = allTopics.find(top => top.id === _eduTopic) || allTopics[0];
