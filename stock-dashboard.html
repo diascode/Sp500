@@ -111,7 +111,6 @@
     <button class="seg-btn" data-mode="historico" onclick="setHomeMode('historico')">📊 Histórico</button>
   </div>
 
-  <div id="regimeIndicator" style="display:none;margin-top:var(--s-3);padding:var(--s-2) var(--s-4);border-radius:8px;font-size:.85rem;font-weight:600;text-align:center;cursor:pointer;transition:background .3s,color .3s" onclick="setState('_eduTopic','market_regime')"></div>
 
   <!-- Sinais controls (shown only in sinais mode) -->
   <div class="scan-controls" id="sinaisControls">
@@ -3044,15 +3043,6 @@ function renderSimulator() {
   html += '<h1 class="hed1" style="margin-top:8px">E se você <span style="color:var(--primary)">investisse</span> agora?</h1>';
   html += '<p class="dek" style="margin-top:var(--s-3)">Escolha um valor e um ativo para ver os cenários possíveis. Apenas simulação — não é recomendação de investimento.</p>';
 
-  // US-231: capital input
-  html += `<div style="display:flex;align-items:center;gap:var(--s-3);margin-bottom:var(--s-4);flex-wrap:wrap">
-  <label style="font-size:.85rem;color:var(--ink-3)">Capital inicial (R$)</label>
-  <input type="number" id="simCapitalInput" min="100" max="1000000" step="100"
-    value="${state.simCapital}"
-    style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:var(--s-1) var(--s-3);color:var(--ink);font-size:.9rem;width:140px"
-    onchange="state.simCapital=Math.max(100,Math.min(1000000,+this.value||1000));localStorage.setItem('momentum_sim_capital',state.simCapital);renderSimulator()"
-  />
-</div>`;
 
   if (allStocksRaw.length === 0) {
     html += '<div class="card" style="padding:40px;text-align:center;margin-top:var(--s-6)">';
