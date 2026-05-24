@@ -391,6 +391,43 @@ Exit. No hesitation. The stop was calculated on the ATR — the normal volatilit
 <p style="margin-top:1rem;padding:.75rem;background:rgba(255,255,255,.05);border-radius:8px;font-size:.85rem;color:var(--muted)">💡 The regime indicator appears below the mode buttons on the main screen. Click it to return here at any time.</p>
 `,
 
+    edu_capitalMgmtBody: `
+<p>Most investors focus on <em>which</em> stock to buy and ignore <em>how much</em> to buy. But position sizing determines your final result more than stock selection does.</p>
+
+<h4 style="margin:1rem 0 .5rem">1. Why does position size vary?</h4>
+<p>Imagine two High Conviction signals on the same day:</p>
+<ul style="padding-left:1.2rem;line-height:1.8;margin:.5rem 0">
+  <li><strong>WEGE3</strong>: score 4.5, low volatility (~1.5%/day)</li>
+  <li><strong>PETR4</strong>: score 3.5, high volatility (~3%/day)</li>
+</ul>
+<p>Betting the same amount on both means you're taking twice the risk on PETR4. Momentum adjusts automatically: less money where there's more risk, more where there's more quality.</p>
+<p style="padding:.6rem .8rem;background:rgba(255,255,255,.05);border-radius:6px;font-size:.88rem"><strong>Rule:</strong> we bet more when we have more conviction and the stock is more stable.</p>
+
+<h4 style="margin:1rem 0 .5rem">2. What is compound interest and why does it matter?</h4>
+<p>With R$1,000 at 10% return: you have R$1,100. Next round, you invest R$110 — not R$100. Your gains generate more gains.</p>
+<table style="width:100%;border-collapse:collapse;font-size:.9rem;margin:.75rem 0">
+  <tr style="border-bottom:1px solid rgba(255,255,255,.1)">
+    <td style="padding:.5rem;color:var(--muted)">Without reinvestment</td>
+    <td style="padding:.5rem;text-align:right">R$1,000 → <strong>R$1,521</strong> over 5 years</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;color:var(--muted)">With reinvestment (compounding)</td>
+    <td style="padding:.5rem;text-align:right">R$1,000 → <strong style="color:#22d3ee">R$1,900</strong> over 5 years</td>
+  </tr>
+</table>
+<p>The R$379 difference didn't come from better signals. It came from using gains to generate more gains. That's why the Simulator uses 10% of current equity — not a fixed amount.</p>
+
+<h4 style="margin:1rem 0 .5rem">3. Why cap sector exposure?</h4>
+<p>Having PETR4, PRIO3, and CSAN3 open simultaneously isn't three bets — it's one. When oil drops, all three fall together.</p>
+<div style="margin:.75rem 0">
+  <div style="padding:.4rem .6rem;border-radius:4px;background:rgba(239,68,68,.08);color:#ef4444;font-size:.85rem;margin-bottom:.3rem">❌ 10 financial sector stocks is not diversification</div>
+  <div style="padding:.4rem .6rem;border-radius:4px;background:rgba(34,197,94,.08);color:#22c55e;font-size:.85rem">✅ Stocks from 5 different sectors with a 25% cap each — that's diversification</div>
+</div>
+<p>The app automatically blocks new entries when a sector already represents 25% of your capital.</p>
+
+<p style="margin-top:1rem;padding:.75rem;background:rgba(255,255,255,.05);border-radius:8px;font-size:.85rem;color:var(--muted)">💡 Check the capital panel in the Simulator to track your allocation in real time.</p>
+`,
+
     // Footer
     footer_version: 'MOMENTUM · v5.0 · live from market data',
     footer_disclaimer: '⚠ PAPER TRADING — EDUCATIONAL PURPOSES ONLY. MOMENTUM is a technical analysis simulator. Nothing on this site constitutes financial advice, investment recommendation, or solicitation to buy or sell securities. All trades are simulated. Past performance does not guarantee future results. Consult a qualified financial advisor before making real investment decisions. By using this app you agree these are paper trades only.',
@@ -790,6 +827,43 @@ Sai. Sem hesitação. O stop foi calculado sobre o ATR — a volatilidade normal
   <li>🟡 Neutro: todos os outros casos</li>
 </ul>
 <p style="margin-top:1rem;padding:.75rem;background:rgba(255,255,255,.05);border-radius:8px;font-size:.85rem;color:var(--muted)">💡 O indicador de regime aparece abaixo dos botões de modo na tela principal. Clique nele para chegar aqui a qualquer momento.</p>
+`,
+
+    edu_capitalMgmtBody: `
+<p>A maioria dos investidores foca em <em>qual</em> ação comprar e ignora <em>quanto</em> comprar. Mas o quanto determina mais o resultado final do que o qual.</p>
+
+<h4 style="margin:1rem 0 .5rem">1. Por que o tamanho da posição muda?</h4>
+<p>Imagine dois sinais de Alta Convicção no mesmo dia:</p>
+<ul style="padding-left:1.2rem;line-height:1.8;margin:.5rem 0">
+  <li><strong>WEGE3</strong>: score 4.5, volatilidade baixa (~1.5%/dia)</li>
+  <li><strong>PETR4</strong>: score 3.5, volatilidade alta (~3%/dia)</li>
+</ul>
+<p>Se você aposta o mesmo valor em ambos, está arriscando o dobro em PETR4. O Momentum ajusta automaticamente: menos dinheiro onde há mais risco, mais onde há mais qualidade.</p>
+<p style="padding:.6rem .8rem;background:rgba(255,255,255,.05);border-radius:6px;font-size:.88rem"><strong>Regra:</strong> apostamos mais quando temos mais certeza e o papel é mais estável.</p>
+
+<h4 style="margin:1rem 0 .5rem">2. O que é juro composto e por que importa?</h4>
+<p>Com R$1.000 e retorno de 10%: você tem R$1.100. No próximo round, investe R$110 — não R$100. Seus ganhos geram mais ganhos.</p>
+<table style="width:100%;border-collapse:collapse;font-size:.9rem;margin:.75rem 0">
+  <tr style="border-bottom:1px solid rgba(255,255,255,.1)">
+    <td style="padding:.5rem;color:var(--muted)">Sem reinvestimento</td>
+    <td style="padding:.5rem;text-align:right">R$1.000 → <strong>R$1.521</strong> em 5 anos</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem;color:var(--muted)">Com reinvestimento (composto)</td>
+    <td style="padding:.5rem;text-align:right">R$1.000 → <strong style="color:#22d3ee">R$1.900</strong> em 5 anos</td>
+  </tr>
+</table>
+<p>A diferença de R$379 não veio de sinais melhores. Veio de usar os ganhos para gerar mais ganhos. Por isso o Simulador usa 10% do capital atual — não um valor fixo.</p>
+
+<h4 style="margin:1rem 0 .5rem">3. Por que limitar a exposição por setor?</h4>
+<p>PETR4, PRIO3 e CSAN3 abertas ao mesmo tempo não são três apostas — são uma. Quando o petróleo cai, as três caem juntas.</p>
+<div style="margin:.75rem 0">
+  <div style="padding:.4rem .6rem;border-radius:4px;background:rgba(239,68,68,.08);color:#ef4444;font-size:.85rem;margin-bottom:.3rem">❌ 10 ações do setor financeiro não é diversificação</div>
+  <div style="padding:.4rem .6rem;border-radius:4px;background:rgba(34,197,94,.08);color:#22c55e;font-size:.85rem">✅ Ações de 5 setores diferentes com limite de 25% cada — isso é diversificação</div>
+</div>
+<p>O app bloqueia automaticamente novas entradas quando um setor já representa 25% do seu capital.</p>
+
+<p style="margin-top:1rem;padding:.75rem;background:rgba(255,255,255,.05);border-radius:8px;font-size:.85rem;color:var(--muted)">💡 Veja o painel de capital no Simulador para acompanhar sua alocação em tempo real.</p>
 `,
 
     // Footer

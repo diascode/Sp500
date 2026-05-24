@@ -279,6 +279,44 @@ let _taxReportMonth = '';
 let _newsSentimentFilter = 'all';
 let _marketPulseNews = [];
 
+// ─── US-225/226: CDI, SECTOR MAP & POSITION SIZING ──────────────────────
+const CDI_ANNUAL = 0.1375;
+const CDI_DAILY  = Math.pow(1 + CDI_ANNUAL, 1 / 252) - 1;
+
+const SECTOR_MAP = {
+  'PETR4.SA':'energia','PRIO3.SA':'energia','CSAN3.SA':'energia','UGPA3.SA':'energia','VBBR3.SA':'energia',
+  'VALE3.SA':'materiais','SUZB3.SA':'materiais','GGBR4.SA':'materiais','CSNA3.SA':'materiais',
+  'ITUB4.SA':'financeiro','BBDC4.SA':'financeiro','BBAS3.SA':'financeiro','B3SA3.SA':'financeiro',
+  'ABEV3.SA':'consumo','JBSS3.SA':'consumo','BRFS3.SA':'consumo','SMTO3.SA':'consumo',
+  'WEGE3.SA':'industrial','RAIL3.SA':'industrial','EMBR3.SA':'industrial',
+  'EQTL3.SA':'utilidades','TAEE11.SA':'utilidades','CPFE3.SA':'utilidades','CMIG4.SA':'utilidades','SBSP3.SA':'utilidades','ELET3.SA':'utilidades',
+  'VIVT3.SA':'telecom','TIMS3.SA':'telecom',
+  'MGLU3.SA':'varejo','LREN3.SA':'varejo','PETZ3.SA':'varejo',
+  'RADL3.SA':'saude','HAPV3.SA':'saude',
+  'TOTS3.SA':'tecnologia',
+  'SLCE3.SA':'agro','AGRO3.SA':'agro','MRFG3.SA':'agro',
+  'MULT3.SA':'imoveis','RENT3.SA':'imoveis',
+};
+
+function fmtBRL(v) {
+  return 'R$ ' + (v || 0).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function calcPositionSize(equity) {
+  return Math.max(10, Math.floor(equity * 0.10 / 10) * 10);
+}
+
+function calcAdjustedSize(baseSize, score, atrPct, ticker, openPositions, equity) {
+  const scoreMult = score >= 4.5 ? 1.50 : score >= 4.0 ? 1.20 : score >= 3.75 ? 1.00 : 0.70;
+  const volMult   = Math.min(Math.max(0.022 / (atrPct || 0.022), 0.6), 1.4);
+  const sector    = SECTOR_MAP[ticker];
+  const sectorExp = openPositions
+    .filter(p => SECTOR_MAP[p.ticker] === sector)
+    .reduce((s, p) => s + p.cost, 0);
+  const sectorMult = equity > 0 && (sectorExp / equity) >= 0.25 ? 0.0 : 1.0;
+  return Math.round(baseSize * scoreMult * volMult * sectorMult / 10) * 10;
+}
+
 // ─── FEATURE FLAGS ───────────────────────────────────────────────────────
 let _featureFlags = {
   cpf_required:  true,
@@ -1404,6 +1442,20 @@ function buildFeedCard(d, idx) {
       </div>
       <canvas class="sparkline-canvas" id="spark-${idx}" height="56"></canvas>
       <p class="why-text"><strong>Por quê:</strong> ${feedCardWhy(d)}</p>
+      ${(() => {
+        if ((d.signal === 'buy' || d.signal === 'watchlist') && state.market === 'brasil') {
+          const _baseSize = calcPositionSize(state.simEquity ?? _simAmount ?? 1000);
+          const _atrPct = d.atr / (d.price || 1);
+          const _adjSize = calcAdjustedSize(_baseSize, d.score ?? 0, _atrPct, d.ticker, state.portfolio ?? [], state.simEquity ?? _simAmount ?? 1000);
+          return `<div style="font-size:.78rem;color:var(--ink-3);margin-top:4px">
+  Posição sugerida: <strong style="color:var(--ink)">${fmtBRL(_adjSize)}</strong>
+  <span style="margin-left:6px;opacity:.6">Score ${(d.score??0).toFixed(1)} · Setor: ${SECTOR_MAP[d.ticker]??'—'}</span>
+  <span onclick="setState('_eduTopic','capital_mgmt')" style="cursor:pointer;margin-left:6px;opacity:.5;font-size:.75rem" title="Como calculamos o tamanho?">(?)</span>
+  ${_adjSize === 0 ? '<br><span style="color:#ef4444;font-size:.75rem">⚠️ Setor no limite de 25% — posição postergada</span>' : ''}
+</div>`;
+        }
+        return '';
+      })()}
       <div class="chip-row">
         <span class="chip">RSI ${d.rsi.toFixed(1)}</span>
         <span class="chip">MACD ${d.macd > 0 ? '+' : ''}${d.macd.toFixed(2)}</span>
@@ -2893,6 +2945,9 @@ function renderSimulator() {
   const container = document.getElementById('dashboard');
   container.style.display = 'block';
 
+  // US-225: expose simEquity on state so signal cards can reference it
+  state.simEquity = _simAmount;
+
   const amounts = [100, 250, 500, 1000, 2500];
   const allStocksRaw = Object.values(state.analyzed).flat().filter(s => s && s.ticker && s.price > 0);
   // US-165: show only buy/neutral; US-218: sorted by score descending (highest conviction first)
@@ -2981,6 +3036,24 @@ function renderSimulator() {
     </button>`;
   });
   html += '</div></div>';
+
+  // US-225: Capital panel — always shown, treats _simAmount as equity and all cash as idle
+  {
+    const _simEquity = _simAmount;
+    const _deployed = 0; // single-trade simulator has no open portfolio positions
+    const _idle = _simEquity - _deployed;
+    const _openCount = 0;
+    const _posSize = calcPositionSize(_simEquity);
+    html += `<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:var(--s-4);margin-bottom:var(--s-4)">
+  <div style="font-size:.8rem;color:var(--ink-3);margin-bottom:var(--s-2)">CAPITAL</div>
+  <div style="font-size:1.4rem;font-weight:700">${fmtBRL(_simEquity)}</div>
+  <div style="display:flex;gap:var(--s-4);margin-top:var(--s-2);font-size:.82rem;color:var(--ink-3)">
+    <span>Posições: ${fmtBRL(_deployed)} (${_openCount} abertas)</span>
+    <span>Caixa (CDI): ${fmtBRL(_idle)} · +${fmtBRL(_idle * CDI_DAILY)}/dia est.</span>
+  </div>
+  <div style="font-size:.78rem;color:var(--ink-3);margin-top:var(--s-1)">Tamanho por posição: ${fmtBRL(_posSize)} (10% do capital)</div>
+</div>`;
+  }
 
   if (!stock) {
     html += '<div class="card" style="padding:32px;text-align:center"><p style="color:var(--ink-3)">Selecione um ativo acima para ver os cenários.</p></div>';
@@ -4905,7 +4978,7 @@ function renderEdu() {
     { icon:'🌱', name:'Fundamentos',      topics:['strategy','why','diversify'] },
     { icon:'🌎', name:'O Mercado',        topics:['brazilstats','sectors','realcases'] },
     { icon:'📊', name:'Análise Técnica',  topics:['rsi','macd','adx','sma','bb','patterns','momentum_signal'] },
-    { icon:'🛡️', name:'Estratégia',       topics:['smart_exit', 'market_regime'] },
+    { icon:'🛡️', name:'Estratégia',       topics:['smart_exit', 'market_regime', 'capital_mgmt'] },
     { icon:'🇧🇷', name:'Impostos',        topics:['darf'] },
     { icon:'🏦', name:'Renda Fixa',       topics:['tesouro','lci_lca','juros_compostos','cdb_cdi'] },
   ];
@@ -4931,6 +5004,7 @@ function renderEdu() {
     { id:'cdb_cdi',    icon:'🏦', name:'CDB e CDI',        color:'#4caf50', title:'CDB e CDI — Renda Fixa Bancária',                subtitle:'O que é CDI, como o CDB rende sobre ele, e quando compensa mais que o Tesouro.', body:t('edu_cdbCdiBody') },
     { id:'smart_exit', icon:'🛡️', name:'Saída Inteligente', color:'#ef5350', title:'Saída Inteligente — Stop Móvel e o Prazo de 20 Dias', subtitle:'Por que sair em 20 dias, como o stop móvel protege seus ganhos e quando sair antes do prazo.', body:t('edu_smartExitBody') },
     { id:'market_regime', icon:'🌡️', name:'Regime de Mercado', color:'#ef9a00', title:'Regime de Mercado — Quando Investir e Quando Esperar', subtitle:'Entenda os três estados do mercado (🟢🟡🔴) e por que o app pausa sinais durante quedas do IBOV.', body:t('edu_marketRegimeBody') },
+    { id:'capital_mgmt', icon:'💰', name:'Gestão de Capital', color:'#22d3ee', title:'Gestão de Capital — Tamanho de Posição, Juros Compostos e Diversificação', subtitle:'Por que o app varia o tamanho das posições e como os juros compostos potencializam seus ganhos.', body:t('edu_capitalMgmtBody') },
   ];
 
   const current = allTopics.find(top => top.id === _eduTopic) || allTopics[0];
