@@ -359,6 +359,38 @@ Exit. No hesitation. The stop was calculated on the ATR — the normal volatilit
 ✅ Exit earlier if the trailing stop is triggered<br>
 ✅ The app alerts you to both — you just need to act`,
 
+    edu_marketRegimeBody: `
+<p>Momentum reads the current state of the IBOV index (via BOVA11.SA) to decide whether the environment is favorable for new buy signals.</p>
+<h4 style="margin:1rem 0 .5rem">The three market states</h4>
+<table style="width:100%;border-collapse:collapse;font-size:.9rem">
+  <tr style="border-bottom:1px solid rgba(255,255,255,.1)">
+    <td style="padding:.5rem"><span style="font-size:1.2rem">🟢</span></td>
+    <td style="padding:.5rem"><strong>Favorable</strong></td>
+    <td style="padding:.5rem;color:var(--muted)">Price above SMA200, SMA50 above SMA200, drawdown &lt; 8%. Buy signals shown normally.</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(255,255,255,.1)">
+    <td style="padding:.5rem"><span style="font-size:1.2rem">🟡</span></td>
+    <td style="padding:.5rem"><strong>Neutral</strong></td>
+    <td style="padding:.5rem;color:var(--muted)">Market undecided. Only High Conviction signals (score ≥ 4.0) are shown. Caution advised.</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem"><span style="font-size:1.2rem">🔴</span></td>
+    <td style="padding:.5rem"><strong>Alert</strong></td>
+    <td style="padding:.5rem;color:var(--muted)">Price below SMA200, or drawdown &gt; 15%, or excess volatility (ATR% &gt; 2.5%). Buy signals paused.</td>
+  </tr>
+</table>
+<h4 style="margin:1rem 0 .5rem">Why pause signals?</h4>
+<p>During broad market selloffs, even fundamentally strong stocks tend to fall. In 2022, the IBOV dropped over 10% between January and July — stocks generating buy signals during that period averaged a <strong>–18%</strong> return over 20 days. Pausing or filtering signals avoids buying into the wrong tide.</p>
+<h4 style="margin:1rem 0 .5rem">How the regime is calculated</h4>
+<p>The app fetches BOVA11.SA candles on every scan. The logic is simple and transparent:</p>
+<ul style="padding-left:1.2rem;line-height:1.8">
+  <li>🔴 Alert if: price &lt; SMA200 <strong>OR</strong> drawdown &gt; 15% <strong>OR</strong> ATR% &gt; 2.5%</li>
+  <li>🟢 Favorable if: price &gt; SMA200 <strong>AND</strong> SMA50 &gt; SMA200 <strong>AND</strong> drawdown &lt; 8%</li>
+  <li>🟡 Neutral: all other cases</li>
+</ul>
+<p style="margin-top:1rem;padding:.75rem;background:rgba(255,255,255,.05);border-radius:8px;font-size:.85rem;color:var(--muted)">💡 The regime indicator appears below the mode buttons on the main screen. Click it to return here at any time.</p>
+`,
+
     // Footer
     footer_version: 'MOMENTUM · v5.0 · live from market data',
     footer_disclaimer: '⚠ PAPER TRADING — EDUCATIONAL PURPOSES ONLY. MOMENTUM is a technical analysis simulator. Nothing on this site constitutes financial advice, investment recommendation, or solicitation to buy or sell securities. All trades are simulated. Past performance does not guarantee future results. Consult a qualified financial advisor before making real investment decisions. By using this app you agree these are paper trades only.',
@@ -727,6 +759,38 @@ Sai. Sem hesitação. O stop foi calculado sobre o ATR — a volatilidade normal
 ✅ Saia no 20º pregão se o stop não tiver sido atingido<br>
 ✅ Saia antes se o stop móvel for tocado<br>
 ✅ O app avisa os dois — você só precisa agir`,
+
+    edu_marketRegimeBody: `
+<p>O Momentum analisa o estado atual do IBOV (via BOVA11.SA) para determinar se o ambiente é favorável a novas compras.</p>
+<h4 style="margin:1rem 0 .5rem">Os três estados do mercado</h4>
+<table style="width:100%;border-collapse:collapse;font-size:.9rem">
+  <tr style="border-bottom:1px solid rgba(255,255,255,.1)">
+    <td style="padding:.5rem"><span style="font-size:1.2rem">🟢</span></td>
+    <td style="padding:.5rem"><strong>Favorável</strong></td>
+    <td style="padding:.5rem;color:var(--muted)">Preço acima da SMA200, SMA50 acima da SMA200, drawdown &lt; 8%. Sinais de compra ativos normalmente.</td>
+  </tr>
+  <tr style="border-bottom:1px solid rgba(255,255,255,.1)">
+    <td style="padding:.5rem"><span style="font-size:1.2rem">🟡</span></td>
+    <td style="padding:.5rem"><strong>Neutro</strong></td>
+    <td style="padding:.5rem;color:var(--muted)">Mercado indeciso. Somente Alta Convicção (pontuação ≥ 4.0) é exibida. Cautela recomendada.</td>
+  </tr>
+  <tr>
+    <td style="padding:.5rem"><span style="font-size:1.2rem">🔴</span></td>
+    <td style="padding:.5rem"><strong>Alerta</strong></td>
+    <td style="padding:.5rem;color:var(--muted)">Preço abaixo da SMA200, ou drawdown &gt; 15%, ou volatilidade excessiva (ATR% &gt; 2.5%). Sinais de compra pausados.</td>
+  </tr>
+</table>
+<h4 style="margin:1rem 0 .5rem">Por que pausar sinais?</h4>
+<p>Durante quedas do mercado, mesmo ações individuais com bons fundamentos tendem a cair junto. Em 2022, o IBOV recuou mais de 10% entre janeiro e julho — ações que geravam sinal de compra nesse período apresentaram retorno médio de <strong>–18%</strong> em 20 dias. Pausar ou filtrar esses sinais evita entrar na maré errada.</p>
+<h4 style="margin:1rem 0 .5rem">Como o regime é calculado</h4>
+<p>O app busca as cotações do BOVA11.SA a cada varredura. A lógica é simples e transparente:</p>
+<ul style="padding-left:1.2rem;line-height:1.8">
+  <li>🔴 Alerta se: preço &lt; SMA200 <strong>OU</strong> drawdown &gt; 15% <strong>OU</strong> ATR% &gt; 2.5%</li>
+  <li>🟢 Favorável se: preço &gt; SMA200 <strong>E</strong> SMA50 &gt; SMA200 <strong>E</strong> drawdown &lt; 8%</li>
+  <li>🟡 Neutro: todos os outros casos</li>
+</ul>
+<p style="margin-top:1rem;padding:.75rem;background:rgba(255,255,255,.05);border-radius:8px;font-size:.85rem;color:var(--muted)">💡 O indicador de regime aparece abaixo dos botões de modo na tela principal. Clique nele para chegar aqui a qualquer momento.</p>
+`,
 
     // Footer
     footer_version: 'MOMENTUM · v5.0 · dados ao vivo do mercado',
