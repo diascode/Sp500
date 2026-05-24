@@ -339,6 +339,26 @@ LCI/LCA: 85–95% CDI, IR isento, carência 90–365 dias, FGC sim
 <strong>Dica Momentum:</strong><br>
 O Momentum é para renda variável — ações de alta volatilidade. CDB e Tesouro são sua reserva e sua base de segurança. Monte a base de renda fixa primeiro, depois explore ações com o que sobra.`,
 
+    edu_smartExitBody: `<strong>Why exit after 20 days?</strong><br>
+The Momentum analyzed 5 years of data from 33 Brazilian stocks. High Conviction signals generate their highest average return in the first 20 trading days after entry. After that, the probability of gain begins to fall — the move has already happened.<br><br>
+20 trading days ≈ 1 calendar month. Long enough for the market to "digest" the signal, but short enough that other factors haven't taken over.<br><br>
+
+<strong>What is a trailing stop?</strong><br>
+Imagine you bought WEGE3 at R$40. The stock rises to R$46. A fixed stop would lock your exit at R$38 (below entry). With a trailing stop, it rises with the price — now protecting at R$43. If the stock continues to R$50, the stop rises to R$47.<br><br>
+The trailing stop <em>never goes down</em>. It only rises. This protects accumulated gains without needing to watch the stock all day.<br><br>
+
+<strong>How Momentum calculates the trailing stop:</strong><div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  Trailing Stop = Highest Price Since Entry − 2 × ATR<br><br>  ATR (Average True Range) = average daily volatility<br>  of the last 14 trading days, in currency units.<br><br>  Example — WEGE3:<br>  ATR = R$ 1.20  · Entry = R$ 40.00<br>  Highest reached = R$ 46.00<br><br>  Initial stop: R$ 40.00 − 2 × R$ 1.20 = <span style="color:#ef5350">R$ 37.60</span><br>  Current stop: R$ 46.00 − 2 × R$ 1.20 = <span style="color:#4caf50">R$ 43.60</span>  ← protecting the gain</div>
+
+<strong>What if the stop is hit before 20 days?</strong><br>
+Exit. No hesitation. The stop was calculated on the ATR — the normal volatility of that stock. If price fell below the stop, something changed. The signal was invalidated. There is no point waiting 20 days if the market already showed it was wrong.<br><br>
+
+<strong>Two real examples:</strong><div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  <span style="color:#4caf50">Winning trade — PETR4:</span><br>  Day  0: Entry R$ 38.00 · Initial stop R$ 35.20<br>  Day  5: High R$ 40.50 · Stop rises to R$ 38.10<br>  Day 12: High R$ 43.00 · Stop rises to R$ 40.60<br>  Day 20: Scheduled exit at R$ 42.00 · <span style="color:#4caf50">+10.5%</span><br><br>  <span style="color:#ef5350">Protected trade — MGLU3:</span><br>  Day  0: Entry R$ 10.00 · Initial stop R$ 9.40<br>  Day  3: High R$ 10.80 · Stop rises to R$ 9.60<br>  Day  7: Falls to R$ 9.55 → Stop triggered<br>  Exit at R$ 9.55 · <span style="color:#ef5350">−4.5%</span> (protected from further decline)</div>
+
+<strong>Summary:</strong><br>
+✅ Exit on the 20th trading day if the stop has not been hit<br>
+✅ Exit earlier if the trailing stop is triggered<br>
+✅ The app alerts you to both — you just need to act`,
+
     // Footer
     footer_version: 'MOMENTUM · v5.0 · live from market data',
     footer_disclaimer: '⚠ PAPER TRADING — EDUCATIONAL PURPOSES ONLY. MOMENTUM is a technical analysis simulator. Nothing on this site constitutes financial advice, investment recommendation, or solicitation to buy or sell securities. All trades are simulated. Past performance does not guarantee future results. Consult a qualified financial advisor before making real investment decisions. By using this app you agree these are paper trades only.',
@@ -687,6 +707,26 @@ LCI/LCA: 85–95% CDI, IR isento, carência 90–365 dias, FGC sim
 
 <strong>Dica Momentum:</strong><br>
 O Momentum é para renda variável — ações de alta volatilidade. CDB e Tesouro são sua reserva e sua base de segurança. Monte a base de renda fixa primeiro, depois explore ações com o que sobra.`,
+
+    edu_smartExitBody: `<strong>Por que sair em 20 dias?</strong><br>
+O Momentum analisou 5 anos de histórico de 33 ações brasileiras. Sinais de Alta Convicção geram o maior retorno médio nos primeiros 20 pregões após a entrada. Depois disso, a probabilidade de ganho começa a cair — o movimento já aconteceu.<br><br>
+20 pregões = aproximadamente 1 mês de calendário. Tempo suficiente para o mercado "digerir" o sinal, mas não tanto que outros fatores comecem a dominar.<br><br>
+
+<strong>O que é um stop móvel?</strong><br>
+Imagine que você comprou WEGE3 a R$40. O papel sobe para R$46. Um stop fixo travaria sua saída em R$38 (abaixo da entrada). Com o stop móvel, ele sobe junto — agora protege em R$43. Se o papel continuar subindo para R$50, o stop sobe para R$47.<br><br>
+O stop móvel <em>nunca desce</em>. Só sobe. Assim você protege os ganhos acumulados sem precisar monitorar o papel o dia todo.<br><br>
+
+<strong>Como o Momentum calcula o stop móvel:</strong><div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  Stop Móvel = Máxima Desde a Entrada − 2 × ATR<br><br>  ATR (Average True Range) = volatilidade diária média<br>  dos últimos 14 pregões, em reais.<br><br>  Exemplo — WEGE3:<br>  ATR = R$ 1.20  · Entrada = R$ 40.00<br>  Máxima atingida = R$ 46.00<br><br>  Stop inicial: R$ 40.00 − 2 × R$ 1.20 = <span style="color:#ef5350">R$ 37.60</span><br>  Stop atual:   R$ 46.00 − 2 × R$ 1.20 = <span style="color:#4caf50">R$ 43.60</span>  ← protegendo o ganho</div>
+
+<strong>E se o stop for atingido antes dos 20 dias?</strong><br>
+Sai. Sem hesitação. O stop foi calculado sobre o ATR — a volatilidade normal do papel. Se ele caiu abaixo do stop, algo mudou. O sinal foi invalidado. Não faz sentido esperar os 20 dias se o mercado já mostrou que estava errado.<br><br>
+
+<strong>Dois exemplos reais:</strong><div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  <span style="color:#4caf50">Trade vencedor — PETR4:</span><br>  Dia  0: Entrada R$ 38.00 · Stop inicial R$ 35.20<br>  Dia  5: Máx R$ 40.50 · Stop sobe para R$ 38.10<br>  Dia 12: Máx R$ 43.00 · Stop sobe para R$ 40.60<br>  Dia 20: Saída programada R$ 42.00 · <span style="color:#4caf50">+10.5%</span><br><br>  <span style="color:#ef5350">Trade protegido — MGLU3:</span><br>  Dia  0: Entrada R$ 10.00 · Stop inicial R$ 9.40<br>  Dia  3: Máx R$ 10.80 · Stop sobe para R$ 9.60<br>  Dia  7: Cai para R$ 9.55 → Stop atingido<br>  Saída R$ 9.55 · <span style="color:#ef5350">−4.5%</span> (protegeu de queda maior)</div>
+
+<strong>Resumo:</strong><br>
+✅ Saia no 20º pregão se o stop não tiver sido atingido<br>
+✅ Saia antes se o stop móvel for tocado<br>
+✅ O app avisa os dois — você só precisa agir`,
 
     // Footer
     footer_version: 'MOMENTUM · v5.0 · dados ao vivo do mercado',
