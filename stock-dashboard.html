@@ -556,7 +556,10 @@ function closeAuthModal() { document.getElementById('authModal').classList.remov
 
 function showOnboardingModal() {
   const el = document.getElementById('onboardingModal');
-  if (el) el.style.display = 'flex';
+  if (!el) return;
+  const safetyEl = el.querySelector('[data-onboarding-safety]');
+  if (safetyEl) safetyEl.textContent = t('onboarding_safety');
+  el.style.display = 'flex';
 }
 
 function dismissOnboarding() {
@@ -5040,9 +5043,9 @@ function renderEdu() {
   const prog = loadCourseProgress();
 
   const COURSE_MODULES = [
-    { icon:'🌱', name:'Fundamentos',      topics:['strategy','why','diversify'] },
+    { icon:'🌱', name:'Fundamentos',      topics:['why','strategy','diversify'] },
     { icon:'🌎', name:'O Mercado',        topics:['brazilstats','sectors','realcases'] },
-    { icon:'📊', name:'Análise Técnica',  topics:['rsi','macd','adx','atr','sma','bb','patterns','momentum_signal'] },
+    { icon:'📊', name:'Análise Técnica',  topics:['chart_basics','rsi','sma','macd','adx','bb','atr','patterns','momentum_signal'] },
     { icon:'🛡️', name:'Estratégia',       topics:['smart_exit', 'market_regime', 'capital_mgmt'] },
     { icon:'🇧🇷', name:'Impostos',        topics:['darf'] },
     { icon:'🏦', name:'Renda Fixa',       topics:['tesouro','lci_lca','juros_compostos','cdb_cdi'] },
@@ -5059,6 +5062,7 @@ function renderEdu() {
     { id:'brazilstats',     icon:'🇧🇷', name:t('edu_brazilstatsName'),  color:'#e8a846', title:t('edu_brazilstatsTitle'),   subtitle:t('edu_brazilstatsSubtitle'),   body:t('edu_brazilstatsBody') },
     { id:'sectors',         icon:'🏭', name:t('edu_sectorsName'),       color:'#9c27b0', title:t('edu_sectorTitle'),        subtitle:t('edu_sectorSubtitle'),        body:t('edu_sectorBody') },
     { id:'realcases',       icon:'📈', name:t('edu_realcasesName'),     color:'#c85a17', title:t('edu_realcasesTitle'),     subtitle:t('edu_realcasesSubtitle'),     body:t('edu_realcasesBody') },
+    { id:'chart_basics', icon:'📊', name:'Como Ler um Gráfico', color:'#a78bfa', title:'Como Ler um Gráfico de Ações', subtitle:'Candlesticks, tendências e o que os eixos realmente significam.', body:t('edu_chartBasicsBody') },
     { id:'rsi',             icon:'📈', name:'RSI',                      color:'#22d3ee', title:t('edu_rsiTitle'),           subtitle:t('edu_rsiSubtitle'),           body:t('edu_rsiBody') },
     { id:'macd',            icon:'🔄', name:'MACD',                     color:'#4caf50', title:t('edu_macdTitle'),          subtitle:t('edu_macdSubtitle'),          body:t('edu_macdBody') },
     { id:'adx',             icon:'📊', name:'ADX',                      color:'#e8a846', title:t('edu_adxTitle'),           subtitle:t('edu_adxSubtitle'),           body:t('edu_adxBody') },
@@ -5488,6 +5492,10 @@ init();
     <div style="font-size:36px;text-align:center;margin-bottom:16px">🚀</div>
     <h2 style="font-family:var(--font-display);font-size:24px;font-weight:700;text-align:center;margin:0 0 8px">Bem-vindo ao Momentum!</h2>
     <p style="color:var(--ink-3);text-align:center;font-size:14px;margin:0 0 24px">Veja o que você pode fazer:</p>
+    <div style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.25);border-radius:8px;padding:12px 16px;margin:0 0 20px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:1.2rem">🔒</span>
+      <span style="color:var(--ink-2);font-size:.9rem" data-onboarding-safety></span>
+    </div>
     <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:28px">
       <div style="display:flex;gap:12px;align-items:flex-start">
         <span style="font-size:22px;flex-shrink:0">📡</span>
