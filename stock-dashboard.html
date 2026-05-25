@@ -5038,9 +5038,6 @@ function renderEdu() {
   container.style.display = 'block';
 
   const prog = loadCourseProgress();
-  const total = 16;
-  const pct = Math.round(prog.length / total * 100);
-  const isComplete = prog.length >= total;
 
   const COURSE_MODULES = [
     { icon:'🌱', name:'Fundamentos',      topics:['strategy','why','diversify'] },
@@ -5050,6 +5047,10 @@ function renderEdu() {
     { icon:'🇧🇷', name:'Impostos',        topics:['darf'] },
     { icon:'🏦', name:'Renda Fixa',       topics:['tesouro','lci_lca','juros_compostos','cdb_cdi'] },
   ];
+
+  const total = COURSE_MODULES.reduce((acc, m) => acc + m.topics.length, 0);
+  const pct = Math.round(prog.length / total * 100);
+  const isComplete = prog.length >= total;
 
   const allTopics = [
     { id:'strategy',        icon:'🧩', name:t('edu_strategyName'),      color:'#4caf50', title:t('edu_strategyTitle'),      subtitle:t('edu_strategySubtitle'),      body:t('edu_strategyBody') },
@@ -5066,7 +5067,7 @@ function renderEdu() {
     { id:'bb',              icon:'📉', name:'Bollinger',                color:'#c85a17', title:t('edu_bollingerTitle'),     subtitle:t('edu_bollingerSubtitle'),     body:t('edu_bollingerBody') },
     { id:'patterns',        icon:'📐', name:t('edu_patternsTab'),       color:'#4caf50', title:t('edu_patternsTitle'),      subtitle:t('edu_patternsSubtitle'),      body:t('edu_patternsBody') },
     { id:'darf',            icon:'🇧🇷', name:'DARF',                    color:'#e8a846', title:t('edu_darfTitle'),          subtitle:t('edu_darfSubtitle'),          body:t('edu_darfBody') },
-    { id:'tesouro',         icon:'🏛️', name:'Tesouro Direto',           color:'#22d3ee', title:'Tesouro Direto — A Renda Fixa do Governo', subtitle:'Selic, IPCA+ e Prefixado: qual escolher e quando.', body:t('edu_tesouроBody') },
+    { id:'tesouro',         icon:'🏛️', name:'Tesouro Direto',           color:'#22d3ee', title:'Tesouro Direto — A Renda Fixa do Governo', subtitle:'Selic, IPCA+ e Prefixado: qual escolher e quando.', body:t('edu_tesouroBody') },
     { id:'lci_lca',         icon:'🌾', name:'LCI e LCA',                color:'#4caf50', title:'LCI e LCA — Renda Fixa Isenta de IR',      subtitle:'Por que a isenção importa e quando compensa mais que o Tesouro.', body:t('edu_lciLcaBody') },
     { id:'juros_compostos', icon:'📐', name:'Juros Compostos',          color:'#ff6a00', title:'O Poder dos Juros Compostos',               subtitle:'A força que transforma disciplina em patrimônio ao longo do tempo.', body:t('edu_jurosCompostosBody') },
     { id:'momentum_signal', icon:'🎯', name:'Sinal Momentum', color:'#22d3ee', title:'Como o Momentum Calcula os Sinais', subtitle:'Entenda os 9 critérios do scoring v3, o tier Monitorar e a pontuação máxima de 6.0.', body:t('edu_momentumSignalBody') },
