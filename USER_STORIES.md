@@ -3485,6 +3485,503 @@ Quando o tópico é marcado como concluído (não desmarcado), chamar automatica
 
 ---
 
+## Epic 55 — Stripe Pagamento MVP
+
+**Description:** Wire the existing Stripe backend to the UI, fix field naming bugs, complete missing webhook handlers, and validate the full end-to-end payment flow in sandbox. The backend endpoints exist (create-checkout, create-portal, webhook handler for 3 events) — this epic fills the gaps and makes payments actually usable.
+
+---
+
+### US-263 — Configurar Ambiente Stripe Sandbox
+
+**Como** desenvolvedor,
+**Quero** ter o Stripe Sandbox configurado com env vars corretas —
+**Para que** possamos testar o fluxo de pagamento sem processar dinheiro real.
+
+**Contexto:**
+As variáveis `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO_MONTHLY` e `STRIPE_WEBHOOK_SECRET` existem no `docker-compose.yml` mas estão vazias no `.env`. Os endpoints `/api/stripe/create-checkout`, `/api/stripe/create-portal` e `/api/stripe/webhook` já existem em `server.js` mas estão desativados por falta das keys.
+
+**O que fazer (ops/config, não código):**
+1. Criar conta Stripe (se não existir) e acessar modo Test
+2. Criar produto "Momentum Pro" com plano mensal em BRL (ex: R$29,90/mês) → copiar o Price ID (formato `price_xxx`)
+3. Adicionar ao `.env`: `STRIPE_SECRET_KEY=sk_test_xxx`, `STRIPE_PRICE_PRO_MONTHLY=price_xxx`
+4. Instalar Stripe CLI: `brew install stripe/stripe-cli/stripe` → `stripe login`
+5. Rodar `stripe listen --forward-to localhost:8081/api/stripe/webhook` → copiar o webhook secret → adicionar `STRIPE_WEBHOOK_SECRET=whsec_xxx` no `.env`
+6. Reconstruir container: `docker compose build && docker compose up -d`
+7. Verificar no log do servidor que Stripe está inicializado (linha de startup no server.js)
+
+**Acceptance Criteria:**
+- [ ] `docker logs jerry-stock-dashboard` mostra "Stripe: connected" ou similar
+- [ ] `stripe listen` conecta sem erro
+- [ ] Chamar `POST /api/stripe/create-checkout` com usuário autenticado retorna uma URL de checkout (não erro 500)
+
+**Sprint:** 39 · **Effort:** 1h · **Priority:** 🔴 High · **Epic:** 55
+
+---
+
+### US-264 — Corrigir Nomenclatura de Campos Stripe no Backend
+
+**Como** desenvolvedor,
+**Quero** que os campos Stripe no registro de usuário tenham nomes precisos —
+**Para que** não haja confusão entre Customer ID e Subscription ID.
+
+**Problema:**
+`user.subscriptionId` atualmente armazena o Stripe **Customer ID** (`cus_xxx`), não o Subscription ID (`sub_xxx`). Isso é confuso e causará bugs quando precisarmos do Subscription ID separadamente (para cancelamento, atualização de plano, etc.).
+
+**O que mudar em `server.js` e `lib/auth.js`:**
+1. Renomear campo `subscriptionId` → `stripeCustomerId` em todo o código
+2. Adicionar novo campo `stripeSubId` (inicialmente `null`) no schema de usuário
+3. No webhook `checkout.session.completed`: salvar `stripeCustomerId = session.customer` E `stripeSubId = session.subscription`
+4. No endpoint `create-portal`: usar `user.stripeCustomerId` (era `user.subscriptionId`)
+5. No `/api/admin/users`: expor `stripeCustomerId` no lugar de `subscriptionId`
+6. Adicionar campos no schema padrão de novo usuário: `stripeCustomerId: null, stripeSubId: null, subStatus: null, paymentMethodLast4: null, failedPaymentCount: 0, paymentHistory: []`
+7. Script de migração único que lê `data/users.json`, renomeia o campo para todos os usuários existentes e salva
+
+**Acceptance Criteria:**
+- [ ] Nenhuma referência a `user.subscriptionId` permanece no código (grep limpo)
+- [ ] Novos usuários criados com todos os 6 novos campos
+- [ ] `stripeSubId` é preenchido no webhook `checkout.session.completed`
+- [ ] Portal de billing continua funcionando com `stripeCustomerId`
+- [ ] Dados existentes migrados sem perda
+
+**Sprint:** 39 · **Effort:** 2h · **Priority:** 🔴 High · **Epic:** 55
+
+---
+
+### US-265 — Webhook invoice.payment_succeeded e invoice.payment_failed
+
+**Como** sistema,
+**Quero** que eventos de cobrança do Stripe sejam registrados localmente —
+**Para que** o admin veja o histórico de pagamentos e o usuário receba alertas de falha.
+
+**Adicionar em `server.js` dentro do switch de eventos do webhook:**
+
+**`invoice.payment_succeeded`:**
+- Encontrar usuário pelo `stripeCustomerId` (= `invoice.customer`)
+- Append em `user.paymentHistory[]`: `{ date, amountBRL: invoice.amount_paid/100, status: 'paid', invoiceId: invoice.id, receiptUrl: invoice.hosted_invoice_url, periodEnd: invoice.lines.data[0].period.end }`
+- Atualizar `user.subStatus = 'active'`, `user.failedPaymentCount = 0`
+- Atualizar `user.subscriptionEnd` com `currentPeriodEnd` da invoice
+
+**`invoice.payment_failed`:**
+- Encontrar usuário pelo `stripeCustomerId`
+- Append em `user.paymentHistory[]`: `{ date, amountBRL, status: 'failed', invoiceId: invoice.id }`
+- Incrementar `user.failedPaymentCount += 1`
+- Setar `user.subStatus = 'past_due'`
+- NÃO fazer downgrade imediato — Stripe vai tentar novamente. Downgrade só ocorre em `customer.subscription.deleted`
+
+**`customer.subscription.updated`:**
+- Já existe mas não salva `subStatus`. Adicionar: `user.subStatus = subscription.status`, `user.cancelAtPeriodEnd = subscription.cancel_at_period_end`
+
+**Acceptance Criteria:**
+- [ ] `invoice.payment_succeeded` popula `paymentHistory[]` e reseta `failedPaymentCount`
+- [ ] `invoice.payment_failed` popula `paymentHistory[]` e incrementa `failedPaymentCount`
+- [ ] `subStatus` é atualizado por `customer.subscription.updated`
+- [ ] `node --check server.js` passa
+- [ ] Testado via `stripe trigger invoice.payment_succeeded` e `stripe trigger invoice.payment_failed`
+
+**Sprint:** 39 · **Effort:** 2h · **Priority:** 🔴 High · **Epic:** 55
+
+---
+
+### US-266 — UI: Banner de Upgrade Pós-Cadastro
+
+**Como** novo usuário no plano free,
+**Quero** ver claramente o que o Pro oferece logo após o cadastro —
+**Para que** possa tomar a decisão de upgrade com contexto, sem bloqueio.
+
+**O que muda em `stock-dashboard.html`:**
+Após login/cadastro, se `authUser.tier === 'free'` e `localStorage.getItem('momentum_upgrade_dismissed')` não estiver setado, exibir um banner fixo no topo da área de conteúdo (não bloqueante):
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ ⭐ Você está no plano gratuito.                              │
+│ Pro: picks ilimitados · portfólio completo · alertas        │
+│ [Conhecer o Pro]                           [×] dispensar    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- Clicar em "Conhecer o Pro" → abre o modal de upgrade (US seguinte)
+- Clicar em "×" → `localStorage.setItem('momentum_upgrade_dismissed', '1')` → banner não aparece mais
+- Banner NÃO aparece para usuários pro ou admin
+- Banner NÃO é um modal bloqueante — usuário pode ignorar e usar o app
+
+**Acceptance Criteria:**
+- [ ] Banner visível após cadastro/login para tier free
+- [ ] Botão "×" dispensa permanentemente (localStorage)
+- [ ] Não aparece para pro/admin
+- [ ] Responsivo (mobile e desktop)
+
+**Sprint:** 40 · **Effort:** 1h · **Priority:** 🔴 High · **Epic:** 55
+
+---
+
+### US-267 — UI: Modal "Seja Pro" e Fluxo de Checkout
+
+**Como** usuário free,
+**Quero** poder assinar o Pro com um clique —
+**Para que** o processo seja simples e rápido.
+
+**O que muda:**
+
+1. **Modal de upgrade** (`showUpgradeModal()`): exibido ao clicar "Conhecer o Pro" ou ao tentar usar feature bloqueada. Mostra:
+   - Tabela Free vs Pro com diferenciais
+   - Preço em BRL (buscar de uma constante no frontend, ex: `PRO_PRICE_BRL = 'R$29,90/mês'`)
+   - Botão "Assinar Pro — R$29,90/mês"
+   - Link "Não agora"
+
+2. **Botão "Assinar Pro"**: chama `POST /api/stripe/create-checkout` → recebe `{ url }` → `window.location.href = url` (redirect para Stripe Checkout)
+
+3. **Página de sucesso** (`/?subscription=success`): ao retornar do Stripe, detectar query param → chamar `checkAuth()` para buscar tier atualizado → exibir toast "Bem-vindo ao Pro! 🎉" → remover query param da URL
+
+4. **Página de cancelamento** (`/?subscription=canceled`): detectar query param → exibir toast "Checkout cancelado. Você continua no plano gratuito." → remover query param
+
+5. **Pro-gating**: quando `authUser.tier === 'free'` tenta ação bloqueada (ex: adicionar mais de 3 picks), mostrar `showUpgradeModal()` em vez de mensagem de erro genérica
+
+**Acceptance Criteria:**
+- [ ] Modal exibe tabela Free vs Pro com preço em BRL
+- [ ] Clique em "Assinar" redireciona para Stripe Checkout (sandbox)
+- [ ] Retorno com `?subscription=success` → toast de boas-vindas + tier atualizado sem reload manual
+- [ ] Retorno com `?subscription=canceled` → toast informativo
+- [ ] Limite de 3 picks no free tier dispara o modal (em vez de erro mudo)
+- [ ] Testado com cartão `4242 4242 4242 4242` em sandbox
+
+**Sprint:** 40 · **Effort:** 3h · **Priority:** 🔴 High · **Epic:** 55
+
+---
+
+### US-268 — Teste Completo do Fluxo Sandbox (QA)
+
+**Como** equipe de produto,
+**Quero** validar todos os cenários de pagamento em sandbox antes de ir para produção —
+**Para que** não haja surpresas com usuários reais.
+
+**Cenários a testar (documentar resultado de cada um):**
+
+1. ✅ Cadastro free → banner upgrade → modal → checkout com `4242...` → webhook → tier=pro → toast sucesso
+2. ✅ Checkout abandonado (cancelar) → usuário permanece free
+3. ✅ Webhook `checkout.session.completed` duplicado (reenviar via Stripe Dashboard) → sem duplicação no DB
+4. ✅ Cancelamento via Stripe Billing Portal → `customer.subscription.deleted` → tier=free
+5. ✅ `cancel_at_period_end=true` → acesso Pro mantido até `subscriptionEnd` → depois free
+6. ✅ `invoice.payment_failed` → `failedPaymentCount++` → banner de aviso no app → sem downgrade imediato
+7. ✅ Re-assinatura após cancelamento → mesmo `stripeCustomerId` reusado (não novo customer)
+8. ✅ Login com `subscriptionEnd` no passado → acesso tratado como free
+
+**Deliverable:** Checklist preenchido com pass/fail por cenário. Bugs encontrados viram US no mesmo sprint ou no próximo.
+
+**Sprint:** 40 · **Effort:** 3h · **Priority:** 🔴 High · **Epic:** 55
+
+---
+
+## Epic 56 — Perfil e Faturamento do Usuário
+
+**Description:** Página de billing para o usuário gerenciar sua assinatura sem precisar abrir o painel Stripe diretamente.
+
+---
+
+### US-269 — Página de Faturamento do Usuário
+
+**Como** assinante Pro,
+**Quero** ver o status da minha assinatura e histórico de cobranças no app —
+**Para que** não precise acessar o Stripe para informações básicas.
+
+**Nova aba/seção "Minha Conta"** (ou dentro do dropdown do usuário → "Faturamento"):
+
+**Bloco "Seu Plano":**
+```
+Plano:          ⭐ Pro
+Status:         Ativo
+Próxima cobrança: 01/jun/2026 — R$29,90
+```
+Dados: `authUser.tier`, `authUser.subStatus`, `authUser.subscriptionEnd` — nenhuma chamada à API Stripe necessária.
+
+**Bloco "Histórico de Pagamentos"** (últimas 6 entradas de `paymentHistory[]`):
+```
+01/mai/2026   R$29,90   ✅ Pago   [Baixar recibo]
+01/abr/2026   R$29,90   ✅ Pago   [Baixar recibo]
+```
+"Baixar recibo" = link para `receiptUrl` (Stripe hosted invoice PDF).
+
+**Botão "Gerenciar Assinatura"** → chama `POST /api/stripe/create-portal` → redirect para Stripe Billing Portal (cancelamento, troca de cartão, etc.)
+
+**Para usuários free:** mostrar apenas "Plano: Gratuito" + botão "Conhecer o Pro" → abre modal de upgrade.
+
+**Acceptance Criteria:**
+- [ ] Status e próxima cobrança exibidos para tier pro
+- [ ] Últimas 6 cobranças listadas com link de recibo
+- [ ] "Gerenciar Assinatura" abre Stripe Billing Portal
+- [ ] Usuários free veem plano gratuito + CTA de upgrade
+- [ ] Nenhuma chamada à API Stripe para renderizar a página (dados locais)
+
+**Sprint:** 41 · **Effort:** 3h · **Priority:** 🟡 Medium · **Epic:** 56
+
+---
+
+### US-270 — Banner de Pagamento com Falha no App
+
+**Como** usuário com pagamento falho,
+**Quero** ser avisado dentro do app que minha cobrança falhou —
+**Para que** eu possa atualizar meu cartão antes de perder o acesso.
+
+**Quando `authUser.failedPaymentCount > 0` e `authUser.subStatus === 'past_due'`:**
+Exibir banner amarelo no topo (abaixo do header):
+
+```
+⚠️ Sua última cobrança falhou. Atualize seu cartão para manter o acesso Pro.
+[Atualizar cartão]
+```
+
+"Atualizar cartão" → `POST /api/stripe/create-portal` → redirect.
+
+**Acceptance Criteria:**
+- [ ] Banner visível quando `failedPaymentCount > 0` e `subStatus === 'past_due'`
+- [ ] Botão abre Stripe Billing Portal
+- [ ] Banner desaparece após pagamento bem-sucedido (próximo `checkAuth()` retorna `failedPaymentCount: 0`)
+- [ ] Não aparece para tier free ou admin
+
+**Sprint:** 41 · **Effort:** 1h · **Priority:** 🔴 High · **Epic:** 56
+
+---
+
+## Epic 57 — Painel Admin de Pagamentos
+
+**Description:** Capacitar o admin a monitorar receita, gerenciar assinaturas e acessar histórico de pagamentos por usuário — tudo dentro do painel admin existente.
+
+---
+
+### US-271 — Dashboard de Receita no Painel Admin
+
+**Como** admin,
+**Quero** ver métricas de receita no painel —
+**Para que** eu possa monitorar a saúde financeira do produto.
+
+**Nova seção no topo do painel admin** (acima da tabela de usuários):
+
+```
+┌──────────┬──────────┬───────────┬──────────────┬──────────────┐
+│ MRR      │ Assinantes│ Novos/mês │ Churn/mês    │ Falhas       │
+│ R$299,00 │ 10 ativos │ 3         │ 1            │ ⚠️ 2         │
+└──────────┴──────────┴───────────┴──────────────┴──────────────┘
+```
+
+**Novo endpoint `GET /api/admin/revenue`:**
+- MRR = `users.filter(u => u.subStatus === 'active').length * PRICE_BRL`
+- Assinantes ativos = count `subStatus === 'active'`
+- Novos este mês = `paymentHistory[].filter(p => p.status === 'paid' && isThisMonth(p.date) && isFirstPayment)`
+- Churn = users com `subStatus` mudado para 'canceled' este mês (precisará de campo `canceledAt` no webhook)
+- Falhas = `users.filter(u => u.failedPaymentCount > 0).length`
+
+**Acceptance Criteria:**
+- [ ] Dashboard tiles visíveis no topo do painel admin
+- [ ] MRR calculado corretamente
+- [ ] Falhas mostradas com link para filtrar a tabela de usuários por `failedPaymentCount > 0`
+- [ ] Endpoint protegido por autenticação admin
+
+**Sprint:** 42 · **Effort:** 2h · **Priority:** 🟡 Medium · **Epic:** 57
+
+---
+
+### US-272 — Histórico de Pagamentos por Usuário no Admin
+
+**Como** admin,
+**Quero** ver o histórico de cobranças de um usuário específico —
+**Para que** possa investigar disputas e suporte.
+
+**Na tabela de usuários admin**, adicionar coluna "Pagamentos" com badge de status:
+- `✅ 3 pagamentos` / `⚠️ 1 falha` / `—` (sem histórico)
+
+**Expandir detalhes do usuário** (linha clicável ou modal): mostrar `paymentHistory[]` com date, amount, status, link para recibo, link direto ao Stripe Dashboard na charge correspondente: `https://dashboard.stripe.com/test/charges/{chargeId}` (test) ou sem `/test/` em produção.
+
+**Novo endpoint `GET /api/admin/users/:id/payments`:** retorna `{ paymentHistory, failedPaymentCount, subStatus, stripeCustomerId }`.
+
+**Acceptance Criteria:**
+- [ ] Badge de status na coluna "Pagamentos" da tabela
+- [ ] Expandido mostra histórico completo com links de recibo e Stripe Dashboard
+- [ ] Links do Stripe Dashboard apontam para o charge correto
+- [ ] Endpoint autenticado como admin
+
+**Sprint:** 42 · **Effort:** 2h · **Priority:** 🟡 Medium · **Epic:** 57
+
+---
+
+### US-273 — Admin: Cancelar Assinatura via Stripe
+
+**Como** admin,
+**Quero** poder cancelar a assinatura de um usuário diretamente do painel —
+**Para que** possa resolver casos de suporte sem acesso ao dashboard Stripe.
+
+**Novo endpoint `POST /api/admin/cancel-subscription`** (body: `{ email }`):
+1. Verificar que usuário tem `stripeSubId`
+2. Chamar `stripe.subscriptions.update(stripeSubId, { cancel_at_period_end: true })`
+3. Atualizar local: `user.cancelAtPeriodEnd = true`
+4. Retornar `{ ok: true, cancelAt: subscriptionEnd }`
+
+**NÃO cancelar imediatamente** (cancel_at_period_end mantém acesso até fim do período pago). Apenas para cancelamento imediato (reembolso) usar `stripe.subscriptions.cancel()` — isso será manual via Stripe Dashboard por ora.
+
+**Botão "Cancelar Assinatura"** no detalhe do usuário admin → confirma com modal inline → chama endpoint → exibe "Assinatura cancelada ao fim do período em [data]".
+
+**Acceptance Criteria:**
+- [ ] Endpoint chama Stripe com `cancel_at_period_end: true`
+- [ ] Campo `cancelAtPeriodEnd: true` salvo no usuário local
+- [ ] Botão visível apenas para usuários com `subStatus === 'active'`
+- [ ] Confirmação inline (não `window.confirm()`)
+- [ ] Admin não pode cancelar conta admin
+
+**Sprint:** 42 · **Effort:** 2h · **Priority:** 🟡 Medium · **Epic:** 57
+
+---
+
+### US-274 — Admin: Extensão de Cortesia de Assinatura
+
+**Como** admin,
+**Quero** poder estender o acesso Pro de um usuário por N dias —
+**Para que** possa resolver situações de suporte sem alterar o ciclo de cobrança Stripe.
+
+**Novo endpoint `POST /api/admin/extend-subscription`** (body: `{ email, days }`):
+1. Verificar autenticação admin
+2. Avançar `user.subscriptionEnd` por `days` dias
+3. Se `user.tier !== 'pro'`, setar `tier = 'pro'` (concessão manual)
+4. Logar no audit log: `{ action: 'extend_subscription', email, days, by: adminEmail, at: now }`
+5. Retornar `{ ok: true, newEnd: subscriptionEnd }`
+
+**Nota:** Esta extensão é local apenas — não afeta o ciclo de cobrança Stripe. O UI deve deixar isso claro: "Extensão de cortesia (não altera cobrança Stripe)".
+
+**Acceptance Criteria:**
+- [ ] `subscriptionEnd` avançado corretamente
+- [ ] Ação registrada no audit log
+- [ ] UI mostra aviso "local only, não afeta cobrança"
+- [ ] Input de dias com validação (1–90 dias máximo)
+
+**Sprint:** 42 · **Effort:** 1h · **Priority:** 🟡 Medium · **Epic:** 57
+
+---
+
+## Epic 58 — Conformidade Legal e Infraestrutura
+
+**Description:** Itens de compliance (CVM, LGPD, NFS-e) e infraestrutura (SQLite migration, backup) necessários antes de crescimento pago significativo.
+
+---
+
+### US-275 — Disclaimer CVM em Todos os Outputs de Sinais
+
+**Como** produto financeiro regulado,
+**Quero** exibir disclaimer de não-recomendação em todos os sinais —
+**Para que** estejamos em conformidade com a regulação CVM (Resolução 62/2022).
+
+**O que adicionar:**
+
+1. **No rodapé fixo da página** (ou acima do scan header): texto pequeno em `var(--ink-4)`:
+   `"Não constitui recomendação de investimento. Análise técnica envolve riscos. Consulte um profissional habilitado pela CVM."`
+
+2. **No card de cada sinal** (buy/watchlist), abaixo do score: linha tiny com `⚠️ Não é recomendação de investimento`
+
+3. **Na página de educação**, no rodapé do módulo de estratégia: parágrafo completo com links para CVM.
+
+**Em PT e EN.**
+
+**Acceptance Criteria:**
+- [ ] Disclaimer visível no footer em todas as views
+- [ ] Disclaimer no card de sinal (versão curta)
+- [ ] Disclaimer na educação (versão longa)
+- [ ] Nenhum copy no app promete retornos ou recomenda ativos específicos
+
+**Sprint:** 43 · **Effort:** 1h · **Priority:** 🔴 High · **Epic:** 58
+
+---
+
+### US-276 — Verificar Preço BRL e Configuração Stripe em Produção
+
+**Como** produto vendido para consumidores brasileiros,
+**Quero** garantir que o preço está em BRL e a conta Stripe é brasileira —
+**Para que** estejamos em conformidade com o Código de Defesa do Consumidor.
+
+**Checklist a verificar e documentar:**
+- [ ] Stripe account currency está em BRL (não USD)
+- [ ] `STRIPE_PRICE_PRO_MONTHLY` aponta para um preço criado em BRL no Stripe Dashboard
+- [ ] Preço exibido no frontend é em R$ (ex: R$29,90/mês) — sem conversão de moeda
+- [ ] Stripe Tax configurado para calcular ISS/PIS/COFINS se aplicável
+- [ ] Test mode keys usadas apenas em `.env` local; produção usa keys diferentes
+
+**Deliverable:** Documento curto confirmando cada item como OK ou listando ação corretiva.
+
+**Sprint:** 43 · **Effort:** 30min · **Priority:** 🔴 High · **Epic:** 58
+
+---
+
+### US-277 — Spike: Migração para SQLite
+
+**Como** sistema com dados de pagamento crescentes,
+**Quero** uma avaliação técnica e plano de migração para SQLite —
+**Para que** possamos executar a migração com risco mínimo quando necessário.
+
+**Contexto:** O flat file `data/users.json` é adequado para MVP mas tem riscos documentados para dados de pagamento (sem transações, sem histórico de auditoria, problemas em multi-processo). SQLite com `better-sqlite3` resolve esses riscos com overhead mínimo.
+
+**Deliverable deste spike:**
+1. Schema SQL completo (tabelas: users, payment_events, audit_log)
+2. Script de migração `scripts/migrate-to-sqlite.js` que lê `users.json` e popula SQLite
+3. Estimativa de esforço para migrar `server.js` e `lib/auth.js`
+4. Plano de rollback caso a migração falhe
+5. Critério de decisão: "migrar quando atingir X usuários pagantes ou Y problemas de concorrência"
+
+**Acceptance Criteria:**
+- [ ] Schema SQL documentado e revisado
+- [ ] Script de migração testado em uma cópia dos dados
+- [ ] Estimativa de esforço ≤ 1 sprint para implementação completa
+- [ ] Critério de trigger documentado
+
+**Sprint:** 43 · **Effort:** 3h · **Priority:** 🟡 Medium · **Epic:** 58
+
+---
+
+### US-278 — Spike: Pesquisa de Provedor NFS-e
+
+**Como** empresa brasileira cobrando por assinatura digital,
+**Quero** entender o processo de emissão de Nota Fiscal de Serviço Eletrônica —
+**Para que** possamos emitir NFS-e quando atingirmos volume que exija compliance fiscal.
+
+**Contexto (admin/compliance agent finding):** Stripe não emite NFS-e brasileira. Recibos do Stripe não substituem NFS-e. Para assinaturas digitais no Brasil, a empresa emissora precisa emitir NFS-e via sistema municipal.
+
+**Deliverable:**
+1. Identificar município de operação da empresa
+2. Pesquisar 2-3 provedores SaaS de NFS-e (ex: ContaAzul, Omie, NFe.io, Plugnotas)
+3. Avaliar: API disponível? Custo por nota? Integração com Stripe (webhook → emissão automática)?
+4. Recomendação: provedor preferido + estimativa de esforço de integração
+5. Identificar limite de faturamento em que a emissão se torna obrigatória na prática
+
+**Acceptance Criteria:**
+- [ ] Pelo menos 2 provedores avaliados com prós/contras
+- [ ] Estimativa de custo por nota e custo de integração
+- [ ] Recomendação clara com justificativa
+
+**Sprint:** 43 · **Effort:** 2h · **Priority:** 🟡 Medium · **Epic:** 58
+
+---
+
+### US-279 — Política de Retenção de Dados LGPD para Pagamentos
+
+**Como** produto LGPD-compliant,
+**Quero** que dados financeiros sejam retidos por 5 anos mesmo após exclusão de conta —
+**Para que** estejamos em conformidade com o Código Civil (Art. 206 §5) e Receita Federal.
+
+**O que mudar em `DELETE /api/auth/delete-account` (server.js):**
+Atualmente o endpoint remove completamente o usuário. Mudar para:
+1. Anonimizar dados pessoais: `email → deleted_{id}@deleted.com`, `cpf → null`, `password → null`, `name → null`
+2. MANTER: `paymentHistory[]`, `stripeCustomerId`, `createdAt`, `subscriptionEnd`
+3. Setar `user.deleted = true`, `user.deletedAt = now`
+4. Remover dados de portfólio e picks (não são financeiros)
+
+**Adicionar aviso no fluxo de exclusão de conta:**
+"Seus dados de pagamento serão retidos por 5 anos para fins fiscais, conforme exigido por lei."
+
+**Acceptance Criteria:**
+- [ ] Exclusão de conta anonimiza dados pessoais mas mantém paymentHistory
+- [ ] Campo `deleted: true` e `deletedAt` setados
+- [ ] Admin não vê usuários deletados na lista padrão (filtrar `deleted !== true`)
+- [ ] Aviso legal visível no modal de exclusão de conta
+- [ ] `/api/auth/me` retorna 401 para usuários deletados (token invalidado)
+
+**Sprint:** 43 · **Effort:** 2h · **Priority:** 🔴 High · **Epic:** 58
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -3510,5 +4007,10 @@ Quando o tópico é marcado como concluído (não desmarcado), chamar automatica
 | 25 | 41 | US-178–182, US-188 | Admin Dashboard Fase 1: KPIs, User List, Audit Log | 🔒 Parked |
 | 21 | 41 | US-183, US-184, US-189 | Admin Fase 2: Consentimento LGPD + Direitos do Titular | 🔒 Parked |
 | 22 | 41 | US-185–187 | Admin Fase 3: Export para Parceiros (gate jurídico) | 🔒 Parked |
+| 39 | 55 | US-263–265 | Stripe Pagamento MVP: sandbox setup, field rename, missing webhooks | 📋 Planned |
+| 40 | 55 | US-266–268 | Stripe Pagamento MVP: upgrade banner, checkout modal, sandbox QA | 📋 Planned |
+| 41 | 56 | US-269–270 | Perfil e Faturamento: user billing page, failed payment banner | 📋 Planned |
+| 42 | 57 | US-271–274 | Admin Pagamentos: revenue dashboard, payment history, cancel/extend subscription | 📋 Planned |
+| 43 | 58 | US-275–279 | Conformidade Legal: CVM disclaimer, BRL verification, SQLite spike, NFS-e spike, LGPD retention | 📋 Planned |
 
 *Completed sprints → USER_STORIES_COMPLETED.md*
