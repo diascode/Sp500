@@ -3501,7 +3501,7 @@ Quando o tópico é marcado como concluído (não desmarcado), chamar automatica
 | 31 | 52, 53 | US-224, US-228 | Regime de Mercado: IBOV filter + training module | ✅ Done |
 | 32 | 52, 53 | US-225, US-226, US-229 | Capital: compounding + CDI accounting + position sizing + sector cap + training module | ✅ Done |
 | 33 | 48, 50, 52, 53 | US-230, US-231, US-232, US-233, US-234, US-235 | UX Polish & Education Completeness: % position sizing, sim capital input, mobile Histórico fix, ATR edu, Signal v3 full criteria, Acompanhados table view | ✅ Done |
-| 34 | 49, 52 | US-236, US-237, US-238, US-239, US-240 | Performance Dashboard & Discovery: closed trades log, price target on cards, portfolio analytics, manual stock lookup, sector exposure bar | 🔄 In Progress |
+| 34 | 49, 52 | US-236, US-237, US-238, US-239, US-240 | Performance Dashboard & Discovery: closed trades log, price target on cards, portfolio analytics, manual stock lookup, sector exposure bar | ✅ Done |
 | 35 | 54 | US-241–246 | Education Critical Fixes: Cyrillic key bug, RSI thresholds, MACD histogram, structural gate, criterion 8, dynamic topic count | ✅ Done |
 | 36 | 54 | US-247–252 | Education Language & Tone: PT-BR translations, untranslated terms, jargon definitions, fear→empowerment rewrite, Carlos recovery, FOMO removal | ✅ Done |
 | 37 | 54 | US-253–257 | Education Curriculum Restructuring: module reordering, chart basics intro lesson, patterns depth rewrite, onboarding trust statement | ✅ Done |
