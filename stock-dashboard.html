@@ -5001,6 +5001,15 @@ function showEducationView() {
 }
 
 // ─── COURSE HELPERS ─────────────────────────────────────────────────────
+const COURSE_MODULES = [
+  { icon:'🌱', name:'Fundamentos',      topics:['why','strategy','diversify'] },
+  { icon:'🌎', name:'O Mercado',        topics:['brazilstats','sectors','realcases'] },
+  { icon:'📊', name:'Análise Técnica',  topics:['chart_basics','rsi','sma','macd','adx','bb','atr','patterns','momentum_signal'] },
+  { icon:'🛡️', name:'Estratégia',       topics:['smart_exit', 'market_regime', 'capital_mgmt'] },
+  { icon:'🇧🇷', name:'Impostos',        topics:['darf'] },
+  { icon:'🏦', name:'Renda Fixa',       topics:['tesouro','lci_lca','juros_compostos','cdb_cdi'] },
+];
+
 function loadCourseProgress() {
   try { return JSON.parse(localStorage.getItem('jerry_course_progress') || '[]'); } catch { return []; }
 }
@@ -5014,14 +5023,34 @@ function toggleTopicComplete(id) {
   updateCourseNavBtn();
   if (prog.length === 16 && idx < 0) showToast('🎉 Curso concluído! Parabéns!', true, 6000);
   renderEdu();
+  // auto-advance to next incomplete topic (only when marking complete, not unmarking)
+  if (idx < 0) {
+    const allIds = [];
+    COURSE_MODULES.forEach(m => m.topics.forEach(tid => allIds.push(tid)));
+    const currentIdx = allIds.indexOf(id);
+    const nextId = allIds.slice(currentIdx + 1).find(tid => !prog.includes(tid));
+    if (nextId) setTimeout(() => switchEduTopic(nextId), 350);
+  }
 }
 
 function resetCourseProgress() {
-  if (!confirm('Recomeçar o curso? Seu progresso será apagado.')) return;
-  localStorage.removeItem('jerry_course_progress');
-  localStorage.removeItem('jerry_course_started');
-  updateCourseNavBtn();
-  renderEdu();
+  const existing = document.getElementById('courseResetConfirm');
+  if (existing) { existing.remove(); return; }
+  // Find a reset button to anchor the confirmation panel after
+  const anchor = document.querySelector('[data-reset-anchor]');
+  if (!anchor) return;
+  const div = document.createElement('div');
+  div.id = 'courseResetConfirm';
+  div.style.cssText = 'background:rgba(239,83,80,.1);border:1px solid rgba(239,83,80,.3);border-radius:8px;padding:12px 16px;margin:8px 0 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap';
+  div.innerHTML = `<span style="color:var(--ink-2);font-size:.9rem;flex:1">Tem certeza? Isso apaga todo o progresso do curso.</span><button onclick="document.getElementById('courseResetConfirm').remove()" style="background:transparent;border:1px solid var(--ink-4);color:var(--ink-3);border-radius:6px;padding:6px 14px;cursor:pointer;font-size:.85rem">Cancelar</button><button id="courseResetConfirmBtn" style="background:#ef5350;border:none;color:#fff;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:.85rem">Sim, recomeçar</button>`;
+  anchor.parentNode.insertBefore(div, anchor.nextSibling);
+  document.getElementById('courseResetConfirmBtn').addEventListener('click', () => {
+    localStorage.removeItem('jerry_course_progress');
+    localStorage.removeItem('jerry_course_started');
+    div.remove();
+    updateCourseNavBtn();
+    renderEdu();
+  });
 }
 
 function updateCourseNavBtn() {
@@ -5041,15 +5070,6 @@ function renderEdu() {
   container.style.display = 'block';
 
   const prog = loadCourseProgress();
-
-  const COURSE_MODULES = [
-    { icon:'🌱', name:'Fundamentos',      topics:['why','strategy','diversify'] },
-    { icon:'🌎', name:'O Mercado',        topics:['brazilstats','sectors','realcases'] },
-    { icon:'📊', name:'Análise Técnica',  topics:['chart_basics','rsi','sma','macd','adx','bb','atr','patterns','momentum_signal'] },
-    { icon:'🛡️', name:'Estratégia',       topics:['smart_exit', 'market_regime', 'capital_mgmt'] },
-    { icon:'🇧🇷', name:'Impostos',        topics:['darf'] },
-    { icon:'🏦', name:'Renda Fixa',       topics:['tesouro','lci_lca','juros_compostos','cdb_cdi'] },
-  ];
 
   const total = COURSE_MODULES.reduce((acc, m) => acc + m.topics.length, 0);
   const pct = Math.round(prog.length / total * 100);
@@ -5099,14 +5119,14 @@ function renderEdu() {
       <span style="font-size:28px">🎉</span>
       <div style="flex:1">
         <div style="font-weight:700;color:var(--buy);margin-bottom:4px">Curso concluído! Todos os 16 tópicos completos.</div>
-        <button onclick="resetCourseProgress()" style="background:none;border:none;color:var(--ink-4);font-size:12px;cursor:pointer;padding:0;text-decoration:underline">Recomeçar curso</button>
+        <button data-reset-anchor onclick="resetCourseProgress()" style="background:none;border:none;color:var(--ink-4);font-size:12px;cursor:pointer;padding:0;text-decoration:underline">Recomeçar curso</button>
       </div>
     </div>`;
   } else {
     html += `<div style="display:flex;align-items:center;gap:var(--s-3)">`;
     html += `<div class="course-prog-wrap"><div class="course-prog-fill" style="width:${pct}%"></div></div>`;
     html += `<span style="font-size:12px;color:var(--ink-3);white-space:nowrap;font-family:var(--font-mono)">${pct}% · ${prog.length}/${total}</span>`;
-    if (prog.length > 0) html += `<button onclick="resetCourseProgress()" style="background:none;border:none;color:var(--ink-4);font-size:11px;cursor:pointer;padding:0;white-space:nowrap;text-decoration:underline">Recomeçar</button>`;
+    if (prog.length > 0) html += `<button data-reset-anchor onclick="resetCourseProgress()" style="background:none;border:none;color:var(--ink-4);font-size:11px;cursor:pointer;padding:0;white-space:nowrap;text-decoration:underline">Recomeçar</button>`;
     html += `</div>`;
   }
   html += `</div>`;
