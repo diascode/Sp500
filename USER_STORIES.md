@@ -3982,6 +3982,389 @@ Atualmente o endpoint remove completamente o usuário. Mudar para:
 
 ---
 
+## Epic 59 — Redesign de Linguagem de Sinais (CVM Compliance)
+
+**Descrição:** A revisão jurídica identificou que "Alta Convicção / Monitorar / Venda" com justificativas "Por quê" constituem, em análise jurídica, recomendações de valores mobiliários sob a Resolução CVM 62/2022 — atividade que requer registro como Analista de Valores Mobiliários. Este Epic redesenha o sistema de sinais de um modelo de "recomendação" para um modelo de "exibição de dados técnicos", seguindo o modelo das plataformas TradingView e Bloomberg Terminal.
+
+**Impacto:** Mudança visual e de copy significativa. A lógica de scoring (pickSignal) permanece intacta. O que muda é como o resultado é apresentado ao usuário.
+
+---
+
+### US-280 — Remover Linguagem de Recomendação dos Labels de Sinal
+
+**Como** produto em conformidade com a Resolução CVM 62/2022,  
+**Quero** que os sinais exibam dados técnicos em vez de julgamentos de convicção —  
+**Para que** o app não seja classificado como prestador de análise de valores mobiliários não registrado.
+
+**Problema identificado (revisão jurídica):**  
+Os labels "Alta Convicção", "Monitorar" e "Venda" constituem linguagem de convicção profissional — o mesmo vocabulário que analistas registrados usam em relatórios. Combinados com o "Por quê" que justifica a recomendação, formam um mini-relatório de análise por ativo. Isso é a definição textual de "análise de valores mobiliários" na lei.
+
+**O que muda em `stock-dashboard.html`:**
+
+1. **Labels dos filter chips (scan header):**
+   - `⭐ Alta Convicção` → `Score 3.5+`
+   - `👁 Monitorar` → `Score 2.5–3.4`
+   - `Aguardar / Venda` → `Score < 2.5`
+
+2. **Badge no card de sinal (`feedCardPillLabel`):**
+   - `Alta Convicção` → `6 de 9 critérios` (número real de critérios atendidos)
+   - `Monitorar` → `4–5 de 9 critérios`
+   - `Venda/Aguardar` → `< 4 critérios`
+   
+   Formato do badge: `📊 Score 4.2 · 6/9 critérios`
+
+3. **Título do card:**
+   - Remover "COMPRA" / "VENDA" como verbo imperativo
+   - Usar "Análise Técnica" como header neutro
+   - Exibir score numérico com destaque: `4.2 / 6.0`
+
+4. **Botão de ação:**
+   - `Acompanhar` → `Salvar na Lista` (neutro, não imperativo)
+   - Remover qualquer copy que implique "compre agora"
+
+5. **Rótulos de tier (onde aparecem em outros contextos):**
+   - `Alta Convicção` → `Alta Pontuação` ou simplesmente `Score ≥ 3.5`
+   - Manter consistência em TODO o codebase (buscar todas as ocorrências de "Alta Convicção")
+
+**Acceptance Criteria:**
+- [ ] Nenhuma ocorrência de "Alta Convicção" como label de ação permanece no HTML renderizado
+- [ ] Nenhuma ocorrência de "Monitorar" como sinal de compra parcial (pode manter como verbo neutro em outros contextos)
+- [ ] Filter chips mostram ranges de score numérico
+- [ ] Badge do card mostra `Score X.X · Y/9 critérios`
+- [ ] Botão de tracking usa linguagem neutra (não imperativa)
+- [ ] Grep no HTML renderizado não encontra "recomendamos", "convicção", "compre", "venda agora"
+- [ ] `node --check stock-dashboard.html` passa (sintaxe OK)
+
+**Sprint:** 44 · **Effort:** 3h · **Priority:** 🔴 High · **Epic:** 59
+
+---
+
+### US-281 — Reescrever Seção "Por Quê" como Dados Técnicos (não Justificativa de Recomendação)
+
+**Como** produto em conformidade com CVM,  
+**Quero** que a explicação do sinal exiba dados brutos e critérios técnicos —  
+**Para que** o app não interprete os indicadores em benefício de uma recomendação de compra.
+
+**Problema identificado:**  
+A seção "Por Quê" atual combina: (1) ativo específico, (2) recomendação ("Alta Convicção"), (3) justificativa técnica ("MACD acelerando — momentum de compra em desenvolvimento"). Isso é um relatório de análise de valores mobiliários conforme CVM 62/2022, Art. 2.
+
+**Linguagem atual (problemática):**
+```
+✅ MACD +0.45 e acelerando — momentum de compra em desenvolvimento
+✅ RSI 58 — zona saudável de tendência (50–65), sem sobrecompra
+✅ SMA200 — preço acima da média de 200 dias (regime de alta estrutural)
+```
+
+**Nova linguagem (dados técnicos, sem interpretação direcional):**
+```
+📊 Critérios técnicos atendidos: 6 de 9
+
+RSI: 58        ✓ dentro do intervalo de referência (50–65)
+MACD: +0.45    ✓ acima de zero (referência positiva)
+ADX: 27        ✓ acima de 25 (indica tendência presente)
+SMA50: acima   ✓ preço acima da média de 50 dias
+SMA200: acima  ✓ preço acima da média de 200 dias
+Volume: 1.3×   ✓ acima da média de 20 dias
+
+Critérios não atendidos (3):
+RSI > 70       ✗ fora do intervalo ótimo
+ADX aceleração ✗ não confirmada
+Drawdown       ✗ > 15% da máxima de 52 semanas
+
+⚠️ Dados técnicos para análise pessoal. Não constitui recomendação.
+[Entender estes indicadores →] (link para educação)
+```
+
+**O que muda em `feedCardWhy()` em `stock-dashboard.html`:**
+1. Remover frases interpretativas: "momentum de compra em desenvolvimento", "zona saudável", "regime de alta estrutural", "tendência de médio prazo"
+2. Substituir por formato tabular: indicador | valor | status (✓/✗) | intervalo de referência
+3. Mostrar TANTO critérios atendidos QUANTO não atendidos (transparência total)
+4. Adicionar linha de disclaimer no final de cada "Por quê"
+5. Adicionar link para módulo de educação do indicador (ex: clicar em "RSI" → abre edu_rsiBody)
+
+**Acceptance Criteria:**
+- [ ] Nenhuma frase interpretativa com linguagem direcional ("momentum de compra", "regime de alta", "tendência saudável") no HTML renderizado
+- [ ] Todos os valores de indicadores exibidos numericamente (RSI: 58, não apenas ✅)
+- [ ] Critérios NÃO atendidos também exibidos (transparência)
+- [ ] Disclaimer curto no final de cada expansão "Por quê"
+- [ ] Link funcional para módulo de educação correspondente
+- [ ] Layout responsivo (mobile 375px OK)
+
+**Sprint:** 44 · **Effort:** 4h · **Priority:** 🔴 High · **Epic:** 59
+
+---
+
+### US-282 — Remover ou Reformular Preço-Alvo ("Alvo: R$47,20")
+
+**Como** produto que não é analista registrado na CVM,  
+**Quero** não exibir preços-alvo específicos por ativo —  
+**Para que** não seja interpretado como fornecimento de previsão de preço (atividade regulada).
+
+**Problema:**  
+"Alvo: R$47,20 (+12%)" é um price target — componente explicitamente listado em relatórios de analistas segundo a ICVM 598. Mesmo calculado matematicamente via ATR, a apresentação como previsão de preço constitui análise regulada.
+
+**O que muda em `buildFeedCard()` em `stock-dashboard.html`:**
+
+**Opção A (remover completamente):** Remover a linha de Alvo/Stop/R:R dos cards de sinal. Manter apenas no módulo de Educação como exemplo de como o usuário PODE calcular seu próprio stop usando ATR.
+
+**Opção B (reformular como ferramenta educacional):** Se o usuário quiser manter a funcionalidade, reformular como:
+```
+📐 Exemplo de gestão de risco com ATR (R$2.50):
+   Stop educacional: preço − 2×ATR = R$38.50
+   Alvo educacional: preço + 2×ATR = R$47.20
+   R/R ilustrativo: 2.0×
+
+⚠️ Estes valores são exemplos de cálculo ATR, não previsões de preço.
+   Você define seu próprio stop e alvo. [Como calcular →]
+```
+
+**Implementar Opção B** (mantém funcionalidade, remove conotação de previsão):
+1. Renomear "Alvo" → "Alvo educacional (2×ATR)"
+2. Renomear "Stop" → "Stop educacional (2×ATR)"
+3. Adicionar "(exemplo)" após os valores
+4. Adicionar disclaimer: "Valores ilustrativos baseados em ATR. Não são previsões de preço."
+5. Adicionar link: "[Como usar ATR para gestão de risco →]" → edu_atrBody
+
+**Acceptance Criteria:**
+- [ ] Label "Alvo:" nunca aparece sem qualificador educacional
+- [ ] Disclaimer presente junto aos valores
+- [ ] Link para edu_atrBody funcional
+- [ ] Reformulação em PT e EN (verificar i18n)
+
+**Sprint:** 44 · **Effort:** 1h · **Priority:** 🔴 High · **Epic:** 59
+
+---
+
+### US-283 — Reposicionar Disclaimers do Backtest (Acima → Abaixo dos Resultados)
+
+**Como** produto em conformidade com CDC Art. 37,  
+**Quero** que os disclaimers de backtest apareçam APÓS os resultados numéricos —  
+**Para que** o usuário leia o aviso DEPOIS de ver as métricas, não antes de esquecê-las.
+
+**Problema (revisão jurídica):**  
+Atualmente, o disclaimer aparece em texto pequeno ACIMA dos cards coloridos de "Taxa de Acerto: 63%" e "Ret. Médio: +8.2%". O usuário vê o disclaimer, ignora, depois vê as métricas em verde e ancora psicologicamente nesses números. CDC Art. 37 proíbe publicidade enganosa — apresentação que minimiza visualmente os avisos configura isso.
+
+**O que muda em `renderHistorico()` / `renderBacktest()` em `stock-dashboard.html`:**
+
+1. **Mover o bloco de disclaimer para DEPOIS dos cards de métricas** (reordenar o HTML gerado)
+
+2. **Aumentar destaque visual do disclaimer:**
+   - Fundo: `background: rgba(239,83,80,0.08)` (levemente vermelho)
+   - Borda: `border: 1px solid rgba(239,83,80,0.3)`
+   - Font-size: mínimo 13px (não 11px)
+   - Ícone: ⚠️ no início
+
+3. **Reescrever texto do disclaimer (mais forte):**
+   De: `"Os critérios foram calibrados com visão do passado — resultados reais podem ser menores."`  
+   Para:
+   ```
+   ⚠️ AVISO — Desempenho Histórico
+   • Desempenho passado NÃO garante resultados futuros.
+   • Este backtest é in-sample: os critérios foram desenvolvidos usando os mesmos dados testados.
+   • Resultados reais serão menores após: corretagem, spread bid/ask, IR (15–20%), e slippage.
+   • Viés de sobrevivência: apenas ações que ainda existem hoje foram analisadas.
+   • Taxa de Acerto de 63% significa: 63 de cada 100 sinais históricos tiveram ganho no período testado. 37 tiveram perdas. Seu resultado real pode ser diferente.
+   ```
+
+4. **Em PT e EN.**
+
+**Acceptance Criteria:**
+- [ ] Disclaimer aparece APÓS os cards de métricas no HTML renderizado
+- [ ] Font-size ≥ 13px no disclaimer
+- [ ] Fundo colorido (não texto cinza em branco)
+- [ ] Texto inclui "NÃO garante resultados futuros" explicitamente
+- [ ] Explicação do que "63% win rate" significa (não probabilidade de ganho futuro)
+- [ ] PT e EN atualizados
+
+**Sprint:** 44 · **Effort:** 1.5h · **Priority:** 🔴 High · **Epic:** 59
+
+---
+
+### US-284 — Reformular Regime de Mercado como Filtro de Dados (não Regra de Operação)
+
+**Como** produto em conformidade com CVM,  
+**Quero** que o módulo de Regime de Mercado seja apresentado como filtro técnico —  
+**Para que** não seja interpretado como instrução direcional de compra/venda.
+
+**Problema:**  
+A linguagem atual "🟢 Sinais de compra ativos normalmente" / "🔴 Sinais de compra suspensos" codifica uma regra de operação: "quando verde, compre; quando vermelho, não compre." Combinada com o sistema de sinais, isso constitui orientação condicional de investimento.
+
+**O que muda em `edu_marketRegimeBody` em `static/i18n.js` (PT e EN):**
+
+Reformular os três estados como **condições de análise**, não **permissões de ação**:
+
+**PT-BR — reescrever a tabela de estados:**
+```
+🟢 Condição Favorável
+IBOV acima da SMA200, SMA50 acima da SMA200, drawdown < 8%
+Observação histórica: em períodos com estas condições, sinais técnicos de alta pontuação tiveram 
+taxa de acerto média maior no backtest. Isso é observação histórica, não previsão.
+Filtro aplicado: todos os sinais de alta pontuação são exibidos.
+
+🟡 Condição Neutra
+Mercado sem direção clara ou em correção moderada.
+Observação histórica: sinais de menor pontuação tiveram desempenho mais irregular nestes períodos.
+Filtro aplicado: apenas sinais com score ≥ 4.0 são exibidos (redução de ruído).
+
+🔴 Condição de Alerta
+IBOV abaixo da SMA200, ou drawdown > 15%, ou volatilidade elevada (ATR% > 2.5%).
+Observação histórica: em períodos de alerta amplo, a maioria dos ativos individuais também recua,
+independente de seus indicadores próprios.
+Filtro aplicado: novos sinais de alta pontuação não são exibidos (redução de ruído máxima).
+
+⚠️ O regime de mercado é um filtro técnico de ruído — não uma recomendação de comprar
+ou não comprar. Você decide quando e se investir. [Saiba mais sobre IBOV →]
+```
+
+**O que muda no dashboard (stock-dashboard.html):**
+- O banner de regime (quando exibido): adicionar "(filtro de ruído)" ao label
+- Ex: `🟡 Condição Neutra (filtro de ruído ativo)` em vez de `🟡 Mercado Neutro`
+
+**Acceptance Criteria:**
+- [ ] edu_marketRegimeBody PT e EN reescritos sem linguagem de "sinais ativos/suspensos"
+- [ ] Cada estado descreve condição histórica, não instrução de ação
+- [ ] Disclaimer explícito: "filtro técnico, não recomendação"
+- [ ] Banner no dashboard usa label neutro
+- [ ] node --check static/i18n.js passa
+
+**Sprint:** 44 · **Effort:** 1.5h · **Priority:** 🟡 Medium · **Epic:** 59
+
+---
+
+### US-285 — Adicionar Disclosure de Não-Registro CVM no App
+
+**Como** produto operando sem registro como Analista de Valores Mobiliários,  
+**Quero** divulgar explicitamente esse status aos usuários —  
+**Para que** não haja expectativa de que os sinais são produzidos por analista regulado.
+
+**O que adicionar:**
+
+1. **No modal de onboarding** (primeira vez que usuário usa o app), após o disclaimer de segurança:
+```
+📋 Sobre este aplicativo:
+O Momentum é um software de análise técnica — não é uma corretora, distribuidora,
+analista de valores mobiliários ou assessor de investimentos registrado na CVM.
+Os sinais são gerados por um algoritmo matemático, não por um analista humano.
+Você é responsável por suas próprias decisões de investimento.
+```
+
+2. **Na página `/disclaimer-completo.html`** (criada em US-282):
+   - Seção "Status Regulatório": "Momentum NÃO é registrado na CVM como Analista de Valores Mobiliários (Res. CVM 62/2022). Somos um software de triagem técnica (screener)."
+
+3. **Na seção "Sobre" ou "FAQ"** (se existir, ou criar `/sobre.html`):
+   - "Por que não somos um analista?" — explicação educacional
+
+4. **No rodapé:**
+   - Adicionar linha: `Não somos analistas registrados na CVM. Dados para fins educacionais.`
+
+**Em PT e EN.**
+
+**Acceptance Criteria:**
+- [ ] Disclosure de não-registro no onboarding modal
+- [ ] Disclosure no disclaimer completo
+- [ ] Rodapé atualizado em PT e EN
+- [ ] Texto usa linguagem positiva ("somos um screener") não apenas negativa
+
+**Sprint:** 44 · **Effort:** 1h · **Priority:** 🔴 High · **Epic:** 59
+
+---
+
+### US-286 — Criar e Publicar Termos de Uso + Aceite no Cadastro
+
+**Como** usuário criando uma conta,  
+**Quero** ler e aceitar explicitamente os Termos de Uso —  
+**Para que** eu entenda as regras e o Momentum esteja protegido legalmente.
+
+**Bloqueador:** Sem Termos de Uso aceitos e logados, cobrar usuários cria risco legal imediato (chargebacks, disputas CDC, LGPD).
+
+**O que fazer:**
+
+1. **Criar `/termos.html`** (página pública, sem login) contendo:
+   - Identificação: nome legal, CNPJ (a ser preenchido), endereço, email de suporte
+   - Descrição do serviço: "software educacional de análise técnica"
+   - Disclaimer de investimento completo (não é recomendação, não considera perfil do usuário)
+   - Limitação de responsabilidade: cap em valor pago nos últimos 12 meses
+   - Cancelamento e reembolso: acesso até fim do período; sem reembolso pro-rata após 7 dias
+   - Lei aplicável: Brasil, foro [município]
+   - Versão e data (ex: "v1.0 — 01/06/2026")
+
+2. **Modificar form de cadastro** (`stock-dashboard.html`, dentro de `renderAuth()`):
+   ```html
+   <label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:.85rem;color:var(--ink-2)">
+     <input type="checkbox" id="authTermsCheckbox" style="margin-top:2px;flex-shrink:0">
+     <span>Concordo com os <a href="/termos.html" target="_blank" style="color:var(--primary)">Termos de Uso</a>,
+     <a href="/privacidade.html" target="_blank" style="color:var(--primary)">Política de Privacidade</a>
+     e Disclaimer de Investimento.</span>
+   </label>
+   ```
+   - Botão "Criar conta" desabilitado até checkbox marcado
+   - `submitAuth()`: validar `document.getElementById('authTermsCheckbox').checked`
+
+3. **Backend (`server.js`):**
+   - `POST /api/auth/signup`: rejeitar com 400 se `body.termsAccepted !== true`
+   - Adicionar ao usuário: `termsAcceptedAt: new Date().toISOString()`, `termsVersion: "1.0"`, `privacyVersion: "1.0"`
+
+4. **Link no footer:** adicionar "Termos de Uso" | "Privacidade"
+
+**Acceptance Criteria:**
+- [ ] `/termos.html` publicado e acessível sem login
+- [ ] Checkbox obrigatório no cadastro; botão desabilitado se unchecked
+- [ ] Server rejeita signup sem `termsAccepted: true`
+- [ ] `termsAcceptedAt` e `termsVersion` salvos no usuário
+- [ ] Links no footer funcionais
+- [ ] Versão datada no documento
+
+**Sprint:** 43 · **Effort:** 6h · **Priority:** 🔴 High · **Epic:** 58
+
+---
+
+### US-287 — Criar Política de Privacidade LGPD-Conforme
+
+**Como** usuário que fornece email e CPF,  
+**Quero** uma Política de Privacidade clara e completa —  
+**Para que** eu conheça meus direitos e o Momentum cumpra a LGPD.
+
+**O que fazer:**
+
+1. **Criar `/privacidade.html`** com seções obrigatórias (LGPD Art. 14):
+   - Dados coletados + base legal de cada categoria:
+     - Email/senha: contrato (Art. 7 II)
+     - CPF: contrato se usado para DARF; consentimento (Art. 7 I) caso contrário
+     - Portfólio/picks: contrato (Art. 7 II)
+     - IP/navegador: legítimo interesse (Art. 7 IX) — segurança
+   - Retenção: conta ativa → mantida; deletada → email/CPF anonimizados; paymentHistory → 5 anos (fiscal)
+   - Direitos LGPD (Art. 18): acesso, retificação, exclusão, portabilidade, opt-out
+   - Terceiros: Stripe (pagamento), Resend (email transacional)
+   - Contato DPO: email de privacidade
+   - Versão e data
+
+2. **Cookie banner:** corrigir `showCookieBanner()` para exibir na primeira visita (atualmente nunca aparece):
+   ```javascript
+   function showCookieBanner() {
+     if (localStorage.getItem('momentum_cookies_accepted')) return;
+     const banner = document.getElementById('cookieBanner');
+     if (banner) { banner.style.display = 'flex'; }
+   }
+   // Chamar no DOMContentLoaded após 500ms
+   ```
+   - Botão "Aceitar": `localStorage.setItem('momentum_cookies_accepted', Date.now())`
+   - Link "Saiba mais" → `/privacidade.html`
+
+3. **Link no footer:** "Política de Privacidade"
+
+**Acceptance Criteria:**
+- [ ] `/privacidade.html` publicado com todas as seções LGPD obrigatórias
+- [ ] Base legal documentada para cada categoria de dados
+- [ ] Retenção de paymentHistory (5 anos) explicitada como exceção ao direito de exclusão
+- [ ] Cookie banner aparece na primeira visita (localStorage vazio)
+- [ ] Cookie banner não reaparece após aceite
+- [ ] Email de DPO configurado e testado
+- [ ] Link no footer funcional
+
+**Sprint:** 43 · **Effort:** 6h · **Priority:** 🔴 High · **Epic:** 58
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -4011,6 +4394,7 @@ Atualmente o endpoint remove completamente o usuário. Mudar para:
 | 40 | 55 | US-266–268 | Stripe Pagamento MVP: upgrade banner, checkout modal, sandbox QA | 📋 Planned |
 | 41 | 56 | US-269–270 | Perfil e Faturamento: user billing page, failed payment banner | 📋 Planned |
 | 42 | 57 | US-271–274 | Admin Pagamentos: revenue dashboard, payment history, cancel/extend subscription | 📋 Planned |
-| 43 | 58 | US-275–279 | Conformidade Legal: CVM disclaimer, BRL verification, SQLite spike, NFS-e spike, LGPD retention | 📋 Planned |
+| 43 | 58 | US-275–279, US-286–287 | Conformidade Legal: CVM disclaimer, BRL verification, SQLite spike, NFS-e spike, LGPD retention, Termos de Uso, Política de Privacidade LGPD | 📋 Planned |
+| 44 | 59 | US-280–285 | CVM Signal Redesign: remove recommendation labels, rewrite Por Que as raw data, reformulate price targets, reposition backtest disclaimers, market regime as filter, CVM non-registration disclosure | 📋 Planned |
 
 *Completed sprints → USER_STORIES_COMPLETED.md*
