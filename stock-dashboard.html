@@ -112,6 +112,15 @@
   </div>
 
 
+  <!-- US-239: Manual stock lookup -->
+  <div id="manualLookupRow" style="display:flex;gap:8px;align-items:center;margin-top:12px;margin-bottom:4px">
+    <input id="manualTickerInput" placeholder="🔍 Buscar ativo... ex: PETR4"
+      style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--ink-1);font-size:.9rem">
+    <button onclick="manualLookup()"
+      style="background:var(--primary);color:#000;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;font-weight:600;font-size:.9rem">Analisar</button>
+  </div>
+  <div id="manualLookupResult" style="margin-bottom:8px"></div>
+
   <!-- Sinais controls (shown only in sinais mode) -->
   <div class="scan-controls" id="sinaisControls">
     <div id="regionSeg" style="display:none"></div>
@@ -263,7 +272,7 @@
 <script src="/static/fx.js"></script>
 <script>
 // ─── STATE ─────────────────────────────────────────────────────────────
-let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, displayedStocks: [], homeMode: localStorage.getItem('momentum_home_mode') || 'sinais', backtestResults: null, marketRegime: 'risk_on', simCapital: parseInt(localStorage.getItem('momentum_sim_capital') || '1000', 10), trackedView: localStorage.getItem('momentum_tracked_view') || 'cards' };
+let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], closedTrades: JSON.parse(localStorage.getItem('momentum_closed') || '[]'), universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, displayedStocks: [], homeMode: localStorage.getItem('momentum_home_mode') || 'sinais', backtestResults: null, marketRegime: 'risk_on', simCapital: parseInt(localStorage.getItem('momentum_sim_capital') || '1000', 10), trackedView: localStorage.getItem('momentum_tracked_view') || 'cards', trackedTab: 'abertas' };
 function businessDaysBetween(d1str, d2str) {
   const ms = Date.parse(d2str) - Date.parse(d1str);
   const calDays = ms / (1000 * 60 * 60 * 24);
@@ -1257,6 +1266,33 @@ async function scanAll() {
 }
 
 
+// ─── US-239: MANUAL STOCK LOOKUP ────────────────────────────────────
+async function manualLookup() {
+  const input = document.getElementById('manualTickerInput');
+  const resultEl = document.getElementById('manualLookupResult');
+  if (!input || !resultEl) return;
+  let ticker = input.value.trim().toUpperCase();
+  if (!ticker) return;
+  if (!ticker.endsWith('.SA')) ticker += '.SA';
+  resultEl.innerHTML = '<div style="padding:16px;color:var(--ink-3);text-align:center">⏳ Buscando...</div>';
+  try {
+    const { candles } = await fetchHistory(ticker);
+    if (!candles || candles.length < 60) throw new Error('Dados insuficientes');
+    const result = analyze(ticker, ticker.replace('.SA', ''), '', candles);
+    if (!result) throw new Error('Não foi possível calcular o sinal');
+    result.manualLookup = true;
+    const card = buildFeedCard(result, 9999);
+    resultEl.innerHTML = '<div style="margin-bottom:8px"><span style="background:var(--surface-3);border:1px solid var(--border);border-radius:12px;padding:3px 10px;font-size:.75rem;color:var(--ink-3)">🔍 Busca manual</span></div>' + card;
+    // Draw sparkline for the manual card
+    requestAnimationFrame(() => {
+      const canvas = document.getElementById('spark-9999');
+      if (canvas) drawFeedSparkline(canvas, candles, result.signal);
+    });
+  } catch(e) {
+    resultEl.innerHTML = `<div style="padding:16px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--sell)">Ativo não encontrado ou sem dados suficientes: ${esc(ticker.replace('.SA', ''))}</div>`;
+  }
+}
+
 function switchMarket(market) {
   if (_scanAbort) { _scanAbort.abort(); _scanAbort = null; }
   // reset legacy/removed markets to brasil
@@ -1458,12 +1494,53 @@ function buildFeedCard(d, idx) {
   const _equity  = state.simCapital ?? 1000;
   const _base    = calcPositionSize(_equity);
   const _adjSize = calcAdjustedSize(_base, d.score ?? 0, _atrPct, d.ticker, state.portfolio ?? [], _equity);
+  // US-237: Alvo / Stop / R:R line
+  const _atrPrice = d.atr || (d.atrPct ? d.atrPct * d.price / 100 : null);
+  let _targetLine = '';
+  if (_atrPrice && d.price) {
+    const _target   = d.price + 2 * _atrPrice;
+    const _stopInit = d.price - 2 * _atrPrice;
+    const _rr       = ((_target - d.price) / (d.price - _stopInit)).toFixed(1);
+    const _tgtPct   = ((_target - d.price) / d.price * 100).toFixed(1);
+    const _stpPct   = ((_stopInit - d.price) / d.price * 100).toFixed(1);
+    _targetLine = `<div style="font-size:.78rem;margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <span>Alvo: <strong style="color:var(--buy)">${fmtBRL(_target)} (+${_tgtPct}%)</strong></span>
+      <span style="color:var(--ink-4)">·</span>
+      <span>Stop: <strong style="color:var(--sell)">${fmtBRL(_stopInit)} (${_stpPct}%)</strong></span>
+      <span style="color:var(--ink-4)">·</span>
+      <span style="color:var(--ink-2)">R/R: ${_rr}x</span>
+    </div>`;
+  }
+  // US-240: Sector exposure bar
+  let _sectorBar = '';
+  if (typeof SECTOR_MAP !== 'undefined') {
+    const _sec240 = SECTOR_MAP[d.ticker];
+    if (_sec240) {
+      const _sectorPicks = (state.trackedPicks || []).filter(p => SECTOR_MAP[p.ticker] === _sec240);
+      if (_sectorPicks.length > 0) {
+        const _eq240 = state.simCapital || 10000;
+        const _sectorValue = _sectorPicks.reduce((sum, p) => sum + (p.entryPrice || 0) * (p.quantity || 1), 0);
+        const _sectorPct = Math.min(100, (_sectorValue / _eq240 * 100));
+        const _barColor240 = _sectorPct >= 25 ? 'var(--sell)' : _sectorPct >= 15 ? '#f59e0b' : 'var(--buy)';
+        const _barWidth240 = Math.min(100, (_sectorPct / 25 * 100)).toFixed(0);
+        const _warn240 = _sectorPct >= 25 ? ' ⚠️ limite atingido' : _sectorPct >= 20 ? ' ⚠️ próximo do limite' : '';
+        _sectorBar = `<div style="margin-top:5px">
+          <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--ink-3);margin-bottom:2px">
+            <span>Setor ${_sec240}: ${_sectorPct.toFixed(0)}% alocado (limite: 25%)${_warn240}</span>
+          </div>
+          <div style="height:4px;background:var(--surface-2);border-radius:2px;overflow:hidden">
+            <div style="width:${_barWidth240}%;height:100%;background:${_barColor240};border-radius:2px"></div>
+          </div>
+        </div>`;
+      }
+    }
+  }
   return `<div style="font-size:.78rem;color:var(--ink-3);margin-top:4px">
     Posição: <strong style="color:var(--ink)">${_pct}% do capital</strong>
     <span style="margin-left:6px;opacity:.6">Score ${(d.score??0).toFixed(1)} · Setor: ${_sector}</span>
     <span onclick="setState('_eduTopic','capital_mgmt')" style="cursor:pointer;margin-left:6px;opacity:.5;font-size:.75rem" title="Como calculamos o tamanho?">(?)</span>
     ${_adjSize === 0 ? '<br><span style="color:#ef4444;font-size:.75rem">⚠️ Setor no limite de 25% — posição postergada</span>' : ''}
-  </div>`;
+  </div>${_targetLine}${_sectorBar}`;
 })() : ''}
       <div class="chip-row">
         <span class="chip">RSI ${d.rsi.toFixed(1)}</span>
@@ -2607,11 +2684,34 @@ function updateTrackedExits() {
     if (timeExit || stopHit) {
       pick.exitSignal = timeExit ? 'prazo' : 'stop_movel';
       pick.exitPrice  = currPrice;
+      // US-236: move to closedTrades on confirmed exit
+      const exitedByStop = stopHit && !timeExit;
+      const closed = {
+        ticker: pick.ticker,
+        entryDate: pick.entryDate,
+        exitDate: new Date().toISOString().slice(0, 10),
+        entryPrice: pick.entryPrice,
+        exitPrice: currPrice,
+        pnlPct: ((currPrice - pick.entryPrice) / pick.entryPrice * 100),
+        reason: exitedByStop ? 'stop' : 'prazo'
+      };
+      // Only add if not already in closedTrades (avoid duplicates on repeated calls)
+      const alreadyClosed = state.closedTrades.some(ct => ct.ticker === closed.ticker && ct.exitDate === closed.exitDate && ct.entryDate === closed.entryDate);
+      if (!alreadyClosed) {
+        state.closedTrades.push(closed);
+        localStorage.setItem('momentum_closed', JSON.stringify(state.closedTrades));
+        // Mark as pending removal — actual splice happens after iteration
+        pick._pendingClose = true;
+      }
     } else {
       pick.exitSignal = null;
       pick.exitPrice  = null;
     }
   }
+  // Remove picks that were just closed
+  const beforeLen = state.trackedPicks.length;
+  state.trackedPicks = state.trackedPicks.filter(p => !p._pendingClose);
+  if (state.trackedPicks.length !== beforeLen) saveTrackedPicks();
 }
 
 function untrackPick(index) {
@@ -2737,6 +2837,8 @@ function renderTrackedPicks() {
   // Update exit signals from current prices before rendering
   updateTrackedExits();
 
+  state.trackedTab = state.trackedTab || 'abertas';
+
   const scanHdr = document.getElementById('scanHeader');
   const grid = document.getElementById('resultsGrid');
   const sidebar = document.getElementById('legacySidebar');
@@ -2750,6 +2852,37 @@ function renderTrackedPicks() {
   html += '<div class="kicker">⭐ Acompanhados</div>';
   html += '<h1 class="hed1" style="margin-top:8px">Sua <span style="color:var(--primary)">watchlist</span>.</h1>';
 
+  // US-236: Tab bar
+  const tabs = [
+    { key: 'abertas', label: 'Abertas' },
+    { key: 'encerradas', label: 'Encerradas' },
+    { key: 'resumo', label: 'Resumo' },
+  ];
+  html += '<div style="display:flex;gap:4px;margin-top:var(--s-4);margin-bottom:var(--s-4);border-bottom:1px solid var(--line);padding-bottom:0">';
+  tabs.forEach(tab => {
+    const active = state.trackedTab === tab.key;
+    html += `<button onclick="state.trackedTab='${tab.key}';renderTrackedPicks()"
+      style="padding:8px 16px;border:none;background:transparent;cursor:pointer;font-size:.85rem;font-weight:${active?'600':'400'};color:${active?'var(--primary)':'var(--ink-3)'};border-bottom:2px solid ${active?'var(--primary)':'transparent'};margin-bottom:-1px">${tab.label}</button>`;
+  });
+  html += '</div>';
+
+  // Encerradas tab
+  if (state.trackedTab === 'encerradas') {
+    html += renderClosedTrades();
+    html += '</div>';
+    container.innerHTML = html;
+    return;
+  }
+
+  // Resumo tab
+  if (state.trackedTab === 'resumo') {
+    html += renderPortfolioSummary();
+    html += '</div>';
+    container.innerHTML = html;
+    return;
+  }
+
+  // Abertas tab
   if (state.trackedPicks.length === 0) {
     html += '<div class="card" style="text-align:center;padding:56px 24px;margin-top:var(--s-6)">';
     html += '<div style="font-size:48px;margin-bottom:16px">⭐</div>';
@@ -2949,6 +3082,106 @@ function renderTrackedPicks() {
   html += '</div>'; // grid
   html += '</div>'; // shell
   container.innerHTML = html;
+}
+
+// ─── US-236: CLOSED TRADES LOG ───────────────────────────────────────
+function renderClosedTrades() {
+  const trades = state.closedTrades || [];
+  if (trades.length === 0) {
+    return '<div style="text-align:center;padding:56px 24px;color:var(--ink-3)">Nenhuma operação encerrada ainda.</div>';
+  }
+  const wins = trades.filter(t => t.pnlPct > 0).length;
+  const winRate = (wins / trades.length * 100).toFixed(0);
+  const avgPnl = (trades.reduce((s, t) => s + t.pnlPct, 0) / trades.length).toFixed(1);
+  let html = '<div style="overflow-x:auto;margin-top:var(--s-3)">';
+  html += '<table class="tracked-table" style="width:100%;border-collapse:collapse;font-size:.85rem">';
+  html += `<thead><tr style="border-bottom:1px solid var(--line);color:var(--ink-3);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">
+    <th style="padding:.4rem .75rem;text-align:left">Ticker</th>
+    <th style="padding:.4rem .75rem;text-align:left">Entrada</th>
+    <th style="padding:.4rem .75rem;text-align:left">Saída</th>
+    <th style="padding:.4rem .75rem;text-align:left">P. Entrada</th>
+    <th style="padding:.4rem .75rem;text-align:left">P. Saída</th>
+    <th style="padding:.4rem .75rem;text-align:left">P&L%</th>
+    <th style="padding:.4rem .75rem;text-align:left">Motivo</th>
+  </tr></thead><tbody>`;
+  trades.slice().reverse().forEach(t => {
+    const pnlColor = t.pnlPct >= 0 ? 'var(--buy)' : 'var(--sell)';
+    const motivo = t.reason === 'stop' ? '🔴 Stop' : '⏱ Prazo';
+    html += `<tr style="border-bottom:1px solid rgba(255,255,255,.06)">
+      <td style="padding:.5rem .75rem;font-weight:600">${(t.ticker || '').replace('.SA', '')}</td>
+      <td style="padding:.5rem .75rem;color:var(--ink-3);font-size:.82rem">${t.entryDate || '—'}</td>
+      <td style="padding:.5rem .75rem;color:var(--ink-3);font-size:.82rem">${t.exitDate || '—'}</td>
+      <td style="padding:.5rem .75rem">${fmtBRL(t.entryPrice)}</td>
+      <td style="padding:.5rem .75rem">${fmtBRL(t.exitPrice)}</td>
+      <td style="padding:.5rem .75rem;font-weight:600;color:${pnlColor}">${t.pnlPct >= 0 ? '+' : ''}${t.pnlPct.toFixed(1)}%</td>
+      <td style="padding:.5rem .75rem">${motivo}</td>
+    </tr>`;
+  });
+  html += `</tbody><tfoot><tr><td colspan="7" style="padding:.6rem .75rem;font-size:.8rem;color:var(--ink-3);border-top:1px solid var(--line)">
+    ${trades.length} operações · Win rate: ${winRate}% · P&L médio: ${avgPnl}%
+  </td></tr></tfoot></table></div>`;
+  return html;
+}
+
+// ─── US-238: PORTFOLIO ANALYTICS (RESUMO TAB) ────────────────────────
+function renderPortfolioSummary() {
+  const trades = state.closedTrades || [];
+  const open = state.trackedPicks || [];
+  if (trades.length === 0) {
+    return '<div style="padding:40px 0;color:var(--ink-3);font-size:14px;line-height:1.7">Nenhuma operação encerrada ainda. Continue acompanhando picks para ver sua performance aqui.</div>';
+  }
+  const wins = trades.filter(t => t.pnlPct > 0);
+  const winRate = trades.length > 0 ? (wins.length / trades.length * 100).toFixed(0) : '0';
+  const avgPnl = trades.length > 0 ? (trades.reduce((s, t) => s + t.pnlPct, 0) / trades.length).toFixed(1) : '0.0';
+  const best = trades.reduce((a, b) => b.pnlPct > a.pnlPct ? b : a, trades[0]);
+  const worst = trades.reduce((a, b) => b.pnlPct < a.pnlPct ? b : a, trades[0]);
+  const byPrazo = trades.filter(t => t.reason === 'prazo').length;
+  const byStop = trades.filter(t => t.reason === 'stop').length;
+
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--s-3);margin-top:var(--s-3)">';
+  const stat = (label, value, color) => `<div style="background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);padding:var(--s-4)"><div style="font-size:11px;color:var(--ink-3);margin-bottom:4px">${label}</div><div style="font-family:var(--font-mono);font-size:20px;font-weight:600;color:${color||'var(--ink)'}">${value}</div></div>`;
+  html += stat('Encerradas', trades.length);
+  html += stat('Abertas', open.length);
+  html += stat('Win Rate', winRate + '%', wins.length / trades.length >= 0.5 ? 'var(--buy)' : 'var(--sell)');
+  html += stat('P&L Médio', (avgPnl >= 0 ? '+' : '') + avgPnl + '%', avgPnl >= 0 ? 'var(--buy)' : 'var(--sell)');
+  html += stat('Melhor Op.', best.ticker.replace('.SA', '') + ' ' + (best.pnlPct >= 0 ? '+' : '') + best.pnlPct.toFixed(1) + '%', 'var(--buy)');
+  html += stat('Pior Op.', worst.ticker.replace('.SA', '') + ' ' + (worst.pnlPct >= 0 ? '+' : '') + worst.pnlPct.toFixed(1) + '%', 'var(--sell)');
+  html += stat('Por Prazo', byPrazo);
+  html += stat('Por Stop', byStop);
+  html += '</div>';
+
+  // Sector exposure
+  if (open.length > 0 && typeof SECTOR_MAP !== 'undefined') {
+    const equity = state.simCapital || 10000;
+    const sectorGroups = {};
+    open.forEach(p => {
+      const sec = SECTOR_MAP[p.ticker];
+      if (!sec) return;
+      if (!sectorGroups[sec]) sectorGroups[sec] = 0;
+      sectorGroups[sec] += (p.entryPrice || 0) * (p.quantity || 1);
+    });
+    const sectors = Object.keys(sectorGroups);
+    if (sectors.length > 0) {
+      html += '<div style="margin-top:var(--s-5)"><div style="font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:var(--s-3)">Exposição por Setor (abertas)</div>';
+      sectors.sort((a, b) => sectorGroups[b] - sectorGroups[a]).forEach(sec => {
+        const pct = Math.min(100, (sectorGroups[sec] / equity * 100));
+        const barColor = pct >= 25 ? 'var(--sell)' : pct >= 15 ? '#f59e0b' : 'var(--buy)';
+        const barWidth = Math.min(100, (pct / 25 * 100)).toFixed(0);
+        const warn = pct >= 20 ? ' ⚠️ próximo do limite' : '';
+        html += `<div style="margin-bottom:var(--s-3)">
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px">
+            <span style="text-transform:capitalize">${sec}${warn}</span>
+            <span style="color:${barColor};font-family:var(--font-mono)">${pct.toFixed(0)}% / 25%</span>
+          </div>
+          <div style="height:4px;background:var(--surface-2);border-radius:2px;overflow:hidden">
+            <div style="width:${barWidth}%;height:100%;background:${barColor};border-radius:2px"></div>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+  }
+  return html;
 }
 
 // ─── PORTFOLIO / MY STOCKS VIEW ──────────────────────────────────────
@@ -5475,6 +5708,8 @@ async function init() {
   document.getElementById('authModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeAuthModal(); });
   document.getElementById('portfolioModal').addEventListener('click', e => { if (e.target === e.currentTarget) closePortfolioModal(); });
   document.getElementById('resetModal').addEventListener('click', e => { if (e.target === e.currentTarget) document.getElementById('resetModal').classList.remove('show'); });
+  // US-239: Enter key on manual ticker input
+  document.getElementById('manualTickerInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') manualLookup(); });
   // Show cookie/LGPD consent banner if not yet accepted
   if (!localStorage.getItem('momentum_consent')) {
     const banner = document.getElementById('cookieBanner');
