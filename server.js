@@ -163,7 +163,7 @@ async function handleRequest(req, res) {
       if (!validateCPF(cpfDigits)) return sendError(res, 400, 'CPF inválido');
       if (users.some(u => u.cpf === cpfDigits)) return sendError(res, 409, 'CPF já cadastrado');
       if (findUser(email)) return sendError(res, 409, 'Email already registered');
-      const user = { id: nextId(), email: email.toLowerCase(), password: await hashPassword(password), cpf: cpfDigits, tier: 'free', createdAt: new Date().toISOString(), subscriptionId: null, subscriptionEnd: null, emailVerified: false };
+      const user = { id: nextId(), email: email.toLowerCase(), password: await hashPassword(password), cpf: cpfDigits, tier: 'free', createdAt: new Date().toISOString(), stripeCustomerId: null, stripeSubId: null, subStatus: null, paymentMethodLast4: null, failedPaymentCount: 0, paymentHistory: [], subscriptionEnd: null, emailVerified: false };
       users.push(user); saveUsers(users);
       // Send verification email (non-blocking)
       const vToken = makeToken();
@@ -514,9 +514,9 @@ async function handleRequest(req, res) {
       const authUser = getAuthUser(req);
       if (!authUser) return sendError(res, 401, 'Not authenticated');
       const user = findUser(authUser.email);
-      if (!user || !user.subscriptionId) return sendError(res, 400, 'No active subscription');
+      if (!user || !user.stripeCustomerId) return sendError(res, 400, 'No active subscription');
       try {
-        const session = await stripe.billingPortal.sessions.create({ customer: user.subscriptionId, return_url: ENV.APP_URL + '/' });
+        const session = await stripe.billingPortal.sessions.create({ customer: user.stripeCustomerId, return_url: ENV.APP_URL + '/' });
         return sendJSON(res, 200, { url: session.url });
       } catch (e) { return sendError(res, 500, 'Stripe error: ' + e.message); }
     }
@@ -543,21 +543,31 @@ async function handleRequest(req, res) {
           const user = email && findUser(email);
           if (user) {
             user.tier = 'pro';
-            user.subscriptionId = session.customer;
+            user.stripeCustomerId = session.customer;
+            user.stripeSubId = session.subscription;
             const sub = await stripe.subscriptions.retrieve(session.subscription);
+            user.subStatus = sub.status;
             user.subscriptionEnd = new Date(sub.current_period_end * 1000).toISOString();
             saveUsers(users);
           }
         }
         if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
           const sub = event.data.object;
-          let email = sub.customer_email;
-          if (!email && sub.customer) {
-            const customer = await stripe.customers.retrieve(sub.customer);
-            email = customer.email;
+          // prefer lookup by stripeCustomerId for reliability
+          let user = users.find(u => u.stripeCustomerId === sub.customer);
+          if (!user) {
+            let email = sub.customer_email;
+            if (!email && sub.customer) {
+              const customer = await stripe.customers.retrieve(sub.customer);
+              email = customer.email;
+            }
+            user = email ? findUser(email) : null;
           }
-          const user = email && findUser(email);
           if (user) {
+            user.stripeCustomerId = user.stripeCustomerId || sub.customer;
+            user.stripeSubId = sub.id;
+            user.subStatus = sub.status;
+            user.cancelAtPeriodEnd = sub.cancel_at_period_end;
             if (sub.status === 'active' || sub.status === 'trialing') {
               user.tier = 'pro';
               user.subscriptionEnd = new Date(sub.current_period_end * 1000).toISOString();
@@ -565,6 +575,45 @@ async function handleRequest(req, res) {
               user.tier = 'free';
               user.subscriptionEnd = null;
             }
+            saveUsers(users);
+          }
+        }
+        if (event.type === 'invoice.payment_succeeded') {
+          const invoice = event.data.object;
+          const user = users.find(u => u.stripeCustomerId === invoice.customer);
+          if (user) {
+            if (!Array.isArray(user.paymentHistory)) user.paymentHistory = [];
+            user.paymentHistory.push({
+              date: new Date(invoice.created * 1000).toISOString(),
+              amountBRL: invoice.amount_paid / 100,
+              status: 'paid',
+              invoiceId: invoice.id,
+              receiptUrl: invoice.hosted_invoice_url || null,
+              periodEnd: invoice.lines?.data?.[0]?.period?.end
+                ? new Date(invoice.lines.data[0].period.end * 1000).toISOString()
+                : null,
+            });
+            user.failedPaymentCount = 0;
+            user.subStatus = 'active';
+            if (invoice.lines?.data?.[0]?.period?.end) {
+              user.subscriptionEnd = new Date(invoice.lines.data[0].period.end * 1000).toISOString();
+            }
+            saveUsers(users);
+          }
+        }
+        if (event.type === 'invoice.payment_failed') {
+          const invoice = event.data.object;
+          const user = users.find(u => u.stripeCustomerId === invoice.customer);
+          if (user) {
+            if (!Array.isArray(user.paymentHistory)) user.paymentHistory = [];
+            user.paymentHistory.push({
+              date: new Date(invoice.created * 1000).toISOString(),
+              amountBRL: invoice.amount_due / 100,
+              status: 'failed',
+              invoiceId: invoice.id,
+            });
+            user.failedPaymentCount = (user.failedPaymentCount || 0) + 1;
+            user.subStatus = 'past_due';
             saveUsers(users);
           }
         }
