@@ -82,6 +82,12 @@
   </div>
 </header>
 
+<div id="upgradeBanner" style="display:none;background:linear-gradient(90deg,rgba(var(--primary-rgb,78,121,255),0.12),rgba(var(--primary-rgb,78,121,255),0.06));border-bottom:1px solid rgba(var(--primary-rgb,78,121,255),0.2);padding:8px 16px;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center">
+  <span style="font-size:13px;color:var(--ink-1)">⭐ Desbloqueie o <strong>Momentum Pro</strong> — rastreamento ilimitado + histórico completo</span>
+  <button class="btn primary" onclick="showUpgradeModal()" style="font-size:11px;padding:4px 12px;white-space:nowrap">Conhecer o Pro</button>
+  <button onclick="dismissUpgradeBanner()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:16px;line-height:1;padding:0 4px" title="Fechar">×</button>
+</div>
+
 <div id="marketTabs" style="display:none">
   <span id="trackedCount">0</span>
   <button id="trackedTabBtn" onclick="showTrackedView()"></button>
@@ -445,6 +451,15 @@ async function updateAuthUI() {
     signInBtn.style.display = 'inline-block';
     userMenu.style.display = 'none';
   }
+  // Upgrade banner: show for free tier only
+  const upgradeBanner = document.getElementById('upgradeBanner');
+  if (upgradeBanner) {
+    if (authUser && authUser.tier === 'free') {
+      showUpgradeBanner();
+    } else {
+      upgradeBanner.style.display = 'none';
+    }
+  }
 }
 
 function formatCPF(v) {
@@ -744,20 +759,42 @@ function showPrivacyNote() {
   showToast('O MOMENTUM salva sua sessão e preferências localmente. Nenhum cookie de rastreamento de terceiros é usado. Suas posições e watchlist são salvas no servidor e removidas permanentemente ao excluir a conta (LGPD Art. 18). Exporte ou delete seus dados a qualquer momento no menu da conta.', true, 8000);
 }
 
+function showUpgradeBanner() {
+  if (localStorage.getItem('momentum_upgrade_dismissed')) return;
+  const b = document.getElementById('upgradeBanner');
+  if (b) b.style.display = 'flex';
+}
+
+function dismissUpgradeBanner() {
+  localStorage.setItem('momentum_upgrade_dismissed', '1');
+  const b = document.getElementById('upgradeBanner');
+  if (b) b.style.display = 'none';
+}
+
+function showUpgradeModal() {
+  const m = document.getElementById('upgradeModal');
+  if (m) { m.style.display = 'flex'; }
+}
+
+function closeUpgradeModal() {
+  const m = document.getElementById('upgradeModal');
+  if (m) { m.style.display = 'none'; }
+}
+
 async function upgradeToPro() {
   if (!authUser) { showAuthModal(); return; }
   if (authUser.tier === 'admin') { return; }
   if (authUser.tier === 'pro') {
     const data = await apiGet('/api/stripe/create-portal');
     if (data.url) { window.location.href = data.url; return; }
-    showComingSoon();
+    showUpgradeModal();
     return;
   }
   try {
     const data = await apiGet('/api/stripe/create-checkout');
     if (data.url) { window.location.href = data.url; return; }
   } catch {}
-  showComingSoon();
+  showUpgradeModal();
 }
 
 function showComingSoon() {
@@ -5589,6 +5626,16 @@ async function init() {
     history.replaceState({}, '', window.location.pathname); // clean URL
     document.getElementById('resetModal').classList.add('show');
   }
+  // Handle ?subscription=success/canceled from Stripe Checkout return
+  const subResult = urlParams.get('subscription');
+  if (subResult === 'success') {
+    history.replaceState({}, '', window.location.pathname);
+    checkAuth(); // refresh tier from server
+    showToast('🎉 Bem-vindo ao Pro! Seu acesso foi ativado.', true, 5000);
+  } else if (subResult === 'canceled') {
+    history.replaceState({}, '', window.location.pathname);
+    showToast('Checkout cancelado. Você continua no plano gratuito.', false, 4000);
+  }
   // Handle ?verify=<token> from email verification emails
   const verifyToken = urlParams.get('verify');
   if (verifyToken) {
@@ -5633,6 +5680,14 @@ async function init() {
     const sl = Number(btn.getAttribute('data-sl'));
     if (!ticker || isNaN(price)) return;
     if (!authUser) { showAuthModal(); return; }
+    // Free tier: max 5 active tracked picks
+    if (authUser.tier === 'free') {
+      const activeCount = state.trackedPicks.filter(p => p.status === 'active').length;
+      if (activeCount >= 5) {
+        showUpgradeModal();
+        return;
+      }
+    }
     // Check if already tracked
     if (state.trackedPicks.find(p => p.ticker === ticker && p.status === 'active')) {
       alert(ticker + ' ' + t('errors_alreadyTracked'));
@@ -5773,6 +5828,59 @@ init();
       <button onclick="completeOnboarding()" style="flex:1;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px">Começar agora →</button>
       <button onclick="dismissOnboarding()" style="padding:12px 16px;background:transparent;color:var(--ink-3);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px">Ver depois</button>
     </div>
+  </div>
+</div>
+
+<div id="upgradeModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeUpgradeModal()">
+  <div style="background:var(--surface);border-radius:16px;max-width:460px;width:100%;padding:32px;position:relative;max-height:90vh;overflow-y:auto">
+    <button onclick="closeUpgradeModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;cursor:pointer;font-size:20px;color:var(--ink-3)">×</button>
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:40px;margin-bottom:8px">⭐</div>
+      <h2 style="font-family:var(--font-mono);color:var(--primary);font-size:18px;margin-bottom:4px">Momentum Pro</h2>
+      <p style="font-size:13px;color:var(--ink-2)">Desbloqueie o potencial completo da plataforma</p>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:8px;border-bottom:1px solid var(--line);color:var(--ink-3);font-weight:500">Recurso</th>
+          <th style="text-align:center;padding:8px;border-bottom:1px solid var(--line);color:var(--ink-3);font-weight:500;width:80px">Free</th>
+          <th style="text-align:center;padding:8px;border-bottom:1px solid var(--line);color:var(--primary);font-weight:600;width:80px">Pro</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:8px;color:var(--ink-1)">Ações rastreadas</td>
+          <td style="text-align:center;padding:8px;color:var(--ink-3)">5</td>
+          <td style="text-align:center;padding:8px;color:var(--buy);font-weight:600">∞</td>
+        </tr>
+        <tr style="background:rgba(var(--primary-rgb,78,121,255),0.04)">
+          <td style="padding:8px;color:var(--ink-1)">Scanner B3 completo</td>
+          <td style="text-align:center;padding:8px">✅</td>
+          <td style="text-align:center;padding:8px">✅</td>
+        </tr>
+        <tr>
+          <td style="padding:8px;color:var(--ink-1)">Histórico de operações</td>
+          <td style="text-align:center;padding:8px;color:var(--ink-3)">—</td>
+          <td style="text-align:center;padding:8px">✅</td>
+        </tr>
+        <tr style="background:rgba(var(--primary-rgb,78,121,255),0.04)">
+          <td style="padding:8px;color:var(--ink-1)">Carteira com múltiplos ativos</td>
+          <td style="text-align:center;padding:8px;color:var(--ink-3)">—</td>
+          <td style="text-align:center;padding:8px">✅</td>
+        </tr>
+        <tr>
+          <td style="padding:8px;color:var(--ink-1)">Módulos de educação</td>
+          <td style="text-align:center;padding:8px">✅</td>
+          <td style="text-align:center;padding:8px">✅</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:24px;font-weight:700;color:var(--ink-1);font-family:var(--font-mono)">R$29,90<span style="font-size:14px;font-weight:400;color:var(--ink-3)">/mês</span></div>
+      <div style="font-size:11px;color:var(--ink-3);margin-top:4px">Cancele quando quiser · Sem fidelidade</div>
+    </div>
+    <button class="btn primary" onclick="closeUpgradeModal();upgradeToPro()" style="width:100%;padding:12px;font-size:14px;font-weight:600">Assinar Pro — R$29,90/mês</button>
+    <button onclick="closeUpgradeModal()" style="width:100%;margin-top:8px;background:none;border:none;cursor:pointer;font-size:12px;color:var(--ink-3);padding:8px">Não agora</button>
   </div>
 </div>
 </body>
