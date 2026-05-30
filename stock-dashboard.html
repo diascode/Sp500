@@ -124,15 +124,6 @@
   </div>
 
 
-  <!-- US-239: Manual stock lookup -->
-  <div id="manualLookupRow" style="display:flex;gap:8px;align-items:center;margin-top:12px;margin-bottom:4px">
-    <input id="manualTickerInput" placeholder="🔍 Buscar ativo... ex: PETR4"
-      style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--ink-1);font-size:.9rem">
-    <button onclick="manualLookup()"
-      style="background:var(--primary);color:#000;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;font-weight:600;font-size:.9rem">Analisar</button>
-  </div>
-  <div id="manualLookupResult" style="margin-bottom:8px"></div>
-
   <!-- Sinais controls (shown only in sinais mode) -->
   <div class="scan-controls" id="sinaisControls">
     <div id="regionSeg" style="display:none"></div>
@@ -195,7 +186,7 @@
 </div>
 
 <footer class="footer">
-  <div id="footerVersion"><strong>MOMENTUM</strong> · v5.0 · live from market data</div>
+  <div id="footerVersion" style="display:none"></div>
   <div id="footerDisclaimer" class="disclaimer"><strong>⚠ PAPER TRADING — EDUCATIONAL PURPOSES ONLY.</strong> MOMENTUM is a technical analysis simulator. Nothing on this site constitutes financial advice, investment recommendation, or solicitation to buy or sell securities. All trades are simulated. Past performance does not guarantee future results. Consult a qualified financial advisor before making real investment decisions. <strong>By using this app you agree these are paper trades only.</strong></div>
 </footer>
 
@@ -810,6 +801,10 @@ function showBillingView() {
 function renderBillingView() {
   const container = document.getElementById('dashboard');
   container.style.display = 'block';
+  const scanHdr = document.getElementById('scanHeader');
+  const resultsGrid = document.getElementById('resultsGrid');
+  if (scanHdr) scanHdr.style.display = 'none';
+  if (resultsGrid) resultsGrid.style.display = 'none';
   if (!authUser) { state.showBilling = false; renderDashboard(); return; }
 
   const isPro = authUser.tier === 'pro' || authUser.tier === 'admin';
@@ -897,6 +892,11 @@ async function upgradeToPro() {
   }
   try {
     const data = await apiGet('/api/stripe/create-checkout');
+    if (data.alreadySubscribed) {
+      // Active sub exists in Stripe but local tier not yet synced — go to portal
+      const portal = await apiGet('/api/stripe/create-portal');
+      if (portal.url) { window.location.href = portal.url; return; }
+    }
     if (data.url) { window.location.href = data.url; return; }
   } catch {}
   showUpgradeModal();
@@ -939,31 +939,48 @@ async function showAdminView() {
   if (sidebar) sidebar.style.display = 'none';
   const container = document.getElementById('dashboard');
   container.style.display = 'block';
-  container.innerHTML = '<div class="shell" style="padding-top:var(--s-7)"><div class="kicker">⚙️ Admin</div><h1 class="hed1" style="margin-top:8px">Painel de <span style="color:var(--primary)">controle</span>.</h1><p class="dek" style="margin-top:8px;margin-bottom:var(--s-6)">Carregando usuários...</p></div>';
+  container.innerHTML = '<div class="shell" style="padding-top:var(--s-7)"><div class="kicker">⚙️ Admin</div><h1 class="hed1" style="margin-top:8px">Painel de <span style="color:var(--primary)">controle</span>.</h1><p class="dek" style="margin-top:8px;margin-bottom:var(--s-6)">Carregando...</p></div>';
 
-  const data = await apiGet('/api/admin/users');
+  const [data, rev] = await Promise.all([
+    apiGet('/api/admin/users'),
+    apiGet('/api/admin/revenue'),
+  ]);
   if (data.error) { alert(data.error); return; }
 
   let html = '<div class="shell" style="padding-top:var(--s-7);padding-bottom:var(--s-8)">';
   html += '<div class="kicker">⚙️ Admin</div>';
   html += '<h1 class="hed1" style="margin-top:8px">Painel de <span style="color:var(--primary)">controle</span>.</h1>';
 
-  // Big stats
-  html += '<div class="grid-4" style="margin-top:var(--s-6);margin-bottom:var(--s-5)">';
-  html += `<div class="big-stat"><div class="lbl">Total usuários</div><div class="val">${data.stats.total}</div><div class="sub">cadastrados</div></div>`;
+  // User stats
+  html += '<div class="kicker" style="margin-top:var(--s-6);margin-bottom:var(--s-3)">Usuários</div>';
+  html += '<div class="grid-4" style="margin-bottom:var(--s-4)">';
+  html += `<div class="big-stat"><div class="lbl">Total</div><div class="val">${data.stats.total}</div><div class="sub">cadastrados</div></div>`;
   html += `<div class="big-stat"><div class="lbl">Free</div><div class="val">${data.stats.free}</div><div class="sub">plano gratuito</div></div>`;
   html += `<div class="big-stat"><div class="lbl">Pro</div><div class="val" style="color:var(--buy)">${data.stats.pro}</div><div class="sub">assinantes</div></div>`;
   html += `<div class="big-stat"><div class="lbl">Subs ativas</div><div class="val" style="color:var(--primary)">${data.stats.activeSubscriptions}</div><div class="sub">Stripe ativo</div></div>`;
   html += '</div>';
 
+  // Revenue stats
+  if (!rev.error) {
+    const mrrFmt = 'R$ ' + (rev.mrr || 0).toFixed(2).replace('.', ',');
+    html += '<div class="kicker" style="margin-top:var(--s-4);margin-bottom:var(--s-3)">Receita</div>';
+    html += '<div class="grid-4" style="margin-bottom:var(--s-5)">';
+    html += `<div class="big-stat"><div class="lbl">MRR</div><div class="val" style="color:var(--buy);font-size:1.4rem">${mrrFmt}</div><div class="sub">estimado</div></div>`;
+    html += `<div class="big-stat"><div class="lbl">Novas/mês</div><div class="val">${rev.newThisMonth}</div><div class="sub">assinaturas</div></div>`;
+    html += `<div class="big-stat"><div class="lbl">Churn pendente</div><div class="val" style="color:var(--sell)">${rev.churnPending}</div><div class="sub">cancelamento agendado</div></div>`;
+    html += `<div class="big-stat"><div class="lbl">Pgtos falhos</div><div class="val" style="color:var(--sell)">${rev.failedPayments}</div><div class="sub">usuários</div></div>`;
+    html += '</div>';
+  }
+
   // User table
+  html += '<div class="kicker" style="margin-bottom:var(--s-3)">Usuários</div>';
   html += '<div class="card-flush" style="overflow-x:auto;margin-bottom:var(--s-5)">';
-  html += '<table class="tracked-table"><thead><tr><th>#</th><th>EMAIL</th><th>TIER</th><th>SUB END</th><th>SINCE</th><th>PRO</th><th>ADMIN</th></tr></thead><tbody>';
+  html += '<table class="tracked-table"><thead><tr><th>#</th><th>EMAIL</th><th>TIER</th><th>SUB END</th><th>SINCE</th><th>PAGAMENTOS</th><th>PRO</th><th>ADMIN</th><th>AÇÕES</th></tr></thead><tbody>';
   data.users.forEach(u => {
     const tierBadge = u.tier === 'admin'
       ? '<span class="chip chip-magenta">👑 Admin</span>'
       : u.tier === 'pro'
-        ? '<span class="chip chip-primary">⭐ Pro</span>'
+        ? `<span class="chip chip-primary">⭐ Pro${u.cancelAtPeriodEnd ? ' ⚠' : ''}</span>`
         : '<span class="chip">Free</span>';
     const proBtn = u.tier === 'admin'
       ? '<span style="color:var(--ink-4);font-size:10px">—</span>'
@@ -972,8 +989,54 @@ async function showAdminView() {
         : `<button class="btn-default admin-tier-btn" data-email="${esc(u.email)}" data-tier="pro" style="font-size:10px;padding:4px 10px;color:var(--buy)">⭐ Pro</button>`;
     const adminBtn = u.tier === 'admin'
       ? '<span style="color:var(--ink-4);font-size:10px">—</span>'
-      : `<button class="btn-default admin-admin-btn" data-email="${esc(u.email)}" style="font-size:10px;padding:4px 10px;color:var(--magenta)">👑 Admin</button>`;
-    html += `<tr><td style="color:var(--ink-4)">${u.id}</td><td style="font-family:var(--font-mono);font-size:12px">${u.email}</td><td>${tierBadge}</td><td style="color:var(--ink-4);font-family:var(--font-mono);font-size:11px">${u.subscriptionEnd ? u.subscriptionEnd.slice(0,10) : '—'}</td><td style="color:var(--ink-4);font-family:var(--font-mono);font-size:11px">${u.createdAt.slice(0,10)}</td><td>${proBtn}</td><td>${adminBtn}</td></tr>`;
+      : `<button class="btn-default admin-admin-btn" data-email="${esc(u.email)}" style="font-size:10px;padding:4px 10px;color:var(--magenta)">👑</button>`;
+
+    // Payments badge
+    const ph = u.paymentHistory || [];
+    const failedCount = u.failedPaymentCount || 0;
+    let payBadge;
+    if (ph.length === 0) {
+      payBadge = '<span style="color:var(--ink-4);font-size:11px">—</span>';
+    } else {
+      const badgeColor = failedCount > 0 ? 'var(--sell)' : 'var(--buy)';
+      const label = `${ph.length} pgto${ph.length > 1 ? 's' : ''}${failedCount > 0 ? ' ⚠' : ''}`;
+      payBadge = `<button onclick="adminTogglePayments(${u.id})" style="font-size:10px;padding:2px 8px;color:${badgeColor};background:transparent;border:1px solid ${badgeColor};border-radius:4px;cursor:pointer">${label}</button>`;
+    }
+
+    // Action buttons: cancel & extend
+    let actionHtml = '';
+    if (u.stripeSubId && !u.cancelAtPeriodEnd) {
+      actionHtml += `<button class="btn-default admin-cancel-btn" data-email="${esc(u.email)}" style="font-size:10px;padding:3px 8px;color:var(--sell)">✕ Cancelar</button> `;
+    } else if (u.cancelAtPeriodEnd) {
+      actionHtml += `<span style="font-size:10px;color:var(--sell)">Cancela em ${u.subscriptionEnd ? u.subscriptionEnd.slice(0,10) : '?'}</span> `;
+    }
+    if (u.tier === 'pro' || u.tier !== 'admin') {
+      actionHtml += `<span style="display:inline-flex;align-items:center;gap:4px;margin-top:4px"><input id="extend-days-${u.id}" type="number" min="1" max="90" value="30" style="width:48px;font-size:10px;padding:2px 4px;background:var(--bg-1);border:1px solid var(--border);color:var(--ink-1);border-radius:4px"> <button class="btn-default admin-extend-btn" data-email="${esc(u.email)}" data-uid="${u.id}" style="font-size:10px;padding:3px 8px;color:var(--primary)">+ Estender</button></span>`;
+    }
+
+    html += `<tr>
+      <td style="color:var(--ink-4)">${u.id}</td>
+      <td style="font-family:var(--font-mono);font-size:12px">${u.email}</td>
+      <td>${tierBadge}</td>
+      <td style="color:var(--ink-4);font-family:var(--font-mono);font-size:11px">${u.subscriptionEnd ? u.subscriptionEnd.slice(0,10) : '—'}</td>
+      <td style="color:var(--ink-4);font-family:var(--font-mono);font-size:11px">${u.createdAt.slice(0,10)}</td>
+      <td>${payBadge}</td>
+      <td>${proBtn}</td>
+      <td>${adminBtn}</td>
+      <td style="white-space:nowrap">${actionHtml || '<span style="color:var(--ink-4);font-size:10px">—</span>'}</td>
+    </tr>`;
+
+    // Hidden payment history row
+    if (ph.length > 0) {
+      const phRows = ph.map(p => {
+        const statusColor = p.status === 'paid' ? 'var(--buy)' : 'var(--sell)';
+        const amtBRL = p.amount ? 'R$ ' + (p.amount / 100).toFixed(2).replace('.', ',') : '—';
+        const date = p.date ? p.date.slice(0,10) : '—';
+        const link = p.receiptUrl ? `<a href="${esc(p.receiptUrl)}" target="_blank" style="color:var(--primary);font-size:10px">Recibo</a>` : '—';
+        return `<tr style="background:var(--bg-1)"><td></td><td colspan="2" style="font-size:11px;color:var(--ink-3);padding-left:32px">↳ ${date}</td><td style="font-size:11px;color:${statusColor}">${p.status}</td><td style="font-size:11px;color:var(--ink-2)">${amtBRL}</td><td>${link}</td><td colspan="3"></td></tr>`;
+      }).join('');
+      html += `<tr id="admin-payments-${u.id}" style="display:none"><td colspan="9" style="padding:0"><table style="width:100%;border-collapse:collapse">${phRows}</table></td></tr>`;
+    }
   });
   html += '</tbody></table></div>';
 
@@ -990,7 +1053,6 @@ async function showAdminView() {
   html += '<div class="kicker" style="margin-top:var(--s-6);margin-bottom:var(--s-3)">⚙️ Feature Flags</div>';
   html += '<div class="card-flush" style="overflow-x:auto;margin-bottom:var(--s-5)">';
   html += '<table class="tracked-table"><thead><tr><th>FEATURE</th><th style="text-align:center;width:100px">FREE</th><th style="text-align:center;width:100px">PRO</th></tr></thead><tbody>';
-  // cpf_required — top-level boolean, single toggle spanning both tier columns
   html += `<tr>
     <td>📋 Exigir CPF no cadastro</td>
     <td style="text-align:center"><input type="checkbox" ${flags.cpf_required !== false ? 'checked' : ''} onchange="toggleFeatureFlagBool('cpf_required',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--primary)"></td>
@@ -1014,6 +1076,34 @@ async function showAdminView() {
   document.querySelectorAll('.admin-admin-btn').forEach(btn => {
     btn.addEventListener('click', () => setAdmin(btn.dataset.email));
   });
+  document.querySelectorAll('.admin-cancel-btn').forEach(btn => {
+    btn.addEventListener('click', () => adminCancelSubscription(btn.dataset.email));
+  });
+  document.querySelectorAll('.admin-extend-btn').forEach(btn => {
+    btn.addEventListener('click', () => adminExtendSubscription(btn.dataset.email, btn.dataset.uid));
+  });
+}
+
+function adminTogglePayments(uid) {
+  const row = document.getElementById('admin-payments-' + uid);
+  if (row) row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+
+async function adminCancelSubscription(email) {
+  if (!confirm('Cancelar assinatura de ' + email + ' ao fim do período atual?')) return;
+  const result = await apiPost('/api/admin/cancel-subscription', { email });
+  if (result.ok) { showToast('Cancelamento agendado', true, 3000); showAdminView(); }
+  else showToast(result.error || 'Erro ao cancelar', false, 3000);
+}
+
+async function adminExtendSubscription(email, uid) {
+  const input = document.getElementById('extend-days-' + uid);
+  const days = parseInt(input?.value) || 30;
+  if (days < 1 || days > 90) { showToast('Entre 1 e 90 dias', false, 2000); return; }
+  if (!confirm('Estender assinatura de ' + email + ' por ' + days + ' dias?')) return;
+  const result = await apiPost('/api/admin/extend-subscription', { email, days });
+  if (result.ok) { showToast('Assinatura estendida por ' + days + ' dias', true, 3000); showAdminView(); }
+  else showToast(result.error || 'Erro ao estender', false, 3000);
 }
 
 async function toggleFeatureFlag(key, tier, enabled) {
@@ -1409,31 +1499,6 @@ async function scanAll() {
 
 
 // ─── US-239: MANUAL STOCK LOOKUP ────────────────────────────────────
-async function manualLookup() {
-  const input = document.getElementById('manualTickerInput');
-  const resultEl = document.getElementById('manualLookupResult');
-  if (!input || !resultEl) return;
-  let ticker = input.value.trim().toUpperCase();
-  if (!ticker) return;
-  if (!ticker.endsWith('.SA')) ticker += '.SA';
-  resultEl.innerHTML = '<div style="padding:16px;color:var(--ink-3);text-align:center">⏳ Buscando...</div>';
-  try {
-    const { candles } = await fetchHistory(ticker);
-    if (!candles || candles.length < 60) throw new Error('Dados insuficientes');
-    const result = analyze(ticker, ticker.replace('.SA', ''), '', candles);
-    if (!result) throw new Error('Não foi possível calcular o sinal');
-    result.manualLookup = true;
-    const card = buildFeedCard(result, 9999);
-    resultEl.innerHTML = '<div style="margin-bottom:8px"><span style="background:var(--surface-3);border:1px solid var(--border);border-radius:12px;padding:3px 10px;font-size:.75rem;color:var(--ink-3)">🔍 Busca manual</span></div>' + card;
-    // Draw sparkline for the manual card
-    requestAnimationFrame(() => {
-      const canvas = document.getElementById('spark-9999');
-      if (canvas) drawFeedSparkline(canvas, candles, result.signal);
-    });
-  } catch(e) {
-    resultEl.innerHTML = `<div style="padding:16px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--sell)">Ativo não encontrado ou sem dados suficientes: ${esc(ticker.replace('.SA', ''))}</div>`;
-  }
-}
 
 function switchMarket(market) {
   if (_scanAbort) { _scanAbort.abort(); _scanAbort = null; }
@@ -1783,17 +1848,17 @@ function openStockDetail(ticker, idx) {
   document.getElementById('scanHeader').style.display = 'none';
   container.style.display = 'block';
   container.innerHTML = `
-    <div style="max-width:1320px;margin:0 auto;padding:var(--s-5) var(--s-6)">
+    <div style="max-width:1320px;margin:0 auto;padding:var(--s-5) var(--s-4)">
       <button class="btn-ghost" onclick="backToScanView()" style="margin-bottom:var(--s-4)">← Voltar</button>
       <div class="card-header" style="margin-bottom:var(--s-4)">
-        <div style="display:flex;align-items:center;gap:var(--s-3)">
-          <div class="stock-logo-wrap" style="width:56px;height:56px;font-size:28px">${stockEmoji(d)}</div>
-          <div>
-            <div style="font-family:var(--font-display);font-size:32px;font-weight:700">${d.ticker}</div>
+        <div style="display:flex;align-items:center;gap:var(--s-3);flex-wrap:wrap">
+          <div class="stock-logo-wrap" style="width:48px;height:48px;font-size:24px;flex-shrink:0">${stockEmoji(d)}</div>
+          <div style="min-width:0">
+            <div style="font-family:var(--font-display);font-size:clamp(20px,5.5vw,32px);font-weight:700">${d.ticker}</div>
             <div style="color:var(--ink-3);font-size:13px">${d.sector || ''}</div>
           </div>
-          <div style="margin-left:auto;text-align:right">
-            <div style="font-family:var(--font-mono);font-size:32px;font-weight:600">${getCurrencySymbol(d.ticker)}${d.price.toFixed(2)}</div>
+          <div style="margin-left:auto;text-align:right;flex-shrink:0">
+            <div style="font-family:var(--font-mono);font-size:clamp(18px,5vw,32px);font-weight:600">${getCurrencySymbol(d.ticker)}${d.price.toFixed(2)}</div>
             ${signalBadgeHtml(d.signal === 'neutral' ? 'hold' : d.signal, d.score)}
           </div>
         </div>
@@ -3483,24 +3548,6 @@ function renderSimulator() {
     </button>`;
   });
   html += '</div></div>';
-
-  // US-225: Capital panel — always shown, treats simCapital as equity and all cash as idle
-  {
-    const _simEquity = state.simCapital;
-    const _deployed = 0; // single-trade simulator has no open portfolio positions
-    const _idle = _simEquity - _deployed;
-    const _openCount = 0;
-    const _posSize = calcPositionSize(_simEquity);
-    html += `<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:var(--s-4);margin-bottom:var(--s-4)">
-  <div style="font-size:.8rem;color:var(--ink-3);margin-bottom:var(--s-2)">CAPITAL</div>
-  <div style="font-size:1.4rem;font-weight:700">${fmtBRL(_simEquity)}</div>
-  <div style="display:flex;gap:var(--s-4);margin-top:var(--s-2);font-size:.82rem;color:var(--ink-3)">
-    <span>Posições: ${fmtBRL(_deployed)} (${_openCount} abertas)</span>
-    <span>Caixa (CDI): ${fmtBRL(_idle)} · +${fmtBRL(_idle * CDI_DAILY)}/dia est.</span>
-  </div>
-  <div style="font-size:.78rem;color:var(--ink-3);margin-top:var(--s-1)">Tamanho por posição: ${fmtBRL(_posSize)} (10% do capital)</div>
-</div>`;
-  }
 
   if (!stock) {
     html += '<div class="card" style="padding:32px;text-align:center"><p style="color:var(--ink-3)">Selecione um ativo acima para ver os cenários.</p></div>';
@@ -5372,6 +5419,8 @@ function showEducationView() {
     const _cs = document.getElementById('calendarSection'); if (_cs) _cs.style.display = 'none';
     const d = document.getElementById('dashboard');
     d.style.display = 'block';
+    const _isPro = authUser && (authUser.tier === 'pro' || authUser.tier === 'admin');
+    if (!_isPro && !FREE_EDU_TOPICS.includes(_eduTopic)) _eduTopic = 'why';
     renderEdu();
   } catch(e) { console.error('Education error:', e); }
 }
@@ -5385,11 +5434,16 @@ const COURSE_MODULES = [
   { icon:'🇧🇷', name:'Impostos',        topics:['darf'] },
   { icon:'🏦', name:'Renda Fixa',       topics:['tesouro','lci_lca','juros_compostos','cdb_cdi'] },
 ];
+const FREE_EDU_TOPICS = ['why'];
 
 function loadCourseProgress() {
   try { return JSON.parse(localStorage.getItem('jerry_course_progress') || '[]'); } catch { return []; }
 }
 function saveCourseProgress(arr) { localStorage.setItem('jerry_course_progress', JSON.stringify(arr)); }
+function toggleCourseModule(modIdx) {
+  const el = document.getElementById('course-mod-' + modIdx);
+  if (el) el.classList.toggle('collapsed');
+}
 
 function toggleTopicComplete(id) {
   const prog = loadCourseProgress();
@@ -5480,6 +5534,7 @@ function renderEdu() {
   const current = allTopics.find(top => top.id === _eduTopic) || allTopics[0];
   const allIds = COURSE_MODULES.flatMap(m => m.topics);
   const isDone = prog.includes(current.id);
+  const isPro = authUser && (authUser.tier === 'pro' || authUser.tier === 'admin');
   const nextIncomplete = !isComplete ? allIds.find(id => !prog.includes(id) && id !== current.id) : null;
 
   let html = '<div class="shell" style="padding-top:var(--s-7);padding-bottom:var(--s-8)">';
@@ -5512,24 +5567,38 @@ function renderEdu() {
 
   // Sidebar
   html += `<aside class="course-sidebar">`;
-  COURSE_MODULES.forEach(mod => {
-    html += `<div class="course-module"><div class="course-module-hdr">${mod.icon} ${mod.name}</div>`;
+  COURSE_MODULES.forEach((mod, modIdx) => {
+    const hasActive = mod.topics.includes(current.id);
+    const completedInMod = mod.topics.filter(tid => prog.includes(tid)).length;
+    html += `<div class="course-module${hasActive ? '' : ' collapsed'}" id="course-mod-${modIdx}">`;
+    html += `<div class="course-module-hdr" onclick="toggleCourseModule(${modIdx})">${mod.icon} ${mod.name}<span class="course-module-meta"><span class="course-module-prog-txt">${completedInMod}/${mod.topics.length}</span><span class="course-module-arrow">▾</span></span></div>`;
+    html += `<div class="course-module-topics">`;
     mod.topics.forEach(tid => {
       const top = allTopics.find(a => a.id === tid);
       if (!top) return;
       const done = prog.includes(tid);
-      const active = _eduTopic === tid;
+      const active = current.id === tid;
+      const gated = !isPro && !FREE_EDU_TOPICS.includes(tid);
       html += `<button class="course-topic-btn${active ? ' active' : ''}${done ? ' done' : ''}" onclick="switchEduTopic('${tid}')">
-        <span class="topic-check">${done ? '✅' : '○'}</span>
-        <span>${top.icon} ${top.name}</span>
+        <span class="topic-check">${gated ? '🔒' : done ? '✅' : '○'}</span>
+        <span style="${gated ? 'color:var(--ink-4)' : ''}">${top.icon} ${top.name}</span>
       </button>`;
     });
-    html += `</div>`;
+    html += `</div></div>`;
   });
   html += `</aside>`;
 
   // Content panel
   html += `<div>`;
+  const isCurrentGated = !isPro && !FREE_EDU_TOPICS.includes(current.id);
+  if (isCurrentGated) {
+    html += `<div class="card" style="text-align:center;padding:var(--s-7) var(--s-5);margin-bottom:var(--s-4)">`;
+    html += `<div style="font-size:48px;margin-bottom:var(--s-4)">🔒</div>`;
+    html += `<h3 style="color:var(--ink-1);margin-bottom:var(--s-3)">Conteúdo exclusivo Pro</h3>`;
+    html += `<p style="color:var(--ink-3);font-size:13px;margin-bottom:var(--s-5);max-width:320px;margin-left:auto;margin-right:auto">Este tópico faz parte do curso completo, disponível apenas para assinantes Pro. Acesse todas as ${allTopics.length} aulas de análise técnica, renda fixa e estratégia.</p>`;
+    html += `<button class="btn-primary" onclick="showUpgradeModal()">Assinar Pro — R$29,90/mês</button>`;
+    html += `</div>`;
+  } else {
   html += `<div class="card" style="margin-bottom:var(--s-4)">`;
   html += `<div class="kicker" style="margin-bottom:var(--s-3)">${current.icon} ${current.name}</div>`;
   html += `<h3 class="hed3" style="color:${current.color};margin-bottom:var(--s-2)">${current.title}</h3>`;
@@ -5578,6 +5647,7 @@ function renderEdu() {
   html += `</div>`;
 
   html += `</div>`; // end card
+  } // end else (not gated)
   html += `</div>`; // end content col
   html += `</div>`; // end course-layout
   html += `</div>`; // end shell
@@ -5585,6 +5655,11 @@ function renderEdu() {
 }
 
 function switchEduTopic(id) {
+  const isPro = authUser && (authUser.tier === 'pro' || authUser.tier === 'admin');
+  if (!isPro && !FREE_EDU_TOPICS.includes(id)) {
+    showUpgradeModal();
+    return;
+  }
   setState('_eduTopic', id);
   const dash = document.getElementById('dashboard');
   if (dash) dash.scrollTop = 0;
@@ -5876,8 +5951,6 @@ async function init() {
   document.getElementById('authModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeAuthModal(); });
   document.getElementById('portfolioModal').addEventListener('click', e => { if (e.target === e.currentTarget) closePortfolioModal(); });
   document.getElementById('resetModal').addEventListener('click', e => { if (e.target === e.currentTarget) document.getElementById('resetModal').classList.remove('show'); });
-  // US-239: Enter key on manual ticker input
-  document.getElementById('manualTickerInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') manualLookup(); });
   // Show cookie/LGPD consent banner if not yet accepted
   if (!localStorage.getItem('momentum_consent')) {
     const banner = document.getElementById('cookieBanner');
@@ -5910,11 +5983,11 @@ init();
   </button>
 </nav>
 
-<div id="onboardingModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;padding:16px">
-  <div style="background:var(--surface);border-radius:16px;max-width:480px;width:100%;padding:32px;position:relative;max-height:90vh;overflow-y:auto">
-    <div style="font-size:36px;text-align:center;margin-bottom:16px">🚀</div>
+<div id="onboardingModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.88);align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--bg-0,#0f1b2d);border:1px solid var(--line);border-radius:16px;max-width:480px;width:100%;padding:32px;position:relative;max-height:90vh;overflow-y:auto">
+    <div style="font-size:36px;text-align:center;margin-bottom:16px">📊</div>
     <h2 style="font-family:var(--font-display);font-size:24px;font-weight:700;text-align:center;margin:0 0 8px">Bem-vindo ao Momentum!</h2>
-    <p style="color:var(--ink-3);text-align:center;font-size:14px;margin:0 0 24px">Veja o que você pode fazer:</p>
+    <p style="color:var(--ink-3);text-align:center;font-size:14px;margin:0 0 20px">Simulador educacional de análise técnica de ações.</p>
     <div style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.25);border-radius:8px;padding:12px 16px;margin:0 0 20px;display:flex;align-items:center;gap:10px">
       <span style="font-size:1.2rem">🔒</span>
       <span style="color:var(--ink-2);font-size:.9rem" data-onboarding-safety></span>
@@ -5922,21 +5995,22 @@ init();
     <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:28px">
       <div style="display:flex;gap:12px;align-items:flex-start">
         <span style="font-size:22px;flex-shrink:0">📡</span>
-        <div><strong style="color:var(--ink)">Passo 1 — Varra o mercado</strong><br><span style="font-size:13px;color:var(--ink-3)">Clique em "Varrer Agora" para analisar as ações. O Momentum calcula RSI, MACD, ADX e exibe um sinal: Compra, Aguardar ou Venda.</span></div>
+        <div><strong style="color:var(--ink)">Passo 1 — Simule uma varredura</strong><br><span style="font-size:13px;color:var(--ink-3)">Clique em "Varrer" para simular análise técnica. O app calcula RSI, MACD, ADX e exibe um sinal educacional: Alta Convicção, Monitorar, Aguardar ou Venda. Nenhuma operação real é realizada.</span></div>
       </div>
       <div style="display:flex;gap:12px;align-items:flex-start">
         <span style="font-size:22px;flex-shrink:0">⭐</span>
-        <div><strong style="color:var(--ink)">Passo 2 — Acompanhe oportunidades</strong><br><span style="font-size:13px;color:var(--ink-3)">Clique ⭐ em qualquer ação para adicioná-la aos Acompanhados. Veja P&L%, VAR%, MACD e ADX em tempo real.</span></div>
+        <div><strong style="color:var(--ink)">Passo 2 — Rastreie sinais simulados</strong><br><span style="font-size:13px;color:var(--ink-3)">Clique ⭐ em qualquer ação para simulação de rastreamento. Acompanhe P&L% simulado, variação e indicadores — como um laboratório de investimentos.</span></div>
       </div>
       <div style="display:flex;gap:12px;align-items:flex-start">
         <span style="font-size:22px;flex-shrink:0">💼</span>
-        <div><strong style="color:var(--ink)">Passo 3 — Simule uma operação</strong><br><span style="font-size:13px;color:var(--ink-3)">Vá em Carteira e adicione uma compra simulada. Acompanhe seu resultado sem arriscar dinheiro real.</span></div>
+        <div><strong style="color:var(--ink)">Passo 3 — Monte uma carteira simulada</strong><br><span style="font-size:13px;color:var(--ink-3)">Em Carteira, adicione compras simuladas com capital fictício. Veja o resultado teórico sem qualquer risco financeiro real.</span></div>
       </div>
       <div style="display:flex;gap:12px;align-items:flex-start">
         <span style="font-size:22px;flex-shrink:0">📚</span>
-        <div><strong style="color:var(--ink)">Passo 4 — Aprenda os indicadores</strong><br><span style="font-size:13px;color:var(--ink-3)">Vá em Educação para entender RSI, MACD, ADX, DARF, CDB/CDI e mais. Inclui o módulo <strong>🎯 Sinal Momentum</strong> — como o score de 0 a 6.0 é calculado — e <strong>🏦 CDB e CDI</strong> — renda fixa bancária explicada.</span></div>
+        <div><strong style="color:var(--ink)">Passo 4 — Aprenda análise técnica</strong><br><span style="font-size:13px;color:var(--ink-3)">Em Aulas, explore RSI, MACD, ADX, regimes de mercado, DARF e mais — 16 módulos educacionais com exemplos práticos do mercado brasileiro.</span></div>
       </div>
     </div>
+    <div style="border-top:1px solid var(--line);padding-top:12px;margin-bottom:16px;font-size:11px;color:var(--ink-4);text-align:center">⚠ Simulação educacional · Dados para fins didáticos · Não constitui recomendação de investimento</div>
     <div style="display:flex;gap:12px">
       <button onclick="completeOnboarding()" style="flex:1;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px">Começar agora →</button>
       <button onclick="dismissOnboarding()" style="padding:12px 16px;background:transparent;color:var(--ink-3);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px">Ver depois</button>
@@ -5982,9 +6056,9 @@ init();
           <td style="text-align:center;padding:8px">✅</td>
         </tr>
         <tr>
-          <td style="padding:8px;color:var(--ink-1)">Cursos de análise técnica (16 aulas)</td>
-          <td style="text-align:center;padding:8px">✅</td>
-          <td style="text-align:center;padding:8px">✅</td>
+          <td style="padding:8px;color:var(--ink-1)">Cursos de análise técnica</td>
+          <td style="text-align:center;padding:8px;color:var(--ink-3);font-size:12px">1 aula</td>
+          <td style="text-align:center;padding:8px;font-size:12px;color:var(--buy);font-weight:600">Curso completo</td>
         </tr>
       </tbody>
     </table>

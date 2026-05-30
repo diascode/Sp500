@@ -4448,6 +4448,200 @@ Você é responsável por suas próprias decisões de investimento.
 
 ---
 
+### US-292 — Remover "MOMENTUM · v5.0 · dados ao vivo do mercado" do footer
+
+**Como** produto educacional,
+**Quero** remover a linha de versão/tagline do footer —
+**Para que** o app não transmita que provê dados em tempo real, criando expectativa incorreta nos usuários.
+
+**O que muda:**
+- `#footerVersion` div: ocultado (display:none)
+- i18n.js: `footer_version` esvaziado em EN e PT
+
+**Acceptance Criteria:**
+- [ ] Texto "MOMENTUM · v5.0 · dados ao vivo do mercado" não aparece em nenhum idioma
+- [ ] Footer disclaimer CVM mantido intacto
+
+**Sprint:** 46 · **Effort:** 0.25h · **Priority:** 🟡 Medium · **Epic:** 59
+
+---
+
+### US-293 — Prevenir Múltiplas Assinaturas Stripe para o Mesmo Usuário
+
+**Como** operador da plataforma,
+**Quero** garantir que um usuário não possa criar mais de uma assinatura Stripe ativa —
+**Para que** evitemos cobranças duplicadas e inconsistências entre o estado local e o Stripe.
+
+**O que muda no servidor (`/api/stripe/create-checkout`):**
+1. Verificar `user.stripeSubId && user.subStatus === 'active'` → retornar `409 { alreadySubscribed: true }` em vez de criar nova sessão
+2. Se o usuário já tem `stripeCustomerId`, passar `customer: stripeCustomerId` (evita duplicação de customer no Stripe)
+
+**O que muda no frontend (`upgradeToPro()`):**
+- Se a resposta for `alreadySubscribed: true`, redirecionar ao Stripe Customer Portal
+
+**Acceptance Criteria:**
+- [ ] Usuário com sub ativa não consegue abrir nova sessão de checkout
+- [ ] Usuário com `stripeCustomerId` reutiliza o mesmo customer no Stripe
+- [ ] Frontend trata o 409 redirecionando ao portal sem erro visível
+
+**Sprint:** 46 · **Effort:** 0.5h · **Priority:** 🔴 High · **Epic:** 55
+
+---
+
+### US-294 — Bug: "Minha Assinatura" mistura com tela "Varrer o mercado"
+
+**Como** usuário, ao clicar em "Minha Assinatura", quero ver apenas o painel de assinatura, sem o cabeçalho de varredura atrás.
+
+**Root cause:** `renderBillingView()` escrevia no `#dashboard` mas não escondia `#scanHeader` nem `#resultsGrid`.
+
+**Fix:** Adicionar `scanHdr.style.display = 'none'` e `resultsGrid.style.display = 'none'` no início de `renderBillingView()`.
+
+**Sprint:** 47 · **Effort:** 0.25h · **Priority:** 🔴 High · **Epic:** 60
+
+---
+
+### US-295 — Bug Mobile: aba "Histórico" cortada no menu de tabs
+
+**Como** usuário mobile, quero ver todas as 4 abas (Sinais, Lista, Padrões, Histórico) completas na barra de navegação.
+
+**Root cause:** `.seg { overflow:hidden }` cortava o 4º botão em viewports ≤ 375px.
+
+**Fix:** Reduzir `font-size` e `padding` das `.seg-btn` em telas estreitas; adicionar `overflow-x:auto` no `#homeModesSeg` abaixo de 420px.
+
+**Sprint:** 47 · **Effort:** 0.25h · **Priority:** 🔴 High · **Epic:** 60
+
+---
+
+### US-296 — Bug Mobile: header do card de ação corta preço e badge
+
+**Como** usuário mobile, quero ver o ticker, preço e badge de sinal sem corte na tela de detalhe de ação.
+
+**Root cause:** Font-size fixo 32px + padding lateral de 32px ultrapassava 375px de viewport.
+
+**Fix:** Mudar font-size para `clamp(18px, 5vw, 32px)` e padding lateral do container para `var(--s-4)`.
+
+**Sprint:** 47 · **Effort:** 0.25h · **Priority:** 🔴 High · **Epic:** 60
+
+---
+
+### US-297 — Bug: "Assinar Pro" não redireciona para o checkout Stripe
+
+**Como** usuário free, ao clicar "Assinar Pro", quero ser redirecionado ao Stripe Checkout.
+
+**Root cause:** Guard de assinatura duplicada verificava `stripeSubId && subStatus=active` sem checar `tier=pro`. Usuários free com dados Stripe obsoletos (de teste) eram bloqueados e caíam no modal de upgrade.
+
+**Fix:** Adicionar `user.tier === 'pro'` à condição do guard. Somente usuários já Pro com sub ativa ficam fora do checkout.
+
+**Sprint:** 47 · **Effort:** 0.25h · **Priority:** 🔴 High · **Epic:** 55
+
+---
+
+### US-298 — UX: Modal "Bem-vindo ao Momentum!" muito transparente e com linguagem não-educacional
+
+**Como** produto educacional, quero que o modal de boas-vindas tenha fundo opaco e texto que deixe claro que o app é um simulador.
+
+**Fix:**
+- Overlay: `rgba(0,0,0,0.7)` → `rgba(0,0,0,0.88)`
+- Card: `var(--surface)` → `var(--bg-0,#0f1b2d)` + borda
+- Subtítulo: "Veja o que você pode fazer:" → "Simulador educacional de análise técnica de ações."
+- Passos reescritos com linguagem de simulação (sem "compra real", "Compra/Venda" → "sinal educacional")
+- Adicionado disclaimer CVM abaixo dos passos
+
+**Sprint:** 47 · **Effort:** 0.5h · **Priority:** 🔴 High · **Epic:** 59
+
+---
+
+### US-299 — UX Mobile: Accordion no menu de Primeiros Passos
+
+**Como** usuário mobile, ao acessar "Primeiros Passos", quero ver os módulos do curso colapsados e expandir apenas o que me interessa — sem precisar rolar por todos os tópicos de uma vez.
+
+**Problema atual:** A sidebar do curso no mobile vira uma nuvem de pills (flex-wrap) com todos os 22 tópicos visíveis de uma vez. Requer scroll longo antes mesmo de ver o conteúdo.
+
+**O que muda:**
+- Desktop: sem mudança (sidebar vertical fixa de 200px, totalmente visível)
+- Mobile (≤768px): sidebar vira um accordion
+  - Cada módulo mostra: `ícone + nome + X/Y tópicos concluídos + seta ▾`
+  - O módulo do tópico atual fica expandido automaticamente
+  - Outros módulos ficam colapsados
+  - Clicar no cabeçalho expande/colapsa o módulo
+  - Tópicos dentro de cada módulo mantêm os status ✅/○ e o botão de navegação
+
+**Acceptance Criteria:**
+- [ ] Desktop layout inalterado
+- [ ] Mobile: apenas 1 módulo aberto por padrão (o do tópico atual)
+- [ ] Contagem "X/Y" visível no cabeçalho do módulo
+- [ ] Seta rotaciona ao expandir
+- [ ] Tópico ativo visível sem scroll adicional
+
+**Sprint:** 48 · **Effort:** 1h · **Priority:** 🔴 High · **Epic:** 60
+
+---
+
+### US-300 — Remover bloco "CAPITAL" do Simulador
+
+**Como** produto educacional, quero remover o bloco de capital do simulador que exibe:
+```
+CAPITAL / R$ 4.900,00 / Posições: R$ 0,00 (0 abertas) / Caixa (CDI): ... / Tamanho por posição: ...
+```
+pois esses dados são sempre zerados/estáticos no simulador de padrões (não há carteira real) e criam confusão.
+
+**Fix:** Remover o bloco `// US-225: Capital panel` do `renderSimulator()`.
+
+**Acceptance Criteria:**
+- [ ] Bloco CAPITAL não aparece no simulador
+- [ ] Restante do simulador funciona normalmente
+
+**Sprint:** 48 · **Effort:** 0.25h · **Priority:** 🟡 Medium · **Epic:** 61
+
+---
+
+### US-301 — Remover "Busca Manual" da tela principal
+
+**Como** produto, quero remover o campo "Buscar ativo... ex: PETR4" + botão "Analisar" da tela principal — o recurso não está bem integrado na UX atual e polui o cabeçalho da varredura.
+
+**Fix:**
+- Remover o div `#manualLookupRow` e `#manualLookupResult` do HTML
+- Remover a função `manualLookup()` do JS
+- Remover o event listener de keydown no `manualTickerInput`
+
+**Acceptance Criteria:**
+- [ ] Campo de busca manual não aparece na tela de sinais
+- [ ] Nenhum erro de JS relacionado a `manualLookup`
+
+**Sprint:** 48 · **Effort:** 0.25h · **Priority:** 🟡 Medium · **Epic:** 61
+
+---
+
+### US-302 — Educação: bloquear conteúdo no plano gratuito (gate por tier)
+
+**Como** produto, quero que apenas o tópico "Por que investir" esteja disponível no plano gratuito — todos os outros tópicos de educação exigem assinatura Pro — para aumentar a conversão e reforçar o valor da assinatura.
+
+**Contexto:**
+O curso atualmente tem 22+ tópicos cobrindo fundamentos, análise técnica, estratégia, impostos e renda fixa. Usuários gratuitos não deveriam ter acesso irrestrito ao curso completo.
+
+**Regra:**
+- `FREE_EDU_TOPICS = ['why']` — constante que controla quais IDs de tópico são acessíveis no tier gratuito
+- Usuários Pro e Admin têm acesso irrestrito a todos os tópicos
+
+**Behavior:**
+- Ao clicar num tópico bloqueado no sidebar: exibe modal de upgrade (não navega)
+- Ao acessar `showEducationView()` como usuário gratuito: inicializa no tópico `'why'` se o tópico atual estiver bloqueado
+- Sidebar: tópicos bloqueados exibem ícone 🔒 e texto dimmed (`color:var(--ink-4)`)
+- Painel de conteúdo: quando tópico bloqueado está selecionado, exibe card de lock screen com botão "Assinar Pro"
+- Modal de upgrade: linha "Cursos de análise técnica" mostra `1 aula` (free) vs `Curso completo` (Pro)
+
+**Acceptance Criteria:**
+- [ ] Usuário gratuito vê apenas "Por que investir" desbloqueado; todos os outros têm 🔒
+- [ ] Clicar em tópico bloqueado abre modal de upgrade
+- [ ] Ao entrar na tela Primeiros Passos, usuário gratuito é direcionado ao tópico 'why'
+- [ ] Painel de conteúdo mostra lock screen para tópicos bloqueados
+- [ ] Modal de upgrade: free = "1 aula", Pro = "Curso completo"
+- [ ] Usuário Pro vê todos os tópicos normalmente, sem bloqueio
+
+**Sprint:** 49 · **Effort:** 1.5h · **Priority:** 🔴 High · **Epic:** 62
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -4480,5 +4674,9 @@ Você é responsável por suas próprias decisões de investimento.
 | 43 | 58 | US-275–279, US-286–287 | Conformidade Legal: CVM disclaimer, BRL verification, SQLite spike, NFS-e spike, LGPD retention, Termos de Uso, Política de Privacidade LGPD | 📋 Planned |
 | 44 | 59 | US-280–285 | CVM Signal Redesign: remove recommendation labels, rewrite Por Que as raw data, reformulate price targets, reposition backtest disclaimers, market regime as filter, CVM non-registration disclosure | 📋 Planned |
 | 45 | 55, 56, 59 | US-288–291 | Bug fixes + UX polish: tier upgrade fallback, billing view fix, modal opacity, education-first copy | 📋 Planned |
+| 46 | 55, 59 | US-292–293 | Stripe hardening: remove footer version tagline, prevent duplicate subscriptions | 📋 Planned |
+| 47 | 60 | US-294–298 | UI Bug Fixes: billing screen overlap, mobile tab overflow, mobile stock header overflow, checkout not redirecting, onboarding modal opacity + simulation copy | 📋 Planned |
+| 48 | 60, 61 | US-299–301 | UX Cleanup: Primeiros Passos mobile accordion, remove CAPITAL block, remove Busca Manual | 📋 Planned |
+| 49 | 62 | US-302 | Education Gating: free tier limited to "Por que investir"; Pro required for all other topics | 📋 Planned |
 
 *Completed sprints → USER_STORIES_COMPLETED.md*

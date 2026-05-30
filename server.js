@@ -416,6 +416,11 @@ async function handleRequest(req, res) {
       const safe = users.map(u => ({
         id: u.id, email: u.email, tier: u.tier, createdAt: u.createdAt,
         subscriptionEnd: u.subscriptionEnd,
+        stripeSubId: u.stripeSubId || null,
+        subStatus: u.subStatus || null,
+        cancelAtPeriodEnd: u.cancelAtPeriodEnd || false,
+        failedPaymentCount: u.failedPaymentCount || 0,
+        paymentHistory: (u.paymentHistory || []).slice(-6).reverse(),
         isSubscribed: u.tier === 'pro' && u.subscriptionEnd && new Date(u.subscriptionEnd) > new Date(),
       }));
       const stats = {
@@ -467,6 +472,74 @@ async function handleRequest(req, res) {
       return sendJSON(res, 200, { ok: true, email: targetEmail, tier: targetUser.tier, subscriptionEnd: targetUser.subscriptionEnd });
     }
 
+    if (pathname === '/api/admin/revenue' && req.method === 'GET') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
+      const now = new Date();
+      const PRO_PRICE_BRL = 29.90;
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const activeProUsers = users.filter(u =>
+        u.tier === 'pro' && u.subscriptionEnd && new Date(u.subscriptionEnd) > now && u.subStatus === 'active'
+      );
+      const cancelPending = users.filter(u => u.cancelAtPeriodEnd === true);
+      const withFailed = users.filter(u => (u.failedPaymentCount || 0) > 0);
+      const newThisMonth = users.filter(u => {
+        const paid = (u.paymentHistory || []).filter(p => p.status === 'paid');
+        if (!paid.length) return false;
+        const first = paid.sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+        return new Date(first.date) >= startOfMonth;
+      });
+      const totalRevenueCents = users.reduce((acc, u) =>
+        acc + (u.paymentHistory || []).filter(p => p.status === 'paid').reduce((s, p) => s + (p.amount || 0), 0), 0);
+      return sendJSON(res, 200, {
+        mrr: activeProUsers.length * PRO_PRICE_BRL,
+        activeSubscribers: activeProUsers.length,
+        newThisMonth: newThisMonth.length,
+        churnPending: cancelPending.length,
+        failedPayments: withFailed.length,
+        totalRevenueCents,
+      });
+    }
+
+    if (pathname === '/api/admin/cancel-subscription' && req.method === 'POST') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
+      if (!stripe) return sendError(res, 503, 'Stripe not configured');
+      const body = await readBody(req);
+      const targetEmail = (body.email || '').toLowerCase();
+      const targetUser = findUser(targetEmail);
+      if (!targetUser) return sendError(res, 404, 'User not found');
+      if (!targetUser.stripeSubId) return sendError(res, 400, 'No Stripe subscription found');
+      try {
+        await stripe.subscriptions.update(targetUser.stripeSubId, { cancel_at_period_end: true });
+        targetUser.cancelAtPeriodEnd = true;
+        saveUsers(users);
+        return sendJSON(res, 200, { ok: true, email: targetEmail });
+      } catch (e) { return sendError(res, 500, 'Stripe error: ' + e.message); }
+    }
+
+    if (pathname === '/api/admin/extend-subscription' && req.method === 'POST') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
+      const body = await readBody(req);
+      const targetEmail = (body.email || '').toLowerCase();
+      const days = parseInt(body.days) || 30;
+      if (days < 1 || days > 90) return sendError(res, 400, 'days must be 1–90');
+      const targetUser = findUser(targetEmail);
+      if (!targetUser) return sendError(res, 404, 'User not found');
+      let base = targetUser.subscriptionEnd ? new Date(targetUser.subscriptionEnd) : new Date();
+      if (base < new Date()) base = new Date();
+      base.setDate(base.getDate() + days);
+      targetUser.subscriptionEnd = base.toISOString();
+      if (!targetUser.auditLog) targetUser.auditLog = [];
+      targetUser.auditLog.push({ action: 'extend_subscription', days, by: authUser.email, at: new Date().toISOString() });
+      saveUsers(users);
+      return sendJSON(res, 200, { ok: true, email: targetEmail, subscriptionEnd: targetUser.subscriptionEnd, days });
+    }
+
     // ─── FEATURE FLAGS ───────────────────────────────────────────
     if (pathname === '/api/feature-flags' && req.method === 'GET') {
       return sendJSON(res, 200, featureFlags);
@@ -493,18 +566,33 @@ async function handleRequest(req, res) {
       if (!stripe) return sendError(res, 503, 'Stripe not configured');
       const authUser = getAuthUser(req);
       if (!authUser) return sendError(res, 401, 'Not authenticated');
+      const user = findUser(authUser.email);
+      // Guard: only block if user is already Pro AND has an active Stripe sub
+      if (user && user.tier === 'pro' && user.stripeSubId && user.subStatus === 'active') {
+        return sendJSON(res, 200, { alreadySubscribed: true });
+      }
       const priceId = ENV.STRIPE_PRICE_PRO_MONTHLY;
       if (!priceId) return sendError(res, 500, 'STRIPE_PRICE_PRO_MONTHLY not set');
+      // Build redirect base URL from the request host so mobile (LAN IP) and desktop work
+      const reqProto = req.headers['x-forwarded-proto'] || 'http';
+      const reqHost = req.headers.host || new URL(ENV.APP_URL).host;
+      const baseUrl = `${reqProto}://${reqHost}`;
       try {
-        const session = await stripe.checkout.sessions.create({
+        const sessionParams = {
           mode: 'subscription',
           payment_method_types: ['card'],
           line_items: [{ price: priceId, quantity: 1 }],
-          customer_email: authUser.email,
-          success_url: ENV.APP_URL + '/?subscription=success&session_id={CHECKOUT_SESSION_ID}',
-          cancel_url: ENV.APP_URL + '/?subscription=canceled',
+          success_url: baseUrl + '/?subscription=success&session_id={CHECKOUT_SESSION_ID}',
+          cancel_url: baseUrl + '/?subscription=canceled',
           metadata: { userId: String(authUser.id) },
-        });
+        };
+        // Reuse existing Stripe customer to avoid duplicates
+        if (user && user.stripeCustomerId) {
+          sessionParams.customer = user.stripeCustomerId;
+        } else {
+          sessionParams.customer_email = authUser.email;
+        }
+        const session = await stripe.checkout.sessions.create(sessionParams);
         return sendJSON(res, 200, { url: session.url });
       } catch (e) { return sendError(res, 500, 'Stripe error: ' + e.message); }
     }
@@ -515,8 +603,11 @@ async function handleRequest(req, res) {
       if (!authUser) return sendError(res, 401, 'Not authenticated');
       const user = findUser(authUser.email);
       if (!user || !user.stripeCustomerId) return sendError(res, 400, 'No active subscription');
+      const reqProto = req.headers['x-forwarded-proto'] || 'http';
+      const reqHost = req.headers.host || new URL(ENV.APP_URL).host;
+      const baseUrl = `${reqProto}://${reqHost}`;
       try {
-        const session = await stripe.billingPortal.sessions.create({ customer: user.stripeCustomerId, return_url: ENV.APP_URL + '/' });
+        const session = await stripe.billingPortal.sessions.create({ customer: user.stripeCustomerId, return_url: baseUrl + '/' });
         return sendJSON(res, 200, { url: session.url });
       } catch (e) { return sendError(res, 500, 'Stripe error: ' + e.message); }
     }
