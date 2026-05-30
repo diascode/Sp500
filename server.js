@@ -501,7 +501,7 @@ async function handleRequest(req, res) {
           payment_method_types: ['card'],
           line_items: [{ price: priceId, quantity: 1 }],
           customer_email: authUser.email,
-          success_url: ENV.APP_URL + '/?subscription=success',
+          success_url: ENV.APP_URL + '/?subscription=success&session_id={CHECKOUT_SESSION_ID}',
           cancel_url: ENV.APP_URL + '/?subscription=canceled',
           metadata: { userId: String(authUser.id) },
         });
@@ -518,6 +518,31 @@ async function handleRequest(req, res) {
       try {
         const session = await stripe.billingPortal.sessions.create({ customer: user.stripeCustomerId, return_url: ENV.APP_URL + '/' });
         return sendJSON(res, 200, { url: session.url });
+      } catch (e) { return sendError(res, 500, 'Stripe error: ' + e.message); }
+    }
+
+    if (pathname === '/api/stripe/verify-session') {
+      if (!stripe) return sendError(res, 503, 'Stripe not configured');
+      const authUserReq = getAuthUser(req);
+      if (!authUserReq) return sendError(res, 401, 'Not authenticated');
+      const sessionId = new URL('http://x' + req.url).searchParams.get('session_id');
+      if (!sessionId) return sendError(res, 400, 'session_id required');
+      try {
+        const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ['subscription'] });
+        if (session.payment_status === 'paid' && session.subscription) {
+          const user = findUser(authUserReq.email);
+          if (user) {
+            const sub = session.subscription;
+            user.tier = 'pro';
+            user.stripeCustomerId = session.customer;
+            user.stripeSubId = sub.id;
+            user.subStatus = sub.status;
+            user.cancelAtPeriodEnd = sub.cancel_at_period_end;
+            user.subscriptionEnd = new Date(sub.current_period_end * 1000).toISOString();
+            saveUsers(users);
+          }
+        }
+        return sendJSON(res, 200, { ok: true, status: session.payment_status });
       } catch (e) { return sendError(res, 500, 'Stripe error: ' + e.message); }
     }
 

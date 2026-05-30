@@ -84,7 +84,7 @@
 </header>
 
 <div id="upgradeBanner" style="display:none;background:linear-gradient(90deg,rgba(var(--primary-rgb,78,121,255),0.12),rgba(var(--primary-rgb,78,121,255),0.06));border-bottom:1px solid rgba(var(--primary-rgb,78,121,255),0.2);padding:8px 16px;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center">
-  <span style="font-size:13px;color:var(--ink-1)">⭐ Desbloqueie o <strong>Momentum Pro</strong> — rastreamento ilimitado + histórico completo</span>
+  <span style="font-size:13px;color:var(--ink-1)">📊 Desbloqueie o <strong>Momentum Pro</strong> — simulação ilimitada + 16 aulas de análise técnica</span>
   <button class="btn primary" onclick="showUpgradeModal()" style="font-size:11px;padding:4px 12px;white-space:nowrap">Conhecer o Pro</button>
   <button onclick="dismissUpgradeBanner()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:16px;line-height:1;padding:0 4px" title="Fechar">×</button>
 </div>
@@ -798,8 +798,13 @@ function closeUpgradeModal() {
 
 function showBillingView() {
   document.getElementById('userDropdown').style.display = 'none';
-  const container = document.getElementById('dashboard');
   if (!authUser) { showAuthModal(); return; }
+  state.showTracked = false;
+  state.showPortfolio = false;
+  state.showSimulator = false;
+  state.showUniverse = false;
+  const container = document.getElementById('dashboard');
+  container.style.display = 'block';
 
   const isPro = authUser.tier === 'pro' || authUser.tier === 'admin';
   const history = authUser.paymentHistory || [];
@@ -5722,8 +5727,15 @@ async function init() {
   // Handle ?subscription=success/canceled from Stripe Checkout return
   const subResult = urlParams.get('subscription');
   if (subResult === 'success') {
+    const sessionId = urlParams.get('session_id');
     history.replaceState({}, '', window.location.pathname);
-    checkAuth(); // refresh tier from server
+    if (sessionId) {
+      fetch('/api/stripe/verify-session?session_id=' + encodeURIComponent(sessionId), {
+        headers: { 'Authorization': 'Bearer ' + getToken() }
+      }).finally(() => checkAuth());
+    } else {
+      checkAuth();
+    }
     showToast('🎉 Bem-vindo ao Pro! Seu acesso foi ativado.', true, 5000);
   } else if (subResult === 'canceled') {
     history.replaceState({}, '', window.location.pathname);
@@ -5924,50 +5936,51 @@ init();
   </div>
 </div>
 
-<div id="upgradeModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeUpgradeModal()">
-  <div style="background:var(--surface);border-radius:16px;max-width:460px;width:100%;padding:32px;position:relative;max-height:90vh;overflow-y:auto">
+<div id="upgradeModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.88);align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeUpgradeModal()">
+  <div style="background:var(--bg-0,#0f1b2d);border:1px solid var(--line);border-radius:16px;max-width:460px;width:100%;padding:32px;position:relative;max-height:90vh;overflow-y:auto">
     <button onclick="closeUpgradeModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;cursor:pointer;font-size:20px;color:var(--ink-3)">×</button>
     <div style="text-align:center;margin-bottom:20px">
-      <div style="font-size:40px;margin-bottom:8px">⭐</div>
-      <h2 style="font-family:var(--font-mono);color:var(--primary);font-size:18px;margin-bottom:4px">Momentum Pro</h2>
-      <p style="font-size:13px;color:var(--ink-2)">Desbloqueie o potencial completo da plataforma</p>
+      <div style="font-size:40px;margin-bottom:8px">📊</div>
+      <h2 style="font-family:var(--font-mono);color:var(--primary);font-size:17px;margin-bottom:4px">Momentum Pro — Plataforma Educacional</h2>
+      <p style="font-size:13px;color:var(--ink-2)">Ferramentas completas de aprendizado em análise técnica</p>
     </div>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px">
+    <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:13px">
       <thead>
         <tr>
-          <th style="text-align:left;padding:8px;border-bottom:1px solid var(--line);color:var(--ink-3);font-weight:500">Recurso</th>
-          <th style="text-align:center;padding:8px;border-bottom:1px solid var(--line);color:var(--ink-3);font-weight:500;width:80px">Free</th>
-          <th style="text-align:center;padding:8px;border-bottom:1px solid var(--line);color:var(--primary);font-weight:600;width:80px">Pro</th>
+          <th style="text-align:left;padding:8px;border-bottom:1px solid var(--line);color:var(--ink-3);font-weight:500">Ferramenta educacional</th>
+          <th style="text-align:center;padding:8px;border-bottom:1px solid var(--line);color:var(--ink-3);font-weight:500;width:70px">Free</th>
+          <th style="text-align:center;padding:8px;border-bottom:1px solid var(--line);color:var(--primary);font-weight:600;width:70px">Pro</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td style="padding:8px;color:var(--ink-1)">Ações rastreadas</td>
+          <td style="padding:8px;color:var(--ink-1)">Simulação de rastreamento de sinais</td>
           <td style="text-align:center;padding:8px;color:var(--ink-3)">5</td>
           <td style="text-align:center;padding:8px;color:var(--buy);font-weight:600">∞</td>
         </tr>
-        <tr style="background:rgba(var(--primary-rgb,78,121,255),0.04)">
-          <td style="padding:8px;color:var(--ink-1)">Scanner B3 completo</td>
+        <tr style="background:rgba(var(--primary-rgb,78,121,255),0.06)">
+          <td style="padding:8px;color:var(--ink-1)">Scanner educacional B3 (140 ações)</td>
           <td style="text-align:center;padding:8px">✅</td>
           <td style="text-align:center;padding:8px">✅</td>
         </tr>
         <tr>
-          <td style="padding:8px;color:var(--ink-1)">Histórico de operações</td>
+          <td style="padding:8px;color:var(--ink-1)">Histórico de trades simulados</td>
           <td style="text-align:center;padding:8px;color:var(--ink-3)">—</td>
           <td style="text-align:center;padding:8px">✅</td>
         </tr>
-        <tr style="background:rgba(var(--primary-rgb,78,121,255),0.04)">
-          <td style="padding:8px;color:var(--ink-1)">Carteira com múltiplos ativos</td>
+        <tr style="background:rgba(var(--primary-rgb,78,121,255),0.06)">
+          <td style="padding:8px;color:var(--ink-1)">Simulação de carteira de investimentos</td>
           <td style="text-align:center;padding:8px;color:var(--ink-3)">—</td>
           <td style="text-align:center;padding:8px">✅</td>
         </tr>
         <tr>
-          <td style="padding:8px;color:var(--ink-1)">Módulos de educação</td>
+          <td style="padding:8px;color:var(--ink-1)">Cursos de análise técnica (16 aulas)</td>
           <td style="text-align:center;padding:8px">✅</td>
           <td style="text-align:center;padding:8px">✅</td>
         </tr>
       </tbody>
     </table>
+    <p style="font-size:11px;color:var(--ink-3);text-align:center;margin-bottom:16px;padding:6px 8px;background:rgba(239,83,80,0.06);border-radius:6px">⚠️ Dados para fins educacionais · Não constitui recomendação de investimento</p>
     <div style="text-align:center;margin-bottom:16px">
       <div style="font-size:24px;font-weight:700;color:var(--ink-1);font-family:var(--font-mono)">R$29,90<span style="font-size:14px;font-weight:400;color:var(--ink-3)">/mês</span></div>
       <div style="font-size:11px;color:var(--ink-3);margin-top:4px">Cancele quando quiser · Sem fidelidade</div>

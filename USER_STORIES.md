@@ -4365,6 +4365,89 @@ Você é responsável por suas próprias decisões de investimento.
 
 ---
 
+### US-288 — Bug: Tier não atualiza após pagamento Stripe (fallback sem webhook)
+
+**Como** usuário que completou um pagamento Pro,
+**Quero** que meu plano seja atualizado imediatamente ao retornar ao app —
+**Para que** não precise esperar o webhook chegar para ter acesso Pro.
+
+**Problema:** `STRIPE_WEBHOOK_SECRET` não configurado em sandbox → webhook rejeitado com 503 → `users.json` não atualizado → usuário retorna como Free após pagar.
+
+**Fix:** Adicionar endpoint `GET /api/stripe/verify-session?session_id=xxx` que verifica a sessão diretamente com a API Stripe e atualiza o tier sem depender de webhook. Stripe injeta `{CHECKOUT_SESSION_ID}` na `success_url`.
+
+**Acceptance Criteria:**
+- [ ] `success_url` inclui `&session_id={CHECKOUT_SESSION_ID}`
+- [ ] Endpoint `GET /api/stripe/verify-session` verifica sessão com Stripe e salva tier=pro
+- [ ] Frontend chama verify-session antes de checkAuth() no handler `?subscription=success`
+- [ ] Tier atualiza mesmo sem `STRIPE_WEBHOOK_SECRET` configurado
+
+**Sprint:** 45 · **Effort:** 1h · **Priority:** 🔴 High · **Epic:** 55
+
+---
+
+### US-289 — Bug: "Minha Assinatura" não renderiza ao clicar
+
+**Como** usuário logado,
+**Quero** que "Minha Assinatura" no menu abra a página de faturamento —
+**Para que** eu possa ver meu plano e histórico de pagamentos.
+
+**Problema:** `showBillingView()` escreve no `#dashboard` mas não reseta os flags de estado (`state.showTracked`, `state.showPortfolio`, etc.) nem define `container.style.display = 'block'`, causando que `renderDashboard()` sobrescreva o conteúdo ou o container fique oculto.
+
+**Acceptance Criteria:**
+- [ ] Clicar "Minha Assinatura" abre a página de faturamento consistentemente
+- [ ] Funciona independente da view ativa (Acompanhados, Carteira, etc.)
+- [ ] "Voltar" via renderDashboard() funcional
+
+**Sprint:** 45 · **Effort:** 0.5h · **Priority:** 🔴 High · **Epic:** 56
+
+---
+
+### US-290 — UI: Overlay do modal de upgrade muito transparente
+
+**Como** usuário vendo o modal "Seja Pro",
+**Quero** que o fundo escurecido seja suficientemente opaco —
+**Para que** o modal se destaque claramente do conteúdo por trás.
+
+**Fix:** Aumentar overlay de `rgba(0,0,0,0.7)` para `rgba(0,0,0,0.88)` e garantir que o card do modal use background sólido (sem transparência do tema).
+
+**Acceptance Criteria:**
+- [ ] Overlay ≥ 85% opaco em todos os temas
+- [ ] Card do modal com fundo sólido
+- [ ] Legível em todos os 4 temas (Brasil, Dia, Pop, Calmo)
+
+**Sprint:** 45 · **Effort:** 0.25h · **Priority:** 🟡 Medium · **Epic:** 55
+
+---
+
+### US-291 — Copy: Modal de upgrade com linguagem educacional
+
+**Como** produto com posicionamento educacional,
+**Quero** que o modal de upgrade descreva os recursos como ferramentas de aprendizado —
+**Para que** o usuário entenda que é uma plataforma de simulação e educação, não uma corretora.
+
+**O que muda no modal `#upgradeModal`:**
+
+- Título: "Momentum Pro" → "Momentum Pro — Plataforma Educacional"
+- Subtítulo: "Desbloqueie o potencial completo da plataforma" → "Ferramentas completas de aprendizado em análise técnica"
+- Tabela de recursos:
+  - "Ações rastreadas" → "Simulação de rastreamento de sinais"
+  - "Scanner B3 completo" → "Scanner educacional B3 (140 ações)"
+  - "Histórico de operações" → "Histórico de trades simulados"
+  - "Carteira com múltiplos ativos" → "Simulação de carteira de investimentos"
+  - "Módulos de educação" → "Cursos de análise técnica (16 aulas)"
+- Adicionar nota abaixo da tabela: `⚠️ Dados para fins educacionais · Não constitui recomendação de investimento`
+- Banner de upgrade: "rastreamento ilimitado + histórico completo" → "simulação ilimitada + 16 aulas de análise técnica"
+
+**Acceptance Criteria:**
+- [ ] Nenhuma descrição de recurso implica operações reais de mercado
+- [ ] Nota de disclaimer visível abaixo da tabela
+- [ ] Banner de upgrade atualizado com linguagem educacional
+- [ ] Billing view ("Minha Assinatura") também usa linguagem educacional
+
+**Sprint:** 45 · **Effort:** 0.5h · **Priority:** 🔴 High · **Epic:** 59
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -4396,5 +4479,6 @@ Você é responsável por suas próprias decisões de investimento.
 | 42 | 57 | US-271–274 | Admin Pagamentos: revenue dashboard, payment history, cancel/extend subscription | 📋 Planned |
 | 43 | 58 | US-275–279, US-286–287 | Conformidade Legal: CVM disclaimer, BRL verification, SQLite spike, NFS-e spike, LGPD retention, Termos de Uso, Política de Privacidade LGPD | 📋 Planned |
 | 44 | 59 | US-280–285 | CVM Signal Redesign: remove recommendation labels, rewrite Por Que as raw data, reformulate price targets, reposition backtest disclaimers, market regime as filter, CVM non-registration disclosure | 📋 Planned |
+| 45 | 55, 56, 59 | US-288–291 | Bug fixes + UX polish: tier upgrade fallback, billing view fix, modal opacity, education-first copy | 📋 Planned |
 
 *Completed sprints → USER_STORIES_COMPLETED.md*
