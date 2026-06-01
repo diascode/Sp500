@@ -5013,6 +5013,9 @@ function changeFontSize(d) {
 }
 
 let _eduTopic = 'strategy';
+let _lessonStep = 1;
+let _quizAnswers = {};
+let _quizSubmitted = false;
 
 // ─── PATTERN FINDER ───────────────────────────────────────────────────────
 let _simPattern = null;  // null = all patterns
@@ -5523,6 +5526,319 @@ function updateCourseNavBtn() {
   }
 }
 
+// ─── PRIMEIROS PASSOS — INTERACTIVE LESSON ──────────────────────────────────
+
+const LESSON_QUIZ_DATA = [
+  {
+    q: 'Você guarda R$10.000 em dinheiro na gaveta em 2010. Em 2024, quanto esse dinheiro vale na prática, levando em conta a inflação?',
+    options: ['R$10.000 — o valor não muda, é dinheiro físico', 'R$14.000 — o dinheiro rendeu um pouco parado', 'R$4.900 — a inflação corroeu mais da metade do poder de compra', 'R$8.500 — perdeu um pouco, mas nada grave'],
+    correct: 2,
+    correctFeedback: 'Exatamente! O IPCA acumulou +104% de 2010 a 2024. Seu dinheiro parado perdeu mais da metade do poder de compra real.',
+    wrongFeedback: 'Quase lá! Com o IPCA acumulando +104% em 14 anos, R$10.000 na gaveta equivalem a R$4.900 em poder de compra de 2010.'
+  },
+  {
+    q: 'O que são as chamadas "ações fracionárias" (como PETR4F)?',
+    options: ['Ações de empresas que faliram e valem menos', 'Ações que só grandes investidores podem comprar', 'Frações de ações que permitem investir com pouco dinheiro, como R$50', 'Um tipo de fundo de investimento arriscado'],
+    correct: 2,
+    correctFeedback: 'Isso mesmo! O "F" no final do código indica que é uma fração da ação. Dá para começar com R$50 por mês, sem precisar de grandes quantias.',
+    wrongFeedback: 'Faz sentido pensar assim, mas ações fracionárias são uma porta de entrada para quem está começando! O "F" no código significa que você pode comprar uma fração da ação com R$50.'
+  },
+  {
+    q: 'De 2010 a 2024, qual foi o retorno acumulado aproximado do Ibovespa (Bolsa de Valores brasileira)?',
+    options: ['+50% — um pouco melhor que a poupança', '+90% — igual à poupança no mesmo período', '−30% — a Bolsa caiu no período por causa das crises', '+280% — bem acima da inflação e da poupança'],
+    correct: 3,
+    correctFeedback: 'Perfeito! O Ibovespa acumulou cerca de +280% no período, contra +104% do IPCA e +90% da poupança. Quem investiu na Bolsa mais que triplicou o poder de compra.',
+    wrongFeedback: 'Pode parecer que a Bolsa perde por causa das crises no noticiário, mas o Ibovespa acumulou +280% de 2010 a 2024 — muito acima da poupança (+90%) e da inflação (+104%).'
+  },
+  {
+    q: 'Em março de 2020, a Bolsa despencou por causa da pandemia. O que aconteceu com quem manteve os investimentos e não vendeu?',
+    options: ['Perdeu tudo — a Bolsa nunca se recuperou totalmente', 'Ficou no zero a zero — a Bolsa voltou exatamente ao ponto anterior', 'Recuperou e viu a Bolsa bater novas máximas históricas em 18 meses', 'Precisou esperar 10 anos para recuperar o dinheiro'],
+    correct: 2,
+    correctFeedback: 'Exatamente! Em menos de 18 meses, o mercado não só se recuperou como atingiu novas máximas. Quem ficou quieto viu o patrimônio crescer.',
+    wrongFeedback: 'Quem manteve a calma viu o mercado se recuperar e bater novas máximas em menos de 18 meses. Quem vendeu com medo ficou com o prejuízo no bolso.'
+  },
+  {
+    q: 'Investindo R$500 por mês durante 25 anos, qual é a diferença aproximada entre aplicar em ações (12%/a) versus deixar na poupança (6%/a)?',
+    options: ['Cerca de R$100 mil — é uma diferença pequena no longo prazo', 'Cerca de R$593 mil — os juros compostos fazem enorme diferença', 'Cerca de R$200 mil — a diferença existe mas não é tão relevante', 'Cerca de R$1 milhão — a poupança praticamente não rende nada'],
+    correct: 1,
+    correctFeedback: 'Isso mesmo! R$500/mês por 25 anos a 12%/a chegam a R$940 mil. Na poupança a 6%/a, o resultado seria R$347 mil. Diferença: R$593 mil gerada pelos juros compostos.',
+    wrongFeedback: 'Os juros compostos têm um efeito que a gente subestima. R$500/mês por 25 anos a 12%/a chegam a R$940 mil, contra R$347 mil na poupança. A diferença é de R$593 mil.'
+  },
+  {
+    q: 'Por que governos criar mais dinheiro (como aconteceu durante a pandemia) prejudica quem guarda dinheiro parado?',
+    options: ['Porque o governo pode confiscar o dinheiro guardado quando imprime mais', 'Porque mais dinheiro em circulação eleva os preços, reduzindo o poder de compra de quem não investe', 'Porque bancos cobram taxas extras quando há muita emissão monetária', 'Porque a criação de dinheiro reduz os juros da poupança automaticamente'],
+    correct: 1,
+    correctFeedback: 'Perfeito! Mais dinheiro circulando com a mesma quantidade de bens = preços mais altos = inflação. Quem investe em ativos reais tende a se proteger.',
+    wrongFeedback: 'O mecanismo principal é: mais dinheiro circulando com a mesma quantidade de bens = preços mais altos = inflação. Quem guarda dinheiro parado perde poder de compra.'
+  }
+];
+
+function lessonGoTo(step) {
+  _lessonStep = step;
+  renderEdu();
+  const dash = document.getElementById('dashboard');
+  if (dash) dash.scrollTop = 0;
+  window.scrollTo(0, 0);
+}
+function lessonNext() { lessonGoTo(Math.min(_lessonStep + 1, 5)); }
+function lessonPrev() { lessonGoTo(Math.max(_lessonStep - 1, 1)); }
+
+function selectQuizAnswer(qIdx, aIdx) {
+  _quizAnswers[qIdx] = aIdx;
+  renderEdu();
+}
+function submitQuiz() { _quizSubmitted = true; renderEdu(); }
+function retryQuiz() { _quizAnswers = {}; _quizSubmitted = false; renderEdu(); }
+
+function chartCompoundInterest() {
+  return `<div style="background:#161616;border-radius:10px;padding:16px 16px 12px;margin:var(--s-4) 0">
+    <div style="color:#f0f0f0;font-size:12px;font-weight:700;margin-bottom:2px">O mesmo dinheiro. Uma escolha diferente.</div>
+    <div style="color:#666;font-size:10px;margin-bottom:14px">R$500/mês · 25 anos · simulação hipotética</div>
+    <svg viewBox="0 0 440 165" width="100%" style="overflow:visible;display:block">
+      <style>@keyframes c1g{from{transform:scaleX(0)}to{transform:scaleX(1)}}.c1b{transform-origin:left center;animation:c1g .9s cubic-bezier(.22,1,.36,1) both}@keyframes c1f{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:translateX(0)}}.c1l{animation:c1f .5s ease both}</style>
+      <text x="0" y="20" font-size="11" fill="#888" font-family="system-ui,sans-serif">Poupança ~6%/a</text>
+      <rect x="0" y="27" width="130" height="30" rx="5" fill="#555" class="c1b" style="animation-delay:.1s"/>
+      <text x="135" y="47" font-size="13" fill="#e0e0e0" font-weight="700" font-family="system-ui,sans-serif" class="c1l" style="animation-delay:.65s">R$347.000</text>
+      <text x="0" y="82" font-size="11" fill="#888" font-family="system-ui,sans-serif">Ações ~12%/a</text>
+      <rect x="0" y="89" width="360" height="30" rx="5" fill="#4caf50" class="c1b" style="animation-delay:.3s"/>
+      <text x="365" y="109" font-size="13" fill="#4caf50" font-weight="700" font-family="system-ui,sans-serif" class="c1l" style="animation-delay:.9s">R$940.000</text>
+      <line x1="0" y1="137" x2="440" y2="137" stroke="#2a2a2a" stroke-width="1"/>
+      <text x="0" y="153" font-size="11" fill="#666" font-family="system-ui,sans-serif">Diferença:</text>
+      <text x="58" y="153" font-size="13" fill="#4caf50" font-weight="700" font-family="system-ui,sans-serif">+R$593.000</text>
+      <text x="155" y="153" font-size="10" fill="#444" font-family="system-ui,sans-serif">a mais escolhendo ações</text>
+    </svg>
+    <p style="font-size:10px;color:#555;margin:8px 0 0;line-height:1.4">Exemplo hipotético para fins educacionais. Rentabilidade passada não garante rentabilidade futura. Valores nominais, sem IR ou taxas.</p>
+  </div>`;
+}
+
+function chartRealReturns() {
+  return `<div style="background:#161616;border-radius:10px;padding:16px 16px 12px;margin:var(--s-4) 0">
+    <div style="color:#f0f0f0;font-size:12px;font-weight:700;margin-bottom:2px">Quem venceu a inflação? Brasil 2010–2024</div>
+    <div style="color:#666;font-size:10px;margin-bottom:14px">Retorno nominal acumulado · dados históricos aproximados</div>
+    <svg viewBox="0 0 440 205" width="100%" style="overflow:visible;display:block">
+      <style>@keyframes c2g{from{transform:scaleY(0)}to{transform:scaleY(1)}}.c2b{transform-origin:center bottom;animation:c2g .85s cubic-bezier(.22,1,.36,1) both}@keyframes c2li{from{opacity:0}to{opacity:1}}.c2ln{animation:c2li .6s ease .7s both}</style>
+      <line x1="0" y1="165" x2="440" y2="165" stroke="#2a2a2a" stroke-width="1"/>
+      <line x1="0" y1="107" x2="440" y2="107" stroke="#e8a846" stroke-width="1.5" stroke-dasharray="6 4" class="c2ln"/>
+      <text x="2" y="103" font-size="10" fill="#e8a846" font-family="system-ui,sans-serif" class="c2ln">Inflação IPCA +104%</text>
+      <rect x="40" y="5" width="75" height="160" rx="5" fill="#4caf50" class="c2b" style="animation-delay:.05s"/>
+      <text x="77" y="2" font-size="11" fill="#4caf50" font-weight="700" text-anchor="middle" font-family="system-ui,sans-serif">+280%</text>
+      <rect x="160" y="107" width="75" height="58" rx="5" fill="#e8a84640" class="c2b" style="animation-delay:.2s"/>
+      <text x="197" y="103" font-size="11" fill="#e8a846" font-weight="700" text-anchor="middle" font-family="system-ui,sans-serif">+104%</text>
+      <rect x="280" y="115" width="75" height="50" rx="5" fill="#ef535055" class="c2b" style="animation-delay:.35s"/>
+      <text x="317" y="111" font-size="11" fill="#ef5350" font-weight="700" text-anchor="middle" font-family="system-ui,sans-serif">+90%</text>
+      <text x="317" y="148" font-size="9" fill="#ef535088" text-anchor="middle" font-family="system-ui,sans-serif">abaixo da</text>
+      <text x="317" y="158" font-size="9" fill="#ef535088" text-anchor="middle" font-family="system-ui,sans-serif">inflação ↓</text>
+      <rect x="380" y="157" width="50" height="8" rx="3" fill="#ef535033" class="c2b" style="animation-delay:.5s"/>
+      <text x="405" y="153" font-size="11" fill="#555" font-weight="700" text-anchor="middle" font-family="system-ui,sans-serif">0%</text>
+      <text x="77" y="178" font-size="10" fill="#888" text-anchor="middle" font-family="system-ui,sans-serif">Ibovespa</text>
+      <text x="197" y="178" font-size="10" fill="#888" text-anchor="middle" font-family="system-ui,sans-serif">IPCA</text>
+      <text x="317" y="178" font-size="10" fill="#888" text-anchor="middle" font-family="system-ui,sans-serif">Poupança</text>
+      <text x="405" y="178" font-size="10" fill="#888" text-anchor="middle" font-family="system-ui,sans-serif">Gaveta</text>
+      <text x="77" y="190" font-size="9" fill="#555" text-anchor="middle" font-family="system-ui,sans-serif">(ações)</text>
+      <text x="197" y="190" font-size="9" fill="#555" text-anchor="middle" font-family="system-ui,sans-serif">(inflação)</text>
+      <text x="317" y="190" font-size="9" fill="#ef535066" text-anchor="middle" font-family="system-ui,sans-serif">⚠ perdeu</text>
+      <text x="405" y="190" font-size="9" fill="#555" text-anchor="middle" font-family="system-ui,sans-serif">(dinheiro)</text>
+    </svg>
+    <p style="font-size:10px;color:#555;margin:8px 0 0;line-height:1.4">Dados históricos de 2010 a 2024. Rentabilidade passada não garante rentabilidade futura. Renda variável envolve riscos, incluindo perda do capital investido.</p>
+  </div>`;
+}
+
+function chartCostOfWaiting() {
+  return `<div style="background:#161616;border-radius:10px;padding:16px 16px 12px;margin:var(--s-4) 0">
+    <div style="color:#f0f0f0;font-size:12px;font-weight:700;margin-bottom:2px">Cada ano que passa custa caro.</div>
+    <div style="color:#666;font-size:10px;margin-bottom:14px">R$500/mês · 12%/a · exemplo hipotético</div>
+    <svg viewBox="0 0 440 210" width="100%" style="overflow:visible;display:block">
+      <style>@keyframes c3g{from{transform:scaleY(0)}to{transform:scaleY(1)}}.c3b{transform-origin:center bottom;animation:c3g 1s cubic-bezier(.22,1,.36,1) both}@keyframes c3a{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}.c3ar{animation:c3a .5s ease 1.1s both}</style>
+      <line x1="0" y1="165" x2="440" y2="165" stroke="#2a2a2a" stroke-width="1"/>
+      <rect x="25" y="5" width="110" height="160" rx="6" fill="#4caf50" class="c3b" style="animation-delay:.05s"/>
+      <text x="80" y="2" font-size="12" fill="#4caf50" font-weight="800" text-anchor="middle" font-family="system-ui,sans-serif">R$1.750.000</text>
+      <rect x="165" y="83" width="110" height="82" rx="6" fill="#e8a846" class="c3b" style="animation-delay:.25s"/>
+      <text x="220" y="79" font-size="12" fill="#e8a846" font-weight="800" text-anchor="middle" font-family="system-ui,sans-serif">R$940.000</text>
+      <rect x="305" y="121" width="110" height="44" rx="6" fill="#ef5350" class="c3b" style="animation-delay:.45s"/>
+      <text x="360" y="117" font-size="12" fill="#ef5350" font-weight="800" text-anchor="middle" font-family="system-ui,sans-serif">R$500.000</text>
+      <text x="150" y="47" font-size="10" fill="#ef535099" text-anchor="middle" font-family="system-ui,sans-serif" class="c3ar">−R$810k</text>
+      <line x1="135" y1="83" x2="165" y2="83" stroke="#ef535055" stroke-width="1.5" stroke-dasharray="4 3" class="c3ar"/>
+      <text x="292" y="100" font-size="10" fill="#ef535099" text-anchor="middle" font-family="system-ui,sans-serif" class="c3ar">−R$440k</text>
+      <line x1="275" y1="121" x2="305" y2="121" stroke="#ef535055" stroke-width="1.5" stroke-dasharray="4 3" class="c3ar"/>
+      <text x="80" y="178" font-size="11" fill="#4caf50" font-weight="600" text-anchor="middle" font-family="system-ui,sans-serif">Começa aos 30</text>
+      <text x="220" y="178" font-size="11" fill="#e8a846" font-weight="600" text-anchor="middle" font-family="system-ui,sans-serif">Começa aos 35</text>
+      <text x="360" y="178" font-size="11" fill="#ef5350" font-weight="600" text-anchor="middle" font-family="system-ui,sans-serif">Começa aos 40</text>
+      <text x="80" y="191" font-size="9" fill="#555" text-anchor="middle" font-family="system-ui,sans-serif">30 anos invest.</text>
+      <text x="220" y="191" font-size="9" fill="#555" text-anchor="middle" font-family="system-ui,sans-serif">25 anos invest.</text>
+      <text x="360" y="191" font-size="9" fill="#555" text-anchor="middle" font-family="system-ui,sans-serif">20 anos invest.</text>
+    </svg>
+    <p style="font-size:10px;color:#555;margin:8px 0 0;line-height:1.4">Exemplo hipotético para fins educacionais. Rentabilidade passada não garante rentabilidade futura. Os valores são aproximações com taxa fixa de 12%/a — resultado real depende de mercado e inflação.</p>
+  </div>`;
+}
+
+function renderLessonSection() {
+  const SECTIONS = [
+    {
+      icon: '📉', title: 'Seu Dinheiro Está Encolhendo',
+      hook: 'Você sabia que o dinheiro parado na sua conta perde valor todo ano, mesmo sem você gastar nada?',
+      content: `<p style="font-size:14px;color:var(--ink-2);line-height:1.7;margin-bottom:var(--s-3)">Quando a economia vai mal, bancos centrais criam dinheiro novo — eletronicamente, do nada — e injetam no sistema. Isso aconteceu no mundo inteiro durante a pandemia. No Brasil, a base monetária (M2) cresceu <strong style="color:var(--ink-1)">+68% entre 2019 e 2023</strong>. Mais dinheiro circulando com a mesma quantidade de bens = preços mais altos.</p>
+<p style="font-size:14px;color:var(--ink-2);line-height:1.7;margin-bottom:var(--s-4)">A poupança rendeu cerca de <strong style="color:var(--ink-1)">+90%</strong> de 2010 a 2024. Mas a inflação (IPCA) foi de <strong style="color:#ef5350">+104%</strong>. Quem manteve dinheiro na poupança perdeu poder de compra sem perceber.</p>
+<div style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;padding:14px;margin-bottom:var(--s-3);font-family:var(--font-mono);font-size:12px;line-height:2">
+<span style="color:#e8a846">R$10.000 guardados em 2010</span><br>
+<span style="color:#ef5350">2024: compra o equivalente a R$4.900 de 2010</span><br>
+<span style="color:#555">O dinheiro estava seguro. O poder de compra, não.</span>
+</div>`,
+      chart: 'returns'
+    },
+    {
+      icon: '🏢', title: 'Isso Não É Jogo — É Ser Dono de Empresa',
+      hook: 'Quando você compra uma ação, você não está apostando — você está virando sócio de uma empresa de verdade.',
+      content: `<p style="font-size:14px;color:var(--ink-2);line-height:1.7;margin-bottom:var(--s-3)">Uma ação é um pedaço real de uma empresa: ela tem funcionários, fábricas, clientes e receita. Quando você compra PETR4, você se torna sócio da Petrobras. Quando a empresa vai bem, você vai bem também.</p>
+<div style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;padding:14px;margin-bottom:var(--s-4)">
+  <div style="font-size:11px;color:#666;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">As 3 objeções mais comuns</div>
+  <div style="margin-bottom:10px"><span style="color:#e8a846;font-weight:600">❝ Bolsa é jogo de azar ❞</span><br><span style="font-size:13px;color:var(--ink-3)">Jogo tem valor esperado negativo — a banca sempre ganha. O Ibovespa acumulou +280% em 14 anos. Empresas vendem produtos reais — não são loteria.</span></div>
+  <div style="margin-bottom:10px"><span style="color:#e8a846;font-weight:600">❝ Não tenho dinheiro suficiente ❞</span><br><span style="font-size:13px;color:var(--ink-3)">Com ações fracionárias (ex: PETR4F), você pode começar com R$50/mês. Não existe mínimo. A barreira é psicológica, não financeira.</span></div>
+  <div><span style="color:#e8a846;font-weight:600">❝ O mercado caiu em 2020 ❞</span><br><span style="font-size:13px;color:var(--ink-3)">Sim — e voltou às máximas históricas em 18 meses. Toda crise da história foi seguida por recuperação. Quem precisou vender na hora errada sofreu; quem ficou quieto, ganhou.</span></div>
+</div>
+<p style="font-size:14px;color:var(--ink-2);line-height:1.7">Pense em imóveis: o Ibovespa historicamente dobra em ~10 anos, igual a um bom imóvel. Mas você vende uma ação em dois minutos com três cliques. Vender um apartamento leva meses de papelada. <strong style="color:var(--ink-1)">Ações são como imóveis que você pode comprar e vender com um clique</strong> — sem escritura, corretor ou financiamento.</p>`,
+      chart: null
+    },
+    {
+      icon: '💰', title: 'Começar Com Pouco Já Muda Tudo',
+      hook: 'Você não precisa ser rico para investir — você precisa investir para não continuar sem dinheiro.',
+      content: `<p style="font-size:14px;color:var(--ink-2);line-height:1.7;margin-bottom:var(--s-3)">Na B3, existe um tipo de ação chamada <strong style="color:var(--ink-1)">ação fracionária</strong> — o ticker termina em F (ex: PETR4F, VALE3F). Ela permite comprar menos do que uma ação inteira. Resultado: dá para começar com R$30, R$50, qualquer valor. Não existe mínimo obrigatório.</p>
+<p style="font-size:14px;color:var(--ink-2);line-height:1.7;margin-bottom:var(--s-3)">O segredo dos juros compostos é simples: a diferença de taxa que parece pequena mês a mês vira uma fortuna ao longo de décadas. Veja o que acontece com o mesmo R$500/mês em 25 anos:</p>`,
+      chart: 'compound'
+    },
+    {
+      icon: '⏳', title: 'O Custo de Não Fazer Nada',
+      hook: 'Não investir também é uma escolha — e ela tem um preço que a maioria nunca calcula.',
+      content: `<p style="font-size:14px;color:var(--ink-2);line-height:1.7;margin-bottom:var(--s-3)">As pessoas se preocupam em perder dinheiro investindo. Quase ninguém calcula o custo de não começar. Veja o impacto de esperar apenas 5 ou 10 anos:</p>`,
+      chart: 'waiting',
+      extra: `<p style="font-size:14px;color:var(--ink-2);line-height:1.7;margin-top:var(--s-3)">Quem começa aos 40 em vez dos 30 acumula <strong style="color:#ef5350">71% a menos</strong> — com o mesmo esforço mensal, a mesma taxa. O tempo é o ingrediente mais poderoso dos juros compostos, e ele não volta.</p>
+<div style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;padding:14px;margin-top:var(--s-4)">
+  <div style="font-size:11px;color:#666;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Conteúdo educacional — CVM</div>
+  <p style="font-size:11px;color:#555;margin:0;line-height:1.5">Este conteúdo tem finalidade exclusivamente educacional e informativa. Não constitui recomendação de investimento, consultoria financeira ou oferta de qualquer produto. Rentabilidade passada não garante rentabilidade futura. Todo investimento envolve riscos, incluindo perda do capital investido. Momentum não é corretora ou consultora de valores mobiliários registrada na CVM.</p>
+</div>`
+    }
+  ];
+
+  if (_lessonStep === 5) return renderLessonQuiz();
+
+  const sec = SECTIONS[_lessonStep - 1];
+  let h = '';
+  h += `<div style="font-size:22px;margin-bottom:var(--s-2)">${sec.icon}</div>`;
+  h += `<h3 style="color:var(--ink-1);font-size:18px;margin-bottom:var(--s-3);line-height:1.3">${sec.title}</h3>`;
+  h += `<p style="font-size:15px;color:#22d3ee;font-style:italic;margin-bottom:var(--s-4);line-height:1.6;border-left:3px solid #22d3ee33;padding-left:12px">${sec.hook}</p>`;
+  h += sec.content;
+  if (sec.chart === 'returns') h += chartRealReturns();
+  if (sec.chart === 'compound') h += chartCompoundInterest();
+  if (sec.chart === 'waiting') h += chartCostOfWaiting();
+  if (sec.extra) h += sec.extra;
+  return h;
+}
+
+function renderLessonQuiz() {
+  const allAnswered = LESSON_QUIZ_DATA.every((_, i) => _quizAnswers[i] !== undefined);
+  let score = 0;
+  if (_quizSubmitted) {
+    LESSON_QUIZ_DATA.forEach((q, i) => { if (_quizAnswers[i] === q.correct) score++; });
+  }
+
+  let h = '';
+  h += `<div style="font-size:22px;margin-bottom:var(--s-2)">🎯</div>`;
+  h += `<h3 style="color:var(--ink-1);font-size:18px;margin-bottom:var(--s-2)">Quiz Final</h3>`;
+  h += `<p style="font-size:14px;color:var(--ink-3);margin-bottom:var(--s-4)">Teste o que você aprendeu. Responda as 6 perguntas e veja seu resultado.</p>`;
+
+  if (_quizSubmitted) {
+    // Results header
+    const scoreColor = score >= 5 ? '#4caf50' : score >= 3 ? '#e8a846' : '#ef5350';
+    const msg = score >= 5
+      ? '🏆 Parabéns! Você entendeu os conceitos fundamentais. Agora você está pronto para explorar como o Momentum identifica oportunidades no mercado.'
+      : score >= 3
+      ? '💪 Bom começo! Você pegou os pontos principais. Que tal reler as seções e tentar de novo?'
+      : '🌱 Sem pressão — esses conceitos levam um tempo pra entrar. Comece de novo com calma, uma seção de cada vez.';
+    h += `<div style="text-align:center;margin-bottom:var(--s-5);padding:var(--s-4);background:#0d0d0d;border-radius:10px;border:1px solid ${scoreColor}33">`;
+    h += `<div style="font-size:42px;font-weight:800;color:${scoreColor};font-family:var(--font-mono)">${score}<span style="font-size:22px;color:#555">/6</span></div>`;
+    h += `<p style="font-size:14px;color:var(--ink-2);margin:var(--s-3) 0 0;line-height:1.6">${msg}</p>`;
+    if (score >= 5) {
+      h += `<button class="btn-primary" style="margin-top:var(--s-4)" onclick="setState('_view','home')">Explorar minha primeira ação →</button>`;
+    }
+    h += `<button class="btn-ghost" style="margin-top:var(--s-3);font-size:12px" onclick="retryQuiz()">↺ Refazer Quiz</button>`;
+    h += `</div>`;
+  }
+
+  LESSON_QUIZ_DATA.forEach((q, qi) => {
+    const selected = _quizAnswers[qi];
+    const isCorrect = _quizSubmitted && selected === q.correct;
+    const isWrong = _quizSubmitted && selected !== undefined && selected !== q.correct;
+    const borderColor = !_quizSubmitted ? '#2a2a2a' : isCorrect ? '#4caf50' : '#ef5350';
+    h += `<div style="border:1px solid ${borderColor};border-radius:10px;padding:14px;margin-bottom:14px;background:#0d0d0d">`;
+    h += `<div style="font-size:13px;color:var(--ink-1);font-weight:600;margin-bottom:10px;line-height:1.5">${qi+1}. ${q.q}</div>`;
+    q.options.forEach((opt, oi) => {
+      const isSel = selected === oi;
+      const isRightAns = _quizSubmitted && oi === q.correct;
+      let bg = '#161616', border = '#2a2a2a', col = 'var(--ink-3)';
+      if (isSel && !_quizSubmitted) { bg = '#22d3ee15'; border = '#22d3ee'; col = '#22d3ee'; }
+      if (isRightAns) { bg = '#4caf5015'; border = '#4caf50'; col = '#4caf50'; }
+      if (isSel && isWrong && !isRightAns) { bg = '#ef535015'; border = '#ef5350'; col = '#ef5350'; }
+      const icon = !_quizSubmitted ? (isSel ? '◉' : '○') : isRightAns ? '✅' : (isSel ? '❌' : '○');
+      h += `<button onclick="${_quizSubmitted ? '' : 'selectQuizAnswer('+qi+','+oi+')'}" style="display:flex;align-items:flex-start;gap:8px;width:100%;text-align:left;background:${bg};border:1px solid ${border};border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:${_quizSubmitted ? 'default' : 'pointer'};color:${col};font-size:13px;line-height:1.4;min-height:44px">`;
+      h += `<span style="flex-shrink:0;margin-top:1px">${icon}</span><span>${opt}</span>`;
+      h += `</button>`;
+    });
+    if (_quizSubmitted && selected !== undefined) {
+      const fb = isCorrect ? q.correctFeedback : q.wrongFeedback;
+      const fbColor = isCorrect ? '#4caf50' : '#e8a846';
+      h += `<div style="font-size:12px;color:${fbColor};background:${fbColor}10;border-radius:6px;padding:8px 10px;margin-top:2px;line-height:1.5">${fb}</div>`;
+    }
+    h += `</div>`;
+  });
+
+  if (!_quizSubmitted) {
+    h += `<button class="${allAnswered ? 'btn-primary' : 'btn-ghost'}" style="width:100%;margin-top:var(--s-2);opacity:${allAnswered ? '1' : '.4'}" ${allAnswered ? 'onclick="submitQuiz()"' : 'disabled'}>Ver Resultado</button>`;
+    if (!allAnswered) {
+      const remaining = LESSON_QUIZ_DATA.filter((_, i) => _quizAnswers[i] === undefined).length;
+      h += `<p style="font-size:11px;color:#555;text-align:center;margin-top:8px">${remaining} pergunta${remaining !== 1 ? 's' : ''} sem resposta</p>`;
+    }
+  }
+
+  return h;
+}
+
+function renderInteractiveLesson(isDone) {
+  const TITLES = ['Seu Dinheiro Está Encolhendo', 'Isso Não É Jogo', 'Começar Com Pouco', 'O Custo de Esperar', 'Quiz Final'];
+  let h = '';
+
+  // Progress pills
+  h += `<div style="display:flex;gap:6px;margin-bottom:var(--s-4);flex-wrap:wrap">`;
+  TITLES.forEach((title, i) => {
+    const step = i + 1;
+    const active = _lessonStep === step;
+    const done = _lessonStep > step;
+    const bg = active ? 'var(--primary)' : done ? '#4caf5033' : '#1a1a1a';
+    const col = active ? '#000' : done ? '#4caf50' : '#555';
+    const border = active ? 'var(--primary)' : done ? '#4caf5055' : '#2a2a2a';
+    h += `<button onclick="lessonGoTo(${step})" style="background:${bg};color:${col};border:1px solid ${border};border-radius:20px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:${active ? '700' : '400'};white-space:nowrap">${done ? '✓' : step} ${active ? title : ''}</button>`;
+  });
+  h += `</div>`;
+
+  // Section content
+  h += `<div style="min-height:200px">`;
+  h += renderLessonSection();
+  h += `</div>`;
+
+  // Nav
+  h += `<div style="display:flex;gap:var(--s-3);margin-top:var(--s-5);padding-top:var(--s-4);border-top:1px solid var(--line);align-items:center;flex-wrap:wrap">`;
+  if (_lessonStep > 1) h += `<button class="btn-ghost" onclick="lessonPrev()">← Anterior</button>`;
+  if (_lessonStep < 5) h += `<button class="btn-primary" style="margin-left:auto" onclick="lessonNext()">Próximo →</button>`;
+
+  // Mark complete on sections 4+ when not already done
+  if (_lessonStep >= 4 && !isDone) {
+    h += `<button class="btn-ghost" style="font-size:12px;${_lessonStep < 5 ? '' : 'margin-left:auto'}" onclick="toggleTopicComplete('why')">Marcar como concluído ✓</button>`;
+  } else if (_lessonStep >= 4 && isDone) {
+    h += `<span style="font-size:12px;color:#4caf50;${_lessonStep < 5 ? '' : 'margin-left:auto'}">✅ Concluído</span>`;
+  }
+  h += `</div>`;
+
+  return h;
+}
+
 function renderEdu() {
   const container = document.getElementById('dashboard');
   container.style.display = 'block';
@@ -5626,6 +5942,12 @@ function renderEdu() {
     html += `<p style="color:var(--ink-3);font-size:13px;margin-bottom:var(--s-5);max-width:320px;margin-left:auto;margin-right:auto">Este tópico faz parte do curso completo, disponível apenas para assinantes Pro. Acesse todas as ${allTopics.length} aulas de análise técnica, renda fixa e estratégia.</p>`;
     html += `<button class="btn-primary" onclick="showUpgradeModal()">Assinar Pro — R$29,90/mês</button>`;
     html += `</div>`;
+  } else if (current.id === 'why') {
+  html += `<div class="card" style="margin-bottom:var(--s-4)">`;
+  html += `<div class="kicker" style="margin-bottom:var(--s-3);color:var(--primary)">🌱 Por Que Investir? · Primeiros Passos</div>`;
+  html += `<p style="font-size:11px;color:#555;margin-bottom:var(--s-4);padding:8px 10px;background:#0d0d0d;border-radius:6px;border:1px solid #1a1a1a">📋 Conteúdo educacional — Não constitui recomendação de investimento. Momentum não é registrado como consultor de valores mobiliários junto à CVM.</p>`;
+  html += renderInteractiveLesson(isDone);
+  html += `</div>`;
   } else {
   html += `<div class="card" style="margin-bottom:var(--s-4)">`;
   html += `<div class="kicker" style="margin-bottom:var(--s-3)">${current.icon} ${current.name}</div>`;
@@ -5688,6 +6010,7 @@ function switchEduTopic(id) {
     showUpgradeModal();
     return;
   }
+  if (id !== 'why') { _lessonStep = 1; _quizAnswers = {}; _quizSubmitted = false; }
   setState('_eduTopic', id);
   const dash = document.getElementById('dashboard');
   if (dash) dash.scrollTop = 0;

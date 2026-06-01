@@ -4724,6 +4724,162 @@ O curso atualmente tem 22+ tópicos cobrindo fundamentos, análise técnica, est
 
 ---
 
+## Epic 65 — Primeiros Passos: Interactive Learning Experience
+
+**Goal:** Transform the free "Por Que Investir?" topic from a wall of text into an interactive, visual, multi-section lesson with a quiz — increasing comprehension, engagement, and free-to-Pro conversion intent.
+
+**Audience:** Class C Brazil, 25–45, mobile-first, high school education, skeptical about investing.
+
+**Design Principles:**
+- 5 sections (mobile card per section, prev/next navigation)
+- Each section: short text + one visual (SVG chart)
+- Final section: 6-question quiz with per-answer feedback
+- All content reviewed by 4 specialized agents (structure, visuals, quiz, CVM compliance)
+- Language: high school level, no financial jargon
+
+**Agents consulted:**
+- Marina (Learning Architect): content order and section pacing
+- Pedro (Visual Communicator): SVG chart specs and design
+- Ana (Interaction Designer): quiz questions, feedback mechanics, progress UX
+- Carla (Localization Expert): CVM compliance, language simplification, cultural fit
+
+---
+
+### US-306 — Lesson Section Engine: Navigation + Progress Bar
+**As a** usuário na tela Educação → Por Que Investir?,
+**I want** the content to be split into 5 navigable sections with a progress bar,
+**so that** I see one digestible piece at a time instead of a wall of text and feel a sense of progress through the lesson.
+
+**Technical:**
+- Add `_lessonStep` global var (1–5, default 1)
+- Add `_quizAnswers` object and `_quizSubmitted` boolean
+- In `renderEdu()`, detect `_eduTopic === 'why'` → call `renderInteractiveLesson()` instead of rendering static body HTML
+- `renderInteractiveLesson()` renders: progress indicator + current section content + prev/next buttons
+- `lessonNext()` / `lessonPrev()` / `lessonGoTo(n)` functions update `_lessonStep` and re-render
+- Reset `_lessonStep = 1` when switching away from 'why' topic
+
+**Acceptance Criteria:**
+- [ ] 5 section tabs/steps shown as numbered pills at top
+- [ ] Active step highlighted with primary color
+- [ ] "Próximo →" button advances to next section; on section 5 replaced by quiz submit
+- [ ] "← Anterior" button shown from section 2+
+- [ ] Switching to a different edu topic resets lesson to step 1
+- [ ] Mobile: buttons full-width, progress pills scroll horizontally if needed
+- [ ] No regression on other edu topics (all still render static body)
+
+**Sprint:** 53 · **Effort:** 1.5h · **Priority:** 🔴 High · **Epic:** 65
+
+---
+
+### US-307 — Lesson Content: 5 Sections with Hook Copy
+**As a** usuário,
+**I want** each of the 5 lesson sections to have a short hook sentence, focused content, and one clear takeaway,
+**so that** each section feels like a complete thought and I'm motivated to advance.
+
+**Section Outline (Marina's recommendation — Pain → Reframe → Possibility → Quiz → Synthesis):**
+- **Section 1 — Seu Dinheiro Está Encolhendo** 📉: Monetary debasement + poupança losing to inflation. Hook: "Você sabia que o dinheiro parado na sua conta perde valor todo ano, mesmo sem você gastar nada?"
+- **Section 2 — Isso Não É Jogo — É Ser Dono de Empresa** 🏢: Debunk "stocks are gambling" + 2020 crash recovery + Ibovespa returns. Hook: "Quando você compra uma ação, você não está apostando — você está virando sócio de uma empresa de verdade."
+- **Section 3 — Começar Com Pouco Já Muda Tudo** 💰: Compound interest + cost of waiting. Hook: "Você não precisa ser rico para investir — você precisa investir para não continuar sem dinheiro."
+- **Section 4 — O Custo de Não Fazer Nada** ⏳: Synthesis + real returns chart + CTA framing. Hook: "Não investir também é uma escolha — e ela tem um preço que a maioria nunca calcula."
+- **Section 5 — Quiz: O Que Você Aprendeu?** 🎯: 6 interactive quiz questions + score result.
+
+**Acceptance Criteria:**
+- [ ] Each section renders: section number, icon, title, hook paragraph, main content, visual
+- [ ] Sections 1, 2, 3, 4 each have exactly one SVG chart
+- [ ] Section 5 renders the quiz engine (US-311)
+- [ ] All text at high-school reading level; no untranslated English terms
+- [ ] CVM disclaimers present on sections that cite return numbers (Carla's requirements)
+
+**Sprint:** 53 · **Effort:** 2h · **Priority:** 🔴 High · **Epic:** 65
+
+---
+
+### US-308 — Visual: Compound Interest Comparison Chart
+**As a** usuário na Seção 3,
+**I want** to see a visual comparison of R$500/mês invested over 25 years at 6% vs 12%,
+**so that** the compounding difference is immediately visceral without reading paragraphs.
+
+**Spec (Pedro's design):** Horizontal bar chart. Poupança 6%/yr → R$347k (muted red). Ações 12%/yr → R$940k (green, 2.7× longer bar). "Diferença: +R$593.000" callout. CSS fade-in animation. Caption + disclaimer below.
+
+**Sprint:** 54 · **Effort:** 1h · **Priority:** 🔴 High · **Epic:** 65
+
+---
+
+### US-309 — Visual: Real Returns Brazil 2010–2024 Chart
+**As a** usuário na Seção 4,
+**I want** a chart comparing Ibovespa, IPCA, Poupança, and cash returns since 2010,
+**so that** I see concretely that poupança did not beat inflation.
+
+**Spec (Pedro's design):** Vertical bar chart, 4 bars. Ibovespa +280% green. IPCA +104% amber dashed threshold line. Poupança +90% muted red (below IPCA line). Cash +0%. "abaixo da inflação" annotation on poupança and cash bars.
+
+**Sprint:** 54 · **Effort:** 1h · **Priority:** 🔴 High · **Epic:** 65
+
+---
+
+### US-310 — Visual: Cost of Waiting Chart
+**As a** usuário na Seção 3,
+**I want** a chart showing how starting to invest at age 30 vs 35 vs 40 changes the final balance,
+**so that** the cost of procrastination becomes concrete and motivating.
+
+**Spec (Pedro's design):** Descending 3-bar staircase. Age 30 → R$1.75M (green). Age 35 → R$940k (amber). Age 40 → R$500k (red). "-R$810k" and "-R$440k" loss annotations between bars. Staggered CSS animation.
+
+**Sprint:** 54 · **Effort:** 1h · **Priority:** 🔴 High · **Epic:** 65
+
+---
+
+### US-311 — Interactive Quiz Engine (6 Questions)
+**As a** usuário na Seção 5,
+**I want** to answer 6 multiple-choice questions and receive feedback after each answer,
+**so that** I can test my understanding and feel confident before exploring the app.
+
+**Quiz Questions (Ana's design):**
+1. R$10k na gaveta 2010→2024 vale quanto hoje? → R$4.900 (inflação comeu 50%)
+2. O que são ações fracionárias (ex: PETR4F)? → Permitem comprar com R$50
+3. Ibovespa retorno 2010–2024 aproximado? → +280%
+4. Quem manteve investimentos no crash de 2020? → Recuperou e bateu novas máximas em 18 meses
+5. Diferença R$500/mês por 25 anos: ações vs poupança? → R$593.000
+6. Por que governos emitir dinheiro prejudica quem guarda em cash? → Inflação corrói poder de compra
+
+**Technical:** `_quizAnswers = {}`, `_quizSubmitted = false`. `selectQuizAnswer(qIdx, aIdx)`. `submitQuiz()`. All answers submitted at once. After submit: per-question ✅/❌ + feedback text.
+
+**Sprint:** 55 · **Effort:** 2h · **Priority:** 🔴 High · **Epic:** 65
+
+---
+
+### US-312 — Quiz Results & Completion Flow
+**As a** usuário que completou o quiz,
+**I want** to see my score with an encouraging message and a clear next step,
+**so that** I feel accomplished and know where to go next in the app.
+
+**Score tiers (Ana's design):**
+- 5–6 ✅: "🏆 Parabéns! Você entendeu os conceitos fundamentais. Agora você está pronto para ver como o Momentum identifica oportunidades no mercado."
+- 3–4 ✅: "💪 Bom começo! Você pegou os pontos principais. Que tal reler as seções e tentar de novo?"
+- 0–2 ✅: "🌱 Sem pressão — esses conceitos levam um tempo pra entrar. Comece de novo com calma, uma seção de cada vez."
+- CTA on pass (5+): "Explorar minha primeira ação →" (goes to scan view)
+
+**Sprint:** 55 · **Effort:** 1h · **Priority:** 🔴 High · **Epic:** 65
+
+---
+
+### US-313 — CVM Compliance Disclaimers & Language Polish
+**As a** product owner,
+**I want** the Primeiros Passos lesson to include appropriate CVM-aligned disclaimers and simplified language per Carla's review,
+**so that** the app is legally protected and accessible to high-school-educated users.
+
+**Carla's required changes:**
+- Module header: "Conteúdo exclusivamente educacional. Não constitui recomendação de investimento."
+- Module footer: "Momentum não é corretora ou consultora de valores mobiliários registrada na CVM."
+- Each chart: "Simulação hipotética para fins educacionais. Rentabilidade passada não garante rentabilidade futura."
+- Remove English phrases: "Stocks are real estate's liquid, scalable cousin" → PT-BR equivalent
+- Simplify "flexibilização quantitativa" → "quando bancos centrais criam dinheiro novo"
+- Simplify "preservar poder de compra" → "fazer seu dinheiro não perder valor com a inflação"
+- Soften "quem vendeu no pânico" → "quem precisou vender na hora errada" (class C audience empathy)
+- All R$ projections prefixed with "Exemplo hipotético:"
+
+**Sprint:** 56 · **Effort:** 1h · **Priority:** 🟡 Medium · **Epic:** 65
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -4763,5 +4919,9 @@ O curso atualmente tem 22+ tópicos cobrindo fundamentos, análise técnica, est
 | 50 | 63 | US-303 | Bug: Acompanhados — P. Atual não atualiza e Stop sempre R$0,00 | 📋 Planned |
 | 51 | 63 | US-304 | Bug: Acompanhados — sem opção de remover ativo da lista | 📋 Planned |
 | 52 | 64 | US-305 | UI: renomear tier "Free" para "Grátis" em toda a interface PT | 📋 Planned |
+| 53 | 65 | US-306, US-307 | Primeiros Passos: lesson section engine + 5-section content with hooks | 📋 Planned |
+| 54 | 65 | US-308, US-309, US-310 | Primeiros Passos: 3 SVG data visualizations (compound, returns, cost-of-waiting) | 📋 Planned |
+| 55 | 65 | US-311, US-312 | Primeiros Passos: 6-question interactive quiz + results flow | 📋 Planned |
+| 56 | 65 | US-313 | Primeiros Passos: CVM compliance disclaimers + language polish | 📋 Planned |
 
 *Completed sprints → USER_STORIES_COMPLETED.md*
