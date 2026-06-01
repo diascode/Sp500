@@ -4701,6 +4701,29 @@ O curso atualmente tem 22+ tópicos cobrindo fundamentos, análise técnica, est
 
 ---
 
+### US-305 — UI: renomear tier "Free" para "Grátis" em toda a interface PT
+
+**Como** produto em português brasileiro, quero que o plano gratuito seja exibido como **"Grátis"** em vez de **"Free"** em toda a interface — o termo em inglês é inconsistente com o restante da UX em PT-BR.
+
+**Locais afetados:**
+- `#tierChip` no header (valor estático no HTML e valor dinâmico em `updateAuthUI`)
+- Dropdown de perfil do usuário (`dropdownTier`)
+- Upgrade modal — coluna "Free" no cabeçalho da tabela de comparação
+- Admin panel — label do stat card "Free" (contagem de usuários)
+- Admin panel — chip de tier do usuário na tabela (`<span class="chip">Free</span>`)
+- Simulador de mercado — label de tier na meta info (`resp.tier || 'Free'`)
+
+**Acceptance Criteria:**
+- [ ] Header chip: usuário gratuito vê "Grátis" em vez de "Free"
+- [ ] Dropdown perfil: tier label mostra "Grátis"
+- [ ] Upgrade modal: cabeçalho da coluna free = "Grátis"
+- [ ] Admin panel: stat card mostra "Grátis", chip na tabela mostra "Grátis"
+- [ ] Sem regressão nos checks `tier === 'free'` (valor interno inalterado)
+
+**Sprint:** 52 · **Effort:** 0.25h · **Priority:** 🟡 Medium · **Epic:** 64
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -4739,5 +4762,6 @@ O curso atualmente tem 22+ tópicos cobrindo fundamentos, análise técnica, est
 | 49 | 62 | US-302 | Education Gating: free tier limited to "Por que investir"; Pro required for all other topics | 📋 Planned |
 | 50 | 63 | US-303 | Bug: Acompanhados — P. Atual não atualiza e Stop sempre R$0,00 | 📋 Planned |
 | 51 | 63 | US-304 | Bug: Acompanhados — sem opção de remover ativo da lista | 📋 Planned |
+| 52 | 64 | US-305 | UI: renomear tier "Free" para "Grátis" em toda a interface PT | 📋 Planned |
 
 *Completed sprints → USER_STORIES_COMPLETED.md*

@@ -40,7 +40,7 @@
         <div class="user-menu" id="userMenu" style="display:none">
           <button class="user-btn" id="userBtn" onclick="toggleUserMenu()">
             <span class="user-avatar" id="userAvatar">T</span>
-            <span class="tier-chip" id="tierChip">Free</span>
+            <span class="tier-chip" id="tierChip">Grátis</span>
           </button>
           <div class="user-dropdown" id="userDropdown" style="display:none">
             <div class="dropdown-header">
@@ -431,8 +431,8 @@ async function updateAuthUI() {
     userMenu.style.display = 'block';
     if (userAvatar) userAvatar.textContent = authUser.email.charAt(0).toUpperCase();
     if (dropdownEmail) dropdownEmail.textContent = authUser.email;
-    if (dropdownTier) dropdownTier.textContent = authUser.tier === 'admin' ? '👑 Admin' : (authUser.tier === 'pro' ? '⭐ Pro' : 'Free');
-    if (tierChip) tierChip.textContent = authUser.tier === 'admin' ? 'Admin' : (authUser.tier === 'pro' ? 'Pro' : 'Free');
+    if (dropdownTier) dropdownTier.textContent = authUser.tier === 'admin' ? '👑 Admin' : (authUser.tier === 'pro' ? '⭐ Pro' : 'Grátis');
+    if (tierChip) tierChip.textContent = authUser.tier === 'admin' ? 'Admin' : (authUser.tier === 'pro' ? 'Pro' : 'Grátis');
     // Admin panel button
     if (adminPanelBtn) {
       try {
@@ -955,7 +955,7 @@ async function showAdminView() {
   html += '<div class="kicker" style="margin-top:var(--s-6);margin-bottom:var(--s-3)">Usuários</div>';
   html += '<div class="grid-4" style="margin-bottom:var(--s-4)">';
   html += `<div class="big-stat"><div class="lbl">Total</div><div class="val">${data.stats.total}</div><div class="sub">cadastrados</div></div>`;
-  html += `<div class="big-stat"><div class="lbl">Free</div><div class="val">${data.stats.free}</div><div class="sub">plano gratuito</div></div>`;
+  html += `<div class="big-stat"><div class="lbl">Grátis</div><div class="val">${data.stats.free}</div><div class="sub">plano gratuito</div></div>`;
   html += `<div class="big-stat"><div class="lbl">Pro</div><div class="val" style="color:var(--buy)">${data.stats.pro}</div><div class="sub">assinantes</div></div>`;
   html += `<div class="big-stat"><div class="lbl">Subs ativas</div><div class="val" style="color:var(--primary)">${data.stats.activeSubscriptions}</div><div class="sub">Stripe ativo</div></div>`;
   html += '</div>';
@@ -981,7 +981,7 @@ async function showAdminView() {
       ? '<span class="chip chip-magenta">👑 Admin</span>'
       : u.tier === 'pro'
         ? `<span class="chip chip-primary">⭐ Pro${u.cancelAtPeriodEnd ? ' ⚠' : ''}</span>`
-        : '<span class="chip">Free</span>';
+        : '<span class="chip">Grátis</span>';
     const proBtn = u.tier === 'admin'
       ? '<span style="color:var(--ink-4);font-size:10px">—</span>'
       : u.tier === 'pro'
@@ -1240,7 +1240,7 @@ async function loadUniverse(market) {
   const stocks = resp.stocks || resp;
   state.universeCache[market] = stocks;
   state._universeMeta = state._universeMeta || {};
-  state._universeMeta[market] = { total: resp.total || stocks.length, visible: resp.visible || stocks.length, tier: resp.tier || 'Free' };
+  state._universeMeta[market] = { total: resp.total || stocks.length, visible: resp.visible || stocks.length, tier: resp.tier || 'Grátis' };
   return stocks;
 }
 
@@ -6058,7 +6058,7 @@ init();
       <thead>
         <tr>
           <th style="text-align:left;padding:8px;border-bottom:1px solid var(--line);color:var(--ink-3);font-weight:500">Ferramenta educacional</th>
-          <th style="text-align:center;padding:8px;border-bottom:1px solid var(--line);color:var(--ink-3);font-weight:500;width:70px">Free</th>
+          <th style="text-align:center;padding:8px;border-bottom:1px solid var(--line);color:var(--ink-3);font-weight:500;width:70px">Grátis</th>
           <th style="text-align:center;padding:8px;border-bottom:1px solid var(--line);color:var(--primary);font-weight:600;width:70px">Pro</th>
         </tr>
       </thead>
