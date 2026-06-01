@@ -4642,6 +4642,42 @@ O curso atualmente tem 22+ tópicos cobrindo fundamentos, análise técnica, est
 
 ---
 
+### US-303 — Bug: Acompanhados não atualiza preço atual e Stop aparece R$0,00
+
+**Como** usuário que rastreia posições em Acompanhados, quero que o **Preço Atual (P. Atual)** reflita o preço de mercado mais recente e que o **Stop** seja calculado corretamente — hoje ambos os campos mostram o mesmo valor da entrada (P&L% sempre +0,0% e Stop sempre R$0,00), tornando o acompanhamento inútil.
+
+**Sintomas observados (screenshot):**
+
+| Ticker | P. Entrada | P. Atual | P&L% | Stop |
+|--------|-----------|---------|------|------|
+| AGRO3  | R$18,81   | R$18,81 | +0.0% | R$0,00 |
+| ABEV3  | R$15,81   | R$15,81 | +0.0% | R$0,00 |
+| CPFE3  | R$43,72   | R$43,72 | +0.0% | R$0,00 |
+| BBDC4  | R$17,39   | R$17,39 | +0.0% | R$0,00 |
+| BBAS3  | R$20,23   | R$20,23 | +0.0% | R$0,00 |
+
+**Causas prováveis a investigar:**
+1. A função que busca preços ao vivo (`getPortfolioPrice` / `getPrice`) retorna `undefined` ou `null` para os tickers rastreados quando a varredura ainda não foi executada na sessão — e o fallback usa o preço de entrada
+2. O Stop (ATR-based ou trailing stop) não é calculado/persistido no momento do rastreamento — fica zerado até que um scan ocorra
+3. A tela de Acompanhados não aciona automaticamente a busca de preços atualizados ao ser exibida; depende de um scan manual prévio
+
+**Comportamento esperado:**
+- **P. Atual**: exibe o preço de mercado mais recente, buscado ao abrir a tela ou via polling leve; se indisponível, mostra "—" (não o preço de entrada)
+- **P&L%**: calculado como `(P. Atual − P. Entrada) / P. Entrada × 100`; exibe "—" se preço atual não disponível
+- **Stop**: calculado e exibido corretamente a partir do ATR × multiplicador no momento do rastreamento, ou atualizado com o preço atual
+- **COMPRA** counter: conta apenas picks com sinal de compra (hoje mostra 0 mesmo com picks rastreados)
+
+**Acceptance Criteria:**
+- [ ] P. Atual difere de P. Entrada após variação de mercado (não é igual ao preço de entrada por padrão)
+- [ ] P&L% reflete variação real; exibe "—" se preço indisponível (não "+0.0%")
+- [ ] Stop != R$0,00 para posições rastreadas; exibe "—" se não calculável
+- [ ] Ao abrir Acompanhados, app tenta buscar preços sem exigir scan manual
+- [ ] Nenhum JS error no console ao abrir a tela
+
+**Sprint:** 50 · **Effort:** 2h · **Priority:** 🔴 High · **Epic:** 63
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -4678,5 +4714,6 @@ O curso atualmente tem 22+ tópicos cobrindo fundamentos, análise técnica, est
 | 47 | 60 | US-294–298 | UI Bug Fixes: billing screen overlap, mobile tab overflow, mobile stock header overflow, checkout not redirecting, onboarding modal opacity + simulation copy | 📋 Planned |
 | 48 | 60, 61 | US-299–301 | UX Cleanup: Primeiros Passos mobile accordion, remove CAPITAL block, remove Busca Manual | 📋 Planned |
 | 49 | 62 | US-302 | Education Gating: free tier limited to "Por que investir"; Pro required for all other topics | 📋 Planned |
+| 50 | 63 | US-303 | Bug: Acompanhados — P. Atual não atualiza e Stop sempre R$0,00 | 📋 Planned |
 
 *Completed sprints → USER_STORIES_COMPLETED.md*

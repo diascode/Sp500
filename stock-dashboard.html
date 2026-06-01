@@ -3033,6 +3033,14 @@ function showTrackedView() {
     document.getElementById('trackedTabBtn').style.borderColor = 'var(--primary)';
     document.getElementById('trackedTabBtn').style.color = 'var(--primary)';
     renderTrackedPicks();
+    // Auto-fetch prices for picks that have no live data yet
+    const missingPrice = state.trackedPicks.some(p => {
+      for (const m of ['brasil','us','europe','emerging']) {
+        if ((state.analyzed[m]||[]).find(s => s.ticker === p.ticker && s.price)) return false;
+      }
+      return true;
+    });
+    if (missingPrice) refreshTracked();
   } else {
     document.getElementById('trackedTabBtn').style.borderColor = '';
     document.getElementById('trackedTabBtn').style.color = '';
@@ -3159,9 +3167,14 @@ function renderTrackedPicks() {
   if (state.trackedView === 'table') {
     const today = new Date().toISOString().slice(0,10);
     const tableRows = state.trackedPicks.filter(p => !p.exitSignal || p.exitSignal).map(p => {
-      const currentPrice = (state.stocks[p.ticker]?.price) ?? p.entryPrice;
-      const pnlPct = ((currentPrice - p.entryPrice) / p.entryPrice * 100);
-      const pnlColor = pnlPct >= 0 ? '#22c55e' : '#ef4444';
+      let _td = null;
+      for (const m of ['brasil','us','europe','emerging']) {
+        const f = (state.analyzed[m]||[]).find(s => s.ticker === p.ticker);
+        if (f) { _td = f; break; }
+      }
+      const currentPrice = _td?.price ?? null;
+      const pnlPct = currentPrice !== null ? ((currentPrice - p.entryPrice) / p.entryPrice * 100) : null;
+      const pnlColor = pnlPct === null ? 'var(--ink-3)' : pnlPct >= 0 ? '#22c55e' : '#ef4444';
       const daysHeld = typeof businessDaysBetween === 'function'
         ? businessDaysBetween(p.entryDate, today) : 0;
       const holdDays = p.holdDays ?? 20;
@@ -3169,14 +3182,17 @@ function renderTrackedPicks() {
       const statusBadge = p.exitSignal === 'stop_movel' ? '🔴 Stop'
         : p.exitSignal === 'prazo' ? '⚠️ Prazo'
         : '🟢 Em curso';
-      const trailStop = p.trailStop ?? (p.highSinceEntry - 2 * (p.atrAtEntry ?? p.entryPrice * 0.02));
+      const _high = p.highSinceEntry ?? p.entryPrice;
+      const _atr = p.atrAtEntry ?? (p.entryPrice * 0.02);
+      const trailStop = p.trailStop ?? (_high - 2 * _atr);
+      const stopStr = trailStop > 0 && !isNaN(trailStop) ? fmtBRL(trailStop) : '—';
       return `<tr style="border-bottom:1px solid rgba(255,255,255,.06)">
         <td style="padding:.5rem .75rem;font-weight:600">${p.ticker.replace('.SA','')}</td>
         <td style="padding:.5rem .75rem;color:var(--ink-3);font-size:.82rem">${p.entryDate?.slice(5).replace('-','/')??'—'}</td>
         <td style="padding:.5rem .75rem">${fmtBRL(p.entryPrice)}</td>
-        <td style="padding:.5rem .75rem">${fmtBRL(currentPrice)}</td>
-        <td style="padding:.5rem .75rem;color:${pnlColor};font-weight:600">${pnlPct>=0?'+':''}${pnlPct.toFixed(1)}%</td>
-        <td style="padding:.5rem .75rem;font-size:.82rem">${fmtBRL(trailStop)}</td>
+        <td style="padding:.5rem .75rem">${currentPrice !== null ? fmtBRL(currentPrice) : '—'}</td>
+        <td style="padding:.5rem .75rem;color:${pnlColor};font-weight:600">${pnlPct !== null ? (pnlPct>=0?'+':'') + pnlPct.toFixed(1) + '%' : '—'}</td>
+        <td style="padding:.5rem .75rem;font-size:.82rem">${stopStr}</td>
         <td style="padding:.5rem .75rem;font-size:.82rem">
           <span>${daysHeld}/${holdDays}</span>
           <div style="height:3px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:3px;width:40px">
