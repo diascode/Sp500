@@ -2929,6 +2929,16 @@ function untrackPick(index) {
   renderTrackedPicks();
 }
 
+function removeTracked(ticker) {
+  const idx = state.trackedPicks.findIndex(p => p.ticker === ticker);
+  if (idx < 0) return;
+  state.trackedPicks.splice(idx, 1);
+  saveTrackedPicks();
+  updateTrackedCount();
+  showToast(ticker.replace('.SA','') + ' removido dos acompanhados', false, 2000);
+  renderTrackedPicks();
+}
+
 async function refreshTracked() {
   if (!authUser) { showAuthModal(); return; }
   if (state.trackedPicks.length === 0) return;
@@ -3200,6 +3210,7 @@ function renderTrackedPicks() {
           </div>
         </td>
         <td style="padding:.5rem .75rem;font-size:.82rem">${statusBadge}</td>
+        <td style="padding:.5rem .75rem;text-align:center"><span style="cursor:pointer;color:var(--ink-4);font-size:15px;line-height:1" onclick="removeTracked('${p.ticker}')" title="Remover">✕</span></td>
       </tr>`;
     }).join('');
 
@@ -3215,6 +3226,7 @@ function renderTrackedPicks() {
             <th style="padding:.4rem .75rem;text-align:left">Stop</th>
             <th style="padding:.4rem .75rem;text-align:left">Dias</th>
             <th style="padding:.4rem .75rem;text-align:left">Status</th>
+            <th style="padding:.4rem .75rem;text-align:center"></th>
           </tr>
         </thead>
         <tbody>${tableRows}</tbody>
@@ -3250,7 +3262,7 @@ function renderTrackedPicks() {
     html += '<div style="font-size:12px;color:var(--ink-3)">Entrada: ' + sym + (pick.entryPrice || 0).toFixed(2) + ' · ' + (pick.entryDate || '—') + '</div>';
     html += '</div>';
     html += '<div style="display:flex;align-items:center;gap:8px">' + sigHtml;
-    html += '<span style="cursor:pointer;color:var(--ink-4);font-size:14px;line-height:1" onclick="event.stopPropagation();listaTrack(\'' + pick.ticker + '\',0,0,0)" title="Remover">✕</span>';
+    html += '<span style="cursor:pointer;color:var(--ink-4);font-size:14px;line-height:1" onclick="event.stopPropagation();removeTracked(\'' + pick.ticker + '\')" title="Remover">✕</span>';
     html += '</div></div>';
 
     // Price row

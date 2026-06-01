@@ -4678,6 +4678,29 @@ O curso atualmente tem 22+ tópicos cobrindo fundamentos, análise técnica, est
 
 ---
 
+### US-304 — Bug: Acompanhados sem opção de remover ativo da lista
+
+**Como** usuário que rastreia posições, quero poder remover um ativo da lista de Acompanhados — atualmente a visão em **Tabela** não tem nenhum botão de remoção, tornando impossível limpar picks encerrados ou errôneos sem usar a visão em Cards.
+
+**Comportamento atual:**
+- Visão **Cards**: possui botão `✕` (funcional), mas chama `listaTrack()` que re-renderiza a tela de scan — efeito colateral indesejado
+- Visão **Tabela**: sem coluna de ação, sem botão de remoção
+
+**Comportamento esperado:**
+- Visão **Tabela**: coluna "AÇÕES" com botão `✕` para remover o ativo da lista
+- Visão **Cards**: botão `✕` já existente, corrigido para chamar função dedicada sem efeito colateral na scan view
+- Ambas as visões: após remoção exibe toast de confirmação e re-renderiza a lista
+
+**Acceptance Criteria:**
+- [ ] Tabela: botão ✕ visível em cada linha, remove o ativo e re-renderiza a lista
+- [ ] Cards: botão ✕ remove o ativo sem re-renderizar a tela de scan
+- [ ] Toast de confirmação após remoção
+- [ ] Lista persiste após remoção (localStorage / servidor)
+
+**Sprint:** 51 · **Effort:** 0.5h · **Priority:** 🔴 High · **Epic:** 63
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -4715,5 +4738,6 @@ O curso atualmente tem 22+ tópicos cobrindo fundamentos, análise técnica, est
 | 48 | 60, 61 | US-299–301 | UX Cleanup: Primeiros Passos mobile accordion, remove CAPITAL block, remove Busca Manual | 📋 Planned |
 | 49 | 62 | US-302 | Education Gating: free tier limited to "Por que investir"; Pro required for all other topics | 📋 Planned |
 | 50 | 63 | US-303 | Bug: Acompanhados — P. Atual não atualiza e Stop sempre R$0,00 | 📋 Planned |
+| 51 | 63 | US-304 | Bug: Acompanhados — sem opção de remover ativo da lista | 📋 Planned |
 
 *Completed sprints → USER_STORIES_COMPLETED.md*
