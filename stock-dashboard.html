@@ -271,6 +271,7 @@
 
 <script src="/static/indicators.js"></script>
 <script src="/static/i18n.js"></script>
+<script src="/static/lessons.js"></script>
 <script src="/static/patterns.js"></script>
 <script src="/static/fx.js"></script>
 <script>
@@ -5527,51 +5528,7 @@ function updateCourseNavBtn() {
 }
 
 // ─── PRIMEIROS PASSOS — INTERACTIVE LESSON ──────────────────────────────────
-
-const LESSON_QUIZ_DATA = [
-  {
-    q: 'Você guarda R$10.000 em dinheiro na gaveta em 2010. Em 2024, quanto esse dinheiro vale na prática, levando em conta a inflação?',
-    options: ['R$10.000 — o valor não muda, é dinheiro físico', 'R$14.000 — o dinheiro rendeu um pouco parado', 'R$4.900 — a inflação corroeu mais da metade do poder de compra', 'R$8.500 — perdeu um pouco, mas nada grave'],
-    correct: 2,
-    correctFeedback: 'Exatamente! O IPCA acumulou +104% de 2010 a 2024. Seu dinheiro parado perdeu mais da metade do poder de compra real.',
-    wrongFeedback: 'Quase lá! Com o IPCA acumulando +104% em 14 anos, R$10.000 na gaveta equivalem a R$4.900 em poder de compra de 2010.'
-  },
-  {
-    q: 'O que são as chamadas "ações fracionárias" (como PETR4F)?',
-    options: ['Ações de empresas que faliram e valem menos', 'Ações que só grandes investidores podem comprar', 'Frações de ações que permitem investir com pouco dinheiro, como R$50', 'Um tipo de fundo de investimento arriscado'],
-    correct: 2,
-    correctFeedback: 'Isso mesmo! O "F" no final do código indica que é uma fração da ação. Dá para começar com R$50 por mês, sem precisar de grandes quantias.',
-    wrongFeedback: 'Faz sentido pensar assim, mas ações fracionárias são uma porta de entrada para quem está começando! O "F" no código significa que você pode comprar uma fração da ação com R$50.'
-  },
-  {
-    q: 'De 2010 a 2024, qual foi o retorno acumulado aproximado do Ibovespa (Bolsa de Valores brasileira)?',
-    options: ['+50% — um pouco melhor que a poupança', '+90% — igual à poupança no mesmo período', '−30% — a Bolsa caiu no período por causa das crises', '+280% — bem acima da inflação e da poupança'],
-    correct: 3,
-    correctFeedback: 'Perfeito! O Ibovespa acumulou cerca de +280% no período, contra +104% do IPCA e +90% da poupança. Quem investiu na Bolsa mais que triplicou o poder de compra.',
-    wrongFeedback: 'Pode parecer que a Bolsa perde por causa das crises no noticiário, mas o Ibovespa acumulou +280% de 2010 a 2024 — muito acima da poupança (+90%) e da inflação (+104%).'
-  },
-  {
-    q: 'Em março de 2020, a Bolsa despencou por causa da pandemia. O que aconteceu com quem manteve os investimentos e não vendeu?',
-    options: ['Perdeu tudo — a Bolsa nunca se recuperou totalmente', 'Ficou no zero a zero — a Bolsa voltou exatamente ao ponto anterior', 'Recuperou e viu a Bolsa bater novas máximas históricas em 18 meses', 'Precisou esperar 10 anos para recuperar o dinheiro'],
-    correct: 2,
-    correctFeedback: 'Exatamente! Em menos de 18 meses, o mercado não só se recuperou como atingiu novas máximas. Quem ficou quieto viu o patrimônio crescer.',
-    wrongFeedback: 'Quem manteve a calma viu o mercado se recuperar e bater novas máximas em menos de 18 meses. Quem vendeu com medo ficou com o prejuízo no bolso.'
-  },
-  {
-    q: 'Investindo R$500 por mês durante 25 anos, qual é a diferença aproximada entre aplicar em ações (12%/a) versus deixar na poupança (6%/a)?',
-    options: ['Cerca de R$100 mil — é uma diferença pequena no longo prazo', 'Cerca de R$593 mil — os juros compostos fazem enorme diferença', 'Cerca de R$200 mil — a diferença existe mas não é tão relevante', 'Cerca de R$1 milhão — a poupança praticamente não rende nada'],
-    correct: 1,
-    correctFeedback: 'Isso mesmo! R$500/mês por 25 anos a 12%/a chegam a R$940 mil. Na poupança a 6%/a, o resultado seria R$347 mil. Diferença: R$593 mil gerada pelos juros compostos.',
-    wrongFeedback: 'Os juros compostos têm um efeito que a gente subestima. R$500/mês por 25 anos a 12%/a chegam a R$940 mil, contra R$347 mil na poupança. A diferença é de R$593 mil.'
-  },
-  {
-    q: 'Por que governos criar mais dinheiro (como aconteceu durante a pandemia) prejudica quem guarda dinheiro parado?',
-    options: ['Porque o governo pode confiscar o dinheiro guardado quando imprime mais', 'Porque mais dinheiro em circulação eleva os preços, reduzindo o poder de compra de quem não investe', 'Porque bancos cobram taxas extras quando há muita emissão monetária', 'Porque a criação de dinheiro reduz os juros da poupança automaticamente'],
-    correct: 1,
-    correctFeedback: 'Perfeito! Mais dinheiro circulando com a mesma quantidade de bens = preços mais altos = inflação. Quem investe em ativos reais tende a se proteger.',
-    wrongFeedback: 'O mecanismo principal é: mais dinheiro circulando com a mesma quantidade de bens = preços mais altos = inflação. Quem guarda dinheiro parado perde poder de compra.'
-  }
-];
+// Lesson data is loaded from /static/lessons.js → window.LESSON_DATA
 
 function lessonGoTo(step) {
   _lessonStep = step;
@@ -5580,7 +5537,10 @@ function lessonGoTo(step) {
   if (dash) dash.scrollTop = 0;
   window.scrollTo(0, 0);
 }
-function lessonNext() { lessonGoTo(Math.min(_lessonStep + 1, 5)); }
+function lessonNext() {
+  const _ld = window.LESSON_DATA && window.LESSON_DATA[_eduTopic];
+  lessonGoTo(Math.min(_lessonStep + 1, _ld ? _ld.totalSteps : 5));
+}
 function lessonPrev() { lessonGoTo(Math.max(_lessonStep - 1, 1)); }
 
 function selectQuizAnswer(qIdx, aIdx) {
@@ -5671,73 +5631,488 @@ function chartCostOfWaiting() {
   </div>`;
 }
 
+// ─── CHART REGISTRY ─────────────────────────────────────────────────────────
+const CHART_REGISTRY = {};
+
+// Register existing 'why' charts
+CHART_REGISTRY['chartRealReturns'] = chartRealReturns;
+CHART_REGISTRY['chartCompoundInterest'] = chartCompoundInterest;
+CHART_REGISTRY['chartCostOfWaiting'] = chartCostOfWaiting;
+
+function _svgWrap(title, subtitle, svgContent, disclaimer) {
+  return `<div style="background:#161616;border-radius:10px;padding:16px 16px 12px;margin:var(--s-4) 0">
+    <div style="color:#f0f0f0;font-size:12px;font-weight:700;margin-bottom:2px">${title}</div>
+    <div style="color:#666;font-size:10px;margin-bottom:14px">${subtitle}</div>
+    ${svgContent}
+    ${disclaimer ? `<p style="font-size:10px;color:#555;margin:8px 0 0;line-height:1.4">${disclaimer}</p>` : ''}
+  </div>`;
+}
+
+// Strategy topic
+CHART_REGISTRY['chartPyramid'] = () => _svgWrap('Pirâmide do Investidor', 'Base segura → diversificado → especulativo',
+  `<svg viewBox="0 0 440 180" width="100%" style="display:block">
+    <style>@keyframes pyr{from{opacity:0;transform:scaleY(0)}to{opacity:1;transform:scaleY(1)}}.pyrb{transform-origin:center bottom;animation:pyr .7s cubic-bezier(.22,1,.36,1) both}</style>
+    <polygon points="220,10 360,150 80,150" fill="#4caf5033" stroke="#4caf50" stroke-width="1.5" class="pyrb" style="animation-delay:.05s"/>
+    <polygon points="220,55 310,150 130,150" fill="#e8a84633" stroke="#e8a846" stroke-width="1.5" class="pyrb" style="animation-delay:.2s"/>
+    <polygon points="220,100 270,150 170,150" fill="#ef535033" stroke="#ef5350" stroke-width="1.5" class="pyrb" style="animation-delay:.35s"/>
+    <text x="220" y="145" text-anchor="middle" fill="#4caf50" font-size="11" font-weight="700" font-family="system-ui">Base: Renda Fixa</text>
+    <text x="220" y="105" text-anchor="middle" fill="#e8a846" font-size="10" font-weight="600" font-family="system-ui">Meio: ETFs / Ações Diversificadas</text>
+    <text x="220" y="62" text-anchor="middle" fill="#ef5350" font-size="10" font-weight="600" font-family="system-ui">Topo: Ações Individuais</text>
+    <text x="220" y="172" text-anchor="middle" fill="#555" font-size="9" font-family="system-ui">Construa de baixo para cima</text>
+  </svg>`, 'Exemplo educacional. Não constitui recomendação de investimento.');
+
+// Diversification topic
+CHART_REGISTRY['chartDiversificationRisk'] = () => _svgWrap('Diversificação Reduz Risco', 'Número de ativos × risco total da carteira',
+  `<svg viewBox="0 0 440 160" width="100%" style="display:block">
+    <style>@keyframes drd{from{stroke-dashoffset:400}to{stroke-dashoffset:0}}.drdc{animation:drd 1.2s ease .2s both;stroke-dasharray:400}</style>
+    <line x1="30" y1="20" x2="30" y2="140" stroke="#2a2a2a" stroke-width="1"/>
+    <line x1="30" y1="140" x2="420" y2="140" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="28" y="25" text-anchor="end" fill="#666" font-size="9" font-family="system-ui">Alto</text>
+    <text x="28" y="140" text-anchor="end" fill="#666" font-size="9" font-family="system-ui">Baixo</text>
+    <text x="225" y="157" text-anchor="middle" fill="#666" font-size="9" font-family="system-ui">Número de ativos na carteira</text>
+    <path d="M35,25 Q80,30 120,65 Q160,90 200,105 Q250,118 300,125 Q350,130 420,133" fill="none" stroke="#4caf50" stroke-width="2.5" class="drdc"/>
+    <line x1="30" y1="133" x2="420" y2="133" stroke="#ef5350" stroke-width="1" stroke-dasharray="6 4"/>
+    <text x="425" y="136" fill="#ef5350" font-size="9" font-family="system-ui">Risco mínimo</text>
+    <text x="72" y="20" fill="#e8a846" font-size="9" font-family="system-ui">1 ativo = risco máximo</text>
+    <text x="290" y="105" fill="#4caf50" font-size="9" font-family="system-ui">5-10 ativos já diversificam bem</text>
+  </svg>`, 'Exemplo hipotético educacional.');
+
+CHART_REGISTRY['chartPieAllocation'] = () => _svgWrap('Classes de Ativos', 'Exemplo de carteira diversificada',
+  `<svg viewBox="0 0 440 150" width="100%" style="display:block">
+    <circle cx="120" cy="75" r="60" fill="none" stroke="#4caf50" stroke-width="36" stroke-dasharray="113 263" stroke-dashoffset="0"/>
+    <circle cx="120" cy="75" r="60" fill="none" stroke="#e8a846" stroke-width="36" stroke-dasharray="75 301" stroke-dashoffset="-113"/>
+    <circle cx="120" cy="75" r="60" fill="none" stroke="#22d3ee" stroke-width="36" stroke-dasharray="56 320" stroke-dashoffset="-188"/>
+    <circle cx="120" cy="75" r="60" fill="none" stroke="#ef5350" stroke-width="36" stroke-dasharray="132 244" stroke-dashoffset="-244"/>
+    <rect x="210" y="20" width="12" height="12" rx="3" fill="#4caf50"/>
+    <text x="228" y="30" fill="#ccc" font-size="11" font-family="system-ui">Renda Fixa (30%)</text>
+    <rect x="210" y="42" width="12" height="12" rx="3" fill="#e8a846"/>
+    <text x="228" y="52" fill="#ccc" font-size="11" font-family="system-ui">Ações BR (20%)</text>
+    <rect x="210" y="64" width="12" height="12" rx="3" fill="#22d3ee"/>
+    <text x="228" y="74" fill="#ccc" font-size="11" font-family="system-ui">FIIs (15%)</text>
+    <rect x="210" y="86" width="12" height="12" rx="3" fill="#ef5350"/>
+    <text x="228" y="96" fill="#ccc" font-size="11" font-family="system-ui">Internacional (35%)</text>
+    <text x="120" y="79" text-anchor="middle" fill="#888" font-size="9" font-family="system-ui">Carteira</text>
+    <text x="120" y="89" text-anchor="middle" fill="#888" font-size="9" font-family="system-ui">exemplo</text>
+  </svg>`, 'Alocação hipotética. Não constitui recomendação.');
+
+// Brazil stats topic
+CHART_REGISTRY['chartIbovVsSP500'] = () => _svgWrap('IBOV vs S&P500 (2010–2024 em moeda local)', 'Retorno nominal acumulado aproximado',
+  `<svg viewBox="0 0 440 160" width="100%" style="display:block">
+    <style>@keyframes bvg{from{transform:scaleX(0)}to{transform:scaleX(1)}}.bvb{transform-origin:left center;animation:bvg .9s cubic-bezier(.22,1,.36,1) both}</style>
+    <text x="0" y="30" fill="#888" font-size="11" font-family="system-ui">IBOV (BRL)</text>
+    <rect x="0" y="37" width="200" height="28" rx="5" fill="#4caf5055" class="bvb" style="animation-delay:.1s"/>
+    <rect x="0" y="37" width="200" height="28" rx="5" fill="none" stroke="#4caf50" stroke-width="1"/>
+    <text x="206" y="55" fill="#4caf50" font-size="13" font-weight="700" font-family="system-ui">+280%</text>
+    <text x="0" y="90" fill="#888" font-size="11" font-family="system-ui">S&amp;P500 (USD)</text>
+    <rect x="0" y="97" width="360" height="28" rx="5" fill="#22d3ee55" class="bvb" style="animation-delay:.3s"/>
+    <rect x="0" y="97" width="360" height="28" rx="5" fill="none" stroke="#22d3ee" stroke-width="1"/>
+    <text x="366" y="115" fill="#22d3ee" font-size="13" font-weight="700" font-family="system-ui">+500%</text>
+    <text x="0" y="148" fill="#555" font-size="10" font-family="system-ui">* S&amp;P500 em USD. Taxa de câmbio BRL/USD afeta retorno real para o brasileiro.</text>
+  </svg>`, 'Dados históricos aproximados 2010-2024. Rentabilidade passada não garante rentabilidade futura.');
+
+// Sectors topic
+CHART_REGISTRY['chartSectorWeights'] = () => _svgWrap('Composição do Ibovespa por Setor', 'Pesos aproximados (2024)',
+  `<svg viewBox="0 0 440 170" width="100%" style="display:block">
+    <style>@keyframes swg{from{transform:scaleX(0)}to{transform:scaleX(1)}}.swb{transform-origin:left;animation:swg .8s cubic-bezier(.22,1,.36,1) both}</style>
+    ${[
+      ['Financeiro (Bancos)','#4caf50',310,30],
+      ['Commodities (VALE+PETR)','#e8a846',220,22],
+      ['Utilities (Energia)','#22d3ee',100,10],
+      ['Varejo','#ff6a00',80,8],
+      ['Saúde','#c85a17',70,7],
+      ['Outros','#666',220,23],
+    ].map(([label,color,w,pct],i) =>
+      `<text x="0" y="${20+i*26}" fill="#888" font-size="10" font-family="system-ui">${label}</text>
+       <rect x="155" y="${8+i*26}" width="${w}" height="16" rx="3" fill="${color}66" class="swb" style="animation-delay:${.05+i*.12}s"/>
+       <text x="${158+w}" y="${20+i*26}" fill="${color}" font-size="10" font-weight="700" font-family="system-ui">${pct}%</text>`
+    ).join('')}
+  </svg>`, 'Dados aproximados. Composição real varia conforme preços de mercado.');
+
+CHART_REGISTRY['chartSectorRotation'] = () => _svgWrap('Rotação Setorial no Ciclo Econômico', 'Fases do ciclo e setores favorecidos',
+  `<svg viewBox="0 0 440 160" width="100%" style="display:block">
+    <circle cx="220" cy="80" r="65" fill="none" stroke="#2a2a2a" stroke-width="1.5"/>
+    <path d="M220,15 A65,65 0 0,1 285,80" fill="none" stroke="#4caf50" stroke-width="8" stroke-linecap="round"/>
+    <path d="M285,80 A65,65 0 0,1 220,145" fill="none" stroke="#e8a846" stroke-width="8" stroke-linecap="round"/>
+    <path d="M220,145 A65,65 0 0,1 155,80" fill="none" stroke="#ef5350" stroke-width="8" stroke-linecap="round"/>
+    <path d="M155,80 A65,65 0 0,1 220,15" fill="none" stroke="#22d3ee" stroke-width="8" stroke-linecap="round"/>
+    <text x="265" y="45" fill="#4caf50" font-size="9" font-weight="700" font-family="system-ui">EXPANSÃO</text>
+    <text x="270" y="56" fill="#888" font-size="8" font-family="system-ui">Cíclicos, Tech</text>
+    <text x="265" y="110" fill="#e8a846" font-size="9" font-weight="700" font-family="system-ui">PICO</text>
+    <text x="265" y="121" fill="#888" font-size="8" font-family="system-ui">Energia, Comod.</text>
+    <text x="100" y="110" fill="#ef5350" font-size="9" font-weight="700" text-anchor="end" font-family="system-ui">RECESSÃO</text>
+    <text x="112" y="121" fill="#888" font-size="8" text-anchor="end" font-family="system-ui">Defensivos</text>
+    <text x="100" y="45" fill="#22d3ee" font-size="9" font-weight="700" text-anchor="end" font-family="system-ui">RECUPERAÇÃO</text>
+    <text x="115" y="56" fill="#888" font-size="8" text-anchor="end" font-family="system-ui">Financeiro</text>
+  </svg>`, 'Simplificado. Ciclos reais são complexos e imprevisíveis.');
+
+// Chart basics topic
+CHART_REGISTRY['chartCandlestick'] = () => _svgWrap('Anatomia do Candlestick', 'Cada vela = 1 período de negociação',
+  `<svg viewBox="0 0 440 160" width="100%" style="display:block">
+    <line x1="120" y1="20" x2="120" y2="50" stroke="#4caf50" stroke-width="2"/>
+    <rect x="100" y="50" width="40" height="60" rx="3" fill="#4caf50"/>
+    <line x1="120" y1="110" x2="120" y2="130" stroke="#4caf50" stroke-width="2"/>
+    <text x="148" y="28" fill="#4caf50" font-size="10" font-family="system-ui">Máxima (sombra superior)</text>
+    <text x="148" y="58" fill="#e0e0e0" font-size="10" font-family="system-ui">Fechamento (topo do corpo)</text>
+    <text x="148" y="88" fill="#888" font-size="10" font-family="system-ui">Corpo = Abertura → Fechamento</text>
+    <text x="148" y="118" fill="#e0e0e0" font-size="10" font-family="system-ui">Abertura (base do corpo)</text>
+    <text x="148" y="133" fill="#4caf50" font-size="10" font-family="system-ui">Mínima (sombra inferior)</text>
+    <line x1="310" y1="30" x2="310" y2="55" stroke="#ef5350" stroke-width="2"/>
+    <rect x="290" y="55" width="40" height="60" rx="3" fill="#ef5350"/>
+    <line x1="310" y1="115" x2="310" y2="140" stroke="#ef5350" stroke-width="2"/>
+    <text x="340" y="78" fill="#ef5350" font-size="11" font-weight="700" font-family="system-ui">Vela Vermelha</text>
+    <text x="340" y="91" fill="#888" font-size="10" font-family="system-ui">Fechou abaixo da abertura</text>
+    <text x="66" y="155" fill="#4caf50" font-size="11" font-weight="700" text-anchor="middle" font-family="system-ui">Vela Verde</text>
+    <text x="66" y="155" fill="#4caf50" font-size="0" font-family="system-ui"> </text>
+  </svg>`, null);
+
+CHART_REGISTRY['chartTrendlines'] = () => _svgWrap('Tipos de Tendência', 'Alta · Baixa · Lateral',
+  `<svg viewBox="0 0 440 145" width="100%" style="display:block">
+    <text x="0" y="15" fill="#4caf50" font-size="10" font-weight="700" font-family="system-ui">↗ Alta (topos e fundos crescentes)</text>
+    <polyline points="0,80 15,70 25,75 40,60 55,65 70,50 85,55 100,40" fill="none" stroke="#4caf50" stroke-width="2"/>
+    <line x1="0" y1="85" x2="100" y2="45" stroke="#4caf5055" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="155" y="15" fill="#ef5350" font-size="10" font-weight="700" font-family="system-ui">↘ Baixa (topos e fundos decrescentes)</text>
+    <polyline points="155,40 170,50 180,45 195,60 210,55 225,70 240,65 255,80" fill="none" stroke="#ef5350" stroke-width="2"/>
+    <line x1="155" y1="40" x2="255" y2="80" stroke="#ef535055" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="310" y="15" fill="#e8a846" font-size="10" font-weight="700" font-family="system-ui">→ Lateral (sem tendência)</text>
+    <polyline points="310,65 325,55 340,65 355,58 370,68 385,58 400,65 415,60" fill="none" stroke="#e8a846" stroke-width="2"/>
+    <line x1="310" y1="62" x2="440" y2="62" stroke="#e8a84655" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="220" y="130" text-anchor="middle" fill="#555" font-size="10" font-family="system-ui">Identifique a tendência antes de qualquer decisão</text>
+  </svg>`, null);
+
+// RSI topic
+CHART_REGISTRY['chartRSIZones'] = () => _svgWrap('Zonas do RSI', 'Sobrecomprado · Neutro · Sobrevendido',
+  `<svg viewBox="0 0 440 160" width="100%" style="display:block">
+    <rect x="0" y="0" width="440" height="33" rx="4" fill="#ef535022"/>
+    <rect x="0" y="33" width="440" height="94" rx="0" fill="#4caf5011"/>
+    <rect x="0" y="127" width="440" height="33" rx="4" fill="#22d3ee22"/>
+    <text x="8" y="22" fill="#ef5350" font-size="11" font-weight="700" font-family="system-ui">RSI &gt; 70 — SOBRECOMPRADO (possível correção)</text>
+    <text x="8" y="83" fill="#4caf50" font-size="11" font-weight="700" font-family="system-ui">RSI 30–70 — ZONA NEUTRA (tendência)</text>
+    <text x="8" y="95" fill="#888" font-size="10" font-family="system-ui">O Momentum considera RSI 50–70 como zona ideal (alta saudável)</text>
+    <text x="8" y="148" fill="#22d3ee" font-size="11" font-weight="700" font-family="system-ui">RSI &lt; 30 — SOBREVENDIDO (possível recuperação)</text>
+    <line x1="0" y1="33" x2="440" y2="33" stroke="#ef535066" stroke-width="1.5"/>
+    <line x1="0" y1="127" x2="440" y2="127" stroke="#22d3ee66" stroke-width="1.5"/>
+  </svg>`, 'RSI sozinho não é sinal de compra ou venda. Confirme com tendência e volume.');
+
+CHART_REGISTRY['chartRSIDivergence'] = () => _svgWrap('Divergência do RSI', 'Preço faz nova máxima, mas RSI não — sinal de fraqueza',
+  `<svg viewBox="0 0 440 155" width="100%" style="display:block">
+    <text x="0" y="15" fill="#888" font-size="10" font-family="system-ui">Preço</text>
+    <polyline points="20,70 80,55 140,45 200,48 260,35" fill="none" stroke="#e8a846" stroke-width="2"/>
+    <circle cx="140" cy="45" r="4" fill="#e8a846"/>
+    <circle cx="260" cy="35" r="4" fill="#e8a846"/>
+    <text x="0" y="95" fill="#888" font-size="10" font-family="system-ui">RSI</text>
+    <polyline points="20,130 80,120 140,110 200,118 260,125" fill="none" stroke="#22d3ee" stroke-width="2"/>
+    <circle cx="140" cy="110" r="4" fill="#22d3ee"/>
+    <circle cx="260" cy="125" r="4" fill="#22d3ee"/>
+    <line x1="140" y1="45" x2="140" y2="110" stroke="#ef535033" stroke-width="1" stroke-dasharray="4 3"/>
+    <line x1="260" y1="35" x2="260" y2="125" stroke="#ef535033" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="270" y="38" fill="#4caf50" font-size="9" font-family="system-ui">↑ Preço: nova máxima</text>
+    <text x="270" y="128" fill="#ef5350" font-size="9" font-family="system-ui">↓ RSI: máxima menor</text>
+    <text x="155" y="145" fill="#ef5350" font-size="10" font-weight="700" font-family="system-ui">⚠ Divergência de baixa — momentum está enfraquecendo</text>
+  </svg>`, null);
+
+// MACD topic
+CHART_REGISTRY['chartMACDHistogram'] = () => _svgWrap('MACD — Histograma e Linha Zero', 'Barras acima de zero = momentum de alta',
+  `<svg viewBox="0 0 440 155" width="100%" style="display:block">
+    <line x1="20" y1="77" x2="420" y2="77" stroke="#2a2a2a" stroke-width="1.5"/>
+    <text x="425" y="80" fill="#555" font-size="9" font-family="system-ui">0</text>
+    ${[
+      [30,40,'#ef5350'],[55,50,'#ef5350'],[80,20,'#ef5350'],
+      [105,10,'#4caf50'],[130,25,'#4caf50'],[155,35,'#4caf50'],
+      [180,45,'#4caf50'],[205,55,'#4caf50'],[230,40,'#4caf50'],
+      [255,15,'#4caf50'],[280,-5,'#ef5350'],[305,-20,'#ef5350'],
+      [330,-30,'#ef5350'],[355,-15,'#ef5350'],[380,5,'#4caf50']
+    ].map(([x,h,c]) => {
+      const y = h >= 0 ? 77-h : 77;
+      const height = Math.abs(h);
+      return `<rect x="${x}" y="${y}" width="18" height="${height}" rx="2" fill="${c}88"/>`;
+    }).join('')}
+    <text x="220" y="145" text-anchor="middle" fill="#555" font-size="9" font-family="system-ui">Histograma crescendo acima de zero = bull momentum. Abaixo = bear.</text>
+  </svg>`, null);
+
+CHART_REGISTRY['chartMACDCrossover'] = () => _svgWrap('Cruzamento MACD — Sinal de Compra/Venda', 'Linha MACD × Linha de Sinal',
+  `<svg viewBox="0 0 440 150" width="100%" style="display:block">
+    <line x1="20" y1="75" x2="420" y2="75" stroke="#2a2a2a" stroke-width="1"/>
+    <polyline points="20,110 80,95 130,80 170,70 210,55 260,45 300,50 350,60 400,70" fill="none" stroke="#4caf50" stroke-width="2" opacity=".9"/>
+    <polyline points="20,120 80,108 130,95 170,90 210,75 260,68 300,72 350,78 400,82" fill="none" stroke="#e8a846" stroke-width="2" stroke-dasharray="6 3"/>
+    <circle cx="210" cy="55" r="7" fill="none" stroke="#4caf50" stroke-width="2"/>
+    <text x="218" y="46" fill="#4caf50" font-size="10" font-weight="700" font-family="system-ui">BUY — MACD cruza acima do sinal</text>
+    <text x="30" y="140" fill="#4caf50" font-size="10" font-family="system-ui">— Linha MACD</text>
+    <text x="170" y="140" fill="#e8a846" font-size="10" font-family="system-ui">- - Linha de Sinal</text>
+  </svg>`, null);
+
+// ADX topic
+CHART_REGISTRY['chartADXStrength'] = () => _svgWrap('Força da Tendência — ADX', 'ADX mede intensidade, não direção',
+  `<svg viewBox="0 0 440 155" width="100%" style="display:block">
+    <rect x="0" y="0" width="440" height="45" rx="4" fill="#4caf5011"/>
+    <rect x="0" y="45" width="440" height="50" rx="0" fill="#e8a84611"/>
+    <rect x="0" y="95" width="440" height="60" rx="4" fill="#ef535011"/>
+    <line x1="0" y1="45" x2="440" y2="45" stroke="#4caf5055" stroke-width="1"/>
+    <line x1="0" y1="95" x2="440" y2="95" stroke="#e8a84655" stroke-width="1"/>
+    <text x="8" y="22" fill="#4caf50" font-size="11" font-weight="700" font-family="system-ui">ADX &gt; 40 — TENDÊNCIA FORTE</text>
+    <text x="8" y="35" fill="#888" font-size="10" font-family="system-ui">Sinal confiável. Entrar na direção confirmada.</text>
+    <text x="8" y="67" fill="#e8a846" font-size="11" font-weight="700" font-family="system-ui">ADX 25–40 — TENDÊNCIA MODERADA</text>
+    <text x="8" y="80" fill="#888" font-size="10" font-family="system-ui">Momentum usa ADX &gt; 25 como filtro.</text>
+    <text x="8" y="112" fill="#ef5350" font-size="11" font-weight="700" font-family="system-ui">ADX &lt; 25 — SEM TENDÊNCIA</text>
+    <text x="8" y="125" fill="#888" font-size="10" font-family="system-ui">Mercado lateral. Sinais menos confiáveis.</text>
+    <text x="8" y="148" fill="#555" font-size="9" font-family="system-ui">ADX não indica direção — combine com +DI / -DI para saber se é alta ou baixa.</text>
+  </svg>`, null);
+
+// ATR topic
+CHART_REGISTRY['chartATRVolatility'] = () => _svgWrap('ATR — Volatilidade Média Diária', 'Cada barra = range do dia (máx-mín)',
+  `<svg viewBox="0 0 440 150" width="100%" style="display:block">
+    ${[20,40,60,80,100,120,140,160,180,200,220,240,260,280,300,320,340,360,380,400].map((x,i) => {
+      const heights = [18,22,15,12,25,30,35,28,40,45,50,42,38,35,25,20,15,18,22,16];
+      const h = heights[i] || 20;
+      const y = 90 - h/2;
+      const color = h > 35 ? '#ef5350' : h > 25 ? '#e8a846' : '#4caf50';
+      return `<line x1="${x+10}" y1="${y}" x2="${x+10}" y2="${y+h}" stroke="${color}" stroke-width="3" stroke-linecap="round"/>`;
+    }).join('')}
+    <line x1="0" y1="90" x2="440" y2="90" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="220" y="130" text-anchor="middle" fill="#e8a846" font-size="10" font-weight="700" font-family="system-ui">Linha ATR (média de 14 dias)</text>
+    <polyline points="20,88 60,85 100,78 140,70 180,60 220,52 260,58 300,65 340,75 380,80 420,82" fill="none" stroke="#e8a846" stroke-width="2" stroke-dasharray="5 3"/>
+    <text x="5" y="148" fill="#4caf50" font-size="9" font-family="system-ui">Verde = baixa volatilidade</text>
+    <text x="170" y="148" fill="#e8a846" font-size="9" font-family="system-ui">Amarelo = média</text>
+    <text x="290" y="148" fill="#ef5350" font-size="9" font-family="system-ui">Vermelho = alta volatilidade</text>
+  </svg>`, null);
+
+// SMA topic
+CHART_REGISTRY['chartSMAGoldenCross'] = () => _svgWrap('Golden Cross — SMA50 cruza acima da SMA200', 'Um dos sinais de alta mais poderosos da análise técnica',
+  `<svg viewBox="0 0 440 155" width="100%" style="display:block">
+    <style>@keyframes gc{from{stroke-dashoffset:500}to{stroke-dashoffset:0}}.gcl{stroke-dasharray:500;animation:gc 1.2s ease both}</style>
+    <polyline points="10,130 60,120 110,110 155,100 190,88 220,70 250,55 280,42 320,35 370,28 420,22" fill="none" stroke="#e8a846" stroke-width="2" class="gcl" style="animation-delay:.1s"/>
+    <polyline points="10,145 60,140 110,135 155,128 190,118 220,105 250,92 280,80 320,70 370,58 420,50" fill="none" stroke="#22d3ee" stroke-width="2" class="gcl" style="animation-delay:.3s"/>
+    <circle cx="220" cy="87" r="10" fill="#4caf5033" stroke="#4caf50" stroke-width="2"/>
+    <line x1="220" y1="20" x2="220" y2="145" stroke="#4caf5055" stroke-width="1" stroke-dasharray="4 3"/>
+    <text x="228" y="18" fill="#4caf50" font-size="10" font-weight="700" font-family="system-ui">Golden Cross</text>
+    <text x="228" y="29" fill="#888" font-size="9" font-family="system-ui">SMA50 cruza acima da SMA200</text>
+    <text x="30" y="148" fill="#e8a846" font-size="10" font-family="system-ui">— SMA 50</text>
+    <text x="145" y="148" fill="#22d3ee" font-size="10" font-family="system-ui">— SMA 200</text>
+  </svg>`, 'Golden Cross não garante alta. Use como confirmação.');
+
+// Bollinger topic
+CHART_REGISTRY['chartBollingerBands'] = () => _svgWrap('Bandas de Bollinger', 'Banda superior · SMA20 · Banda inferior',
+  `<svg viewBox="0 0 440 150" width="100%" style="display:block">
+    <polyline points="10,35 60,30 110,28 160,35 210,40 260,38 310,30 360,25 410,30" fill="none" stroke="#ef535066" stroke-width="1.5" stroke-dasharray="6 3"/>
+    <polyline points="10,75 60,72 110,70 160,78 210,82 260,78 310,72 360,68 410,72" fill="none" stroke="#e8a846" stroke-width="2"/>
+    <polyline points="10,115 60,114 110,112 160,121 210,124 260,118 310,114 360,111 410,114" fill="none" stroke="#4caf5066" stroke-width="1.5" stroke-dasharray="6 3"/>
+    <path d="M10,35 Q60,30 110,28 Q160,35 210,40 Q260,38 310,30 Q360,25 410,30 L410,114 Q360,111 310,114 Q260,118 210,124 Q160,121 110,112 Q60,114 10,115 Z" fill="#4caf5008"/>
+    <polyline points="10,80 50,68 90,55 130,65 170,58 210,45 250,50 290,62 330,55 370,48 410,55" fill="none" stroke="#fff" stroke-width="1.5" opacity=".7"/>
+    <text x="5" y="27" fill="#ef5350" font-size="9" font-family="system-ui">Banda Superior</text>
+    <text x="5" y="68" fill="#e8a846" font-size="9" font-family="system-ui">SMA20</text>
+    <text x="5" y="125" fill="#4caf50" font-size="9" font-family="system-ui">Banda Inferior</text>
+    <text x="360" y="145" fill="#888" font-size="9" font-family="system-ui">Preço</text>
+  </svg>`, '95% dos preços ficam dentro das bandas.');
+
+CHART_REGISTRY['chartBollingerSqueeze'] = () => _svgWrap('Bollinger Squeeze — Bandas Comprimidas', 'Baixa volatilidade antecede movimento explosivo',
+  `<svg viewBox="0 0 440 140" width="100%" style="display:block">
+    <polyline points="10,30 80,40 140,50 200,55 250,60 280,65 300,75 330,50 380,25 420,15" fill="none" stroke="#ef535066" stroke-width="1.5" stroke-dasharray="5 3"/>
+    <polyline points="10,70 80,72 140,74 200,75 250,76 280,77 300,77 330,62 380,45 420,30" fill="none" stroke="#e8a846" stroke-width="2"/>
+    <polyline points="10,110 80,104 140,98 200,95 250,92 280,89 300,79 330,74 380,65 420,45" fill="none" stroke="#4caf5066" stroke-width="1.5" stroke-dasharray="5 3"/>
+    <rect x="240" y="55" width="80" height="40" rx="4" fill="#e8a84615" stroke="#e8a84655" stroke-width="1"/>
+    <text x="280" y="72" text-anchor="middle" fill="#e8a846" font-size="9" font-weight="700" font-family="system-ui">SQUEEZE</text>
+    <text x="280" y="83" text-anchor="middle" fill="#888" font-size="8" font-family="system-ui">Bandas comprimidas</text>
+    <line x1="320" y1="75" x2="340" y2="55" stroke="#e8a846" stroke-width="1" stroke-dasharray="3 2"/>
+    <text x="345" y="30" fill="#4caf50" font-size="10" font-weight="700" font-family="system-ui">→ Explosão!</text>
+    <text x="220" y="130" text-anchor="middle" fill="#555" font-size="9" font-family="system-ui">Squeeze → espere confirmação da direção antes de entrar</text>
+  </svg>`, null);
+
+// Patterns topic
+CHART_REGISTRY['chartCandlePatterns'] = () => _svgWrap('Padrões de Vela Comuns', 'Martelo · Doji · Engolfo de Alta',
+  `<svg viewBox="0 0 440 145" width="100%" style="display:block">
+    <text x="55" y="15" text-anchor="middle" fill="#4caf50" font-size="10" font-weight="700" font-family="system-ui">Martelo</text>
+    <line x1="55" y1="20" x2="55" y2="35" stroke="#4caf50" stroke-width="2"/>
+    <rect x="40" y="35" width="30" height="15" rx="3" fill="#4caf50"/>
+    <line x1="55" y1="50" x2="55" y2="90" stroke="#4caf50" stroke-width="2"/>
+    <text x="55" y="108" text-anchor="middle" fill="#888" font-size="9" font-family="system-ui">Reversão de alta</text>
+    <text x="55" y="118" text-anchor="middle" fill="#888" font-size="9" font-family="system-ui">no fundo</text>
+    <text x="185" y="15" text-anchor="middle" fill="#e8a846" font-size="10" font-weight="700" font-family="system-ui">Doji</text>
+    <line x1="185" y1="20" x2="185" y2="40" stroke="#e8a846" stroke-width="2"/>
+    <rect x="178" y="40" width="14" height="4" rx="2" fill="#e8a846"/>
+    <line x1="185" y1="44" x2="185" y2="90" stroke="#e8a846" stroke-width="2"/>
+    <text x="185" y="108" text-anchor="middle" fill="#888" font-size="9" font-family="system-ui">Indecisão</text>
+    <text x="185" y="118" text-anchor="middle" fill="#888" font-size="9" font-family="system-ui">Atenção ao próximo</text>
+    <text x="340" y="15" text-anchor="middle" fill="#4caf50" font-size="10" font-weight="700" font-family="system-ui">Engolfo de Alta</text>
+    <rect x="308" y="35" width="24" height="45" rx="3" fill="#ef5350"/>
+    <rect x="298" y="20" width="44" height="65" rx="3" fill="#4caf50"/>
+    <text x="340" y="108" text-anchor="middle" fill="#888" font-size="9" font-family="system-ui">Vela verde "engole"</text>
+    <text x="340" y="118" text-anchor="middle" fill="#888" font-size="9" font-family="system-ui">a vela vermelha</text>
+    <text x="220" y="138" text-anchor="middle" fill="#555" font-size="9" font-family="system-ui">Sempre confirme com volume e tendência antes de agir</text>
+  </svg>`, null);
+
+// Tesouro topic
+CHART_REGISTRY['chartTesouroTypes'] = () => _svgWrap('Os 3 Tipos de Tesouro Direto', 'Selic · IPCA+ · Prefixado',
+  `<svg viewBox="0 0 440 155" width="100%" style="display:block">
+    ${[
+      ['🔵','Tesouro Selic','Segue a taxa Selic','Liquidez diária','Ideal para reserva de emergência','#22d3ee',0],
+      ['🟡','Tesouro IPCA+','IPCA + taxa fixa','Longo prazo (10+ anos)','Protege da inflação','#e8a846',52],
+      ['🟢','Tesouro Prefixado','Taxa % fixa ao ano','Médio prazo','Bom quando Selic cai','#4caf50',104],
+    ].map(([emoji,name,rate,term,use,color,y]) =>
+      `<rect x="0" y="${y}" width="440" height="46" rx="6" fill="${color}11" stroke="${color}44" stroke-width="1"/>
+       <text x="10" y="${y+18}" fill="${color}" font-size="11" font-weight="700" font-family="system-ui">${name}</text>
+       <text x="10" y="${y+30}" fill="#888" font-size="9" font-family="system-ui">Rendimento: ${rate} · Prazo: ${term}</text>
+       <text x="10" y="${y+42}" fill="${color}" font-size="9" font-family="system-ui">→ ${use}</text>`
+    ).join('')}
+  </svg>`, 'Tesouro Direto é garantido pelo Tesouro Nacional.');
+
+// CDB/CDI topic
+CHART_REGISTRY['chartCDIvsSelicRate'] = () => _svgWrap('CDI vs Selic — Andam Juntos', 'Histórico aproximado 2020–2024',
+  `<svg viewBox="0 0 440 145" width="100%" style="display:block">
+    <line x1="30" y1="10" x2="30" y2="120" stroke="#2a2a2a" stroke-width="1"/>
+    <line x1="30" y1="120" x2="420" y2="120" stroke="#2a2a2a" stroke-width="1"/>
+    <polyline points="30,105 95,110 145,110 195,90 250,50 310,25 370,20 420,22" fill="none" stroke="#e8a846" stroke-width="2.5"/>
+    <polyline points="30,107 95,112 145,112 195,93 250,53 310,27 370,22 420,24" fill="none" stroke="#4caf50" stroke-width="1.5" stroke-dasharray="5 3"/>
+    ${['2020','2021','2022','2023','2024'].map((y,i) =>
+      `<text x="${30+i*97}" y="133" fill="#555" font-size="9" text-anchor="middle" font-family="system-ui">${y}</text>`
+    ).join('')}
+    <text x="5" y="110" fill="#555" font-size="9" text-anchor="end" font-family="system-ui">2%</text>
+    <text x="5" y="25" fill="#555" font-size="9" text-anchor="end" font-family="system-ui">14%</text>
+    <text x="220" y="143" text-anchor="middle" fill="#e8a846" font-size="10" font-family="system-ui">— Selic   </text>
+    <text x="280" y="143" text-anchor="middle" fill="#4caf50" font-size="10" font-family="system-ui">- - CDI</text>
+  </svg>`, 'CDI fica ~0,10% abaixo da Selic. Dados aproximados para fins educacionais.');
+
+// LCI/LCA topic
+CHART_REGISTRY['chartTaxComparison'] = () => _svgWrap('LCI vs CDB — Comparação Pós-IR', 'CDB 110% CDI com IR de 20% = 88% líquido',
+  `<svg viewBox="0 0 440 150" width="100%" style="display:block">
+    <style>@keyframes tcg{from{transform:scaleX(0)}to{transform:scaleX(1)}}.tcb{transform-origin:left;animation:tcg .9s cubic-bezier(.22,1,.36,1) both}</style>
+    <text x="0" y="30" fill="#888" font-size="11" font-family="system-ui">CDB 110% CDI (bruto)</text>
+    <rect x="0" y="37" width="300" height="24" rx="5" fill="#e8a84633" class="tcb" style="animation-delay:.1s"/>
+    <text x="306" y="53" fill="#e8a846" font-size="12" font-weight="700" font-family="system-ui">110% CDI</text>
+    <text x="0" y="78" fill="#888" font-size="11" font-family="system-ui">CDB 110% CDI (líquido, IR 20%)</text>
+    <rect x="0" y="85" width="240" height="24" rx="5" fill="#ef535033" class="tcb" style="animation-delay:.3s"/>
+    <text x="246" y="101" fill="#ef5350" font-size="12" font-weight="700" font-family="system-ui">88% CDI</text>
+    <text x="0" y="126" fill="#888" font-size="11" font-family="system-ui">LCI 89% CDI (isenta de IR)</text>
+    <rect x="0" y="133" width="243" height="24" rx="5" fill="#4caf5033" class="tcb" style="animation-delay:.5s"/>
+    <text x="249" y="149" fill="#4caf50" font-size="12" font-weight="700" font-family="system-ui">89% CDI ✓</text>
+  </svg>`, 'Exemplo hipotético. A LCI ganha 1% CDI a mais que o CDB após imposto, mesmo com taxa nominal menor.');
+
+// Juros compostos topic
+CHART_REGISTRY['chartCompoundSimple'] = () => _svgWrap('Juros Simples vs Compostos', 'R$1.000 a 10%/a por 20 anos',
+  `<svg viewBox="0 0 440 155" width="100%" style="display:block">
+    <style>@keyframes csg{from{stroke-dashoffset:600}to{stroke-dashoffset:0}}.csl{stroke-dasharray:600;animation:csg 1.5s ease both}</style>
+    <line x1="30" y1="10" x2="30" y2="125" stroke="#2a2a2a" stroke-width="1"/>
+    <line x1="30" y1="125" x2="420" y2="125" stroke="#2a2a2a" stroke-width="1"/>
+    <polyline points="30,125 100,110 170,95 240,80 310,65 380,50 420,43" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="5 3" class="csl" style="animation-delay:.1s"/>
+    <polyline points="30,125 100,118 170,108 240,93 310,72 380,42 420,25" fill="none" stroke="#4caf50" stroke-width="2.5" class="csl" style="animation-delay:.3s"/>
+    <text x="425" y="46" fill="#4caf50" font-size="10" font-weight="700" font-family="system-ui">R$6.727</text>
+    <text x="425" y="62" fill="#555" font-size="10" font-family="system-ui">R$3.000</text>
+    <text x="5" y="125" fill="#555" font-size="9" text-anchor="end" font-family="system-ui">0</text>
+    <text x="5" y="10" fill="#555" font-size="9" text-anchor="end" font-family="system-ui">7k</text>
+    ${[0,5,10,15,20].map((y,i) =>
+      `<text x="${30+i*98}" y="138" fill="#555" font-size="9" text-anchor="middle" font-family="system-ui">Ano ${y}</text>`
+    ).join('')}
+    <text x="200" y="152" text-anchor="middle" fill="#4caf50" font-size="10" font-family="system-ui">— Compostos</text>
+    <text x="310" y="152" text-anchor="middle" fill="#555" font-size="10" font-family="system-ui">- - Simples</text>
+  </svg>`, 'R$1.000 a 10%/a: juros simples = R$3.000 em 20 anos. Compostos = R$6.727. Exemplo hipotético.');
+
+// DARF topic
+CHART_REGISTRY['chartDARFCalendar'] = () => _svgWrap('Calendário do DARF', 'Prazo: último dia útil do mês seguinte às vendas',
+  `<svg viewBox="0 0 440 140" width="100%" style="display:block">
+    ${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'].map((m,i) => {
+      const x = (i % 4) * 110;
+      const y = Math.floor(i / 4) * 45;
+      const hasDARF = [2,4,7,9].includes(i);
+      return `<rect x="${x}" y="${y}" width="100" height="36" rx="5" fill="${hasDARF ? '#ef535022' : '#1a1a1a'}" stroke="${hasDARF ? '#ef535066' : '#2a2a2a'}" stroke-width="1"/>
+        <text x="${x+50}" y="${y+16}" text-anchor="middle" fill="${hasDARF ? '#ef5350' : '#888'}" font-size="11" font-weight="${hasDARF ? '700' : '400'}" font-family="system-ui">${m}</text>
+        ${hasDARF ? `<text x="${x+50}" y="${y+28}" text-anchor="middle" fill="#ef5350" font-size="8" font-family="system-ui">DARF</text>` : ''}`;
+    }).join('')}
+    <text x="220" y="133" text-anchor="middle" fill="#888" font-size="9" font-family="system-ui">Exemplo: vendeu em março → DARF até último dia útil de abril</text>
+  </svg>`, 'Isenção: vendas totais no mês &lt; R$20.000 (apenas operações normais, não day-trade).');
+
+// Momentum signal topic
+CHART_REGISTRY['chartMomentumScore'] = () => _svgWrap('Score do Momentum — 9 Critérios', 'Máximo de 6,0 pontos',
+  `<svg viewBox="0 0 440 175" width="100%" style="display:block">
+    ${[
+      ['Preço > SMA200',1.0,'#4caf50'],
+      ['SMA50 > SMA200',1.0,'#4caf50'],
+      ['MACD bullish crossover',1.0,'#4caf50'],
+      ['RSI 50–70',0.5,'#e8a846'],
+      ['ADX > 25',0.5,'#e8a846'],
+      ['Volume acima da média',0.5,'#e8a846'],
+      ['Padrão gráfico detectado',0.5,'#e8a846'],
+      ['Regime de mercado bull',0.5,'#22d3ee'],
+      ['Setor em tendência',0.5,'#22d3ee'],
+    ].map(([label,pts,color],i) =>
+      `<text x="0" y="${14+i*18}" fill="#aaa" font-size="9" font-family="system-ui">${label}</text>
+       <rect x="195" y="${4+i*18}" width="${pts*60}" height="11" rx="3" fill="${color}88"/>
+       <text x="${200+pts*60}" y="${14+i*18}" fill="${color}" font-size="9" font-weight="700" font-family="system-ui">+${pts}</text>`
+    ).join('')}
+    <line x1="0" y1="168" x2="440" y2="168" stroke="#2a2a2a" stroke-width="1"/>
+    <text x="0" y="175" fill="#888" font-size="9" font-family="system-ui">Score ≥ 3,5 → BUY  |  2,5–3,5 → MONITORAR  |  &lt; 2,5 → sem sinal</text>
+  </svg>`, 'Não constitui recomendação de investimento.');
+
+// Smart exit topic
+CHART_REGISTRY['chartTrailingStop'] = () => _svgWrap('Stop Móvel — 2×ATR', 'O stop sobe com o preço, nunca desce',
+  `<svg viewBox="0 0 440 150" width="100%" style="display:block">
+    <polyline points="20,120 60,100 100,80 140,60 180,50 220,40 260,45 300,55 340,65" fill="none" stroke="#4caf50" stroke-width="2"/>
+    <polyline points="20,140 60,120 100,100 140,80 180,70 220,60 260,64 300,70 340,80" fill="none" stroke="#ef5350" stroke-width="1.5" stroke-dasharray="5 3"/>
+    <text x="345" y="62" fill="#4caf50" font-size="9" font-family="system-ui">Preço</text>
+    <text x="345" y="80" fill="#ef5350" font-size="9" font-family="system-ui">Stop (2×ATR)</text>
+    <line x1="300" y1="10" x2="300" y2="145" stroke="#e8a84655" stroke-width="1" stroke-dasharray="3 2"/>
+    <text x="302" y="18" fill="#e8a846" font-size="9" font-family="system-ui">Stop atingido</text>
+    <text x="302" y="28" fill="#e8a846" font-size="9" font-family="system-ui">→ Saída</text>
+    <text x="20" y="15" fill="#888" font-size="9" font-family="system-ui">↑ Cada nova máxima eleva o stop</text>
+    <circle cx="260" cy="45" r="4" fill="#4caf50"/>
+    <circle cx="260" cy="64" r="4" fill="#ef5350"/>
+  </svg>`, 'Stop baseado em ATR da ação, calculado automaticamente pelo app.');
+
+// Market regime topic
+CHART_REGISTRY['chartMarketRegime'] = () => _svgWrap('Regime de Mercado — IBOV vs SMA30', 'O regime determina se sinais BUY estão ativos',
+  `<svg viewBox="0 0 440 150" width="100%" style="display:block">
+    <rect x="0" y="0" width="440" height="45" rx="4" fill="#4caf5011" stroke="#4caf5044" stroke-width="1"/>
+    <rect x="0" y="50" width="440" height="45" rx="4" fill="#e8a84611" stroke="#e8a84644" stroke-width="1"/>
+    <rect x="0" y="100" width="440" height="45" rx="4" fill="#ef535011" stroke="#ef535044" stroke-width="1"/>
+    <text x="8" y="20" fill="#4caf50" font-size="13" font-family="system-ui">🟢 BULL</text>
+    <text x="65" y="20" fill="#4caf50" font-size="10" font-weight="700" font-family="system-ui">— IBOV acima da SMA30</text>
+    <text x="8" y="35" fill="#888" font-size="10" font-family="system-ui">Sinais BUY ativos. Condições favoráveis para novas posições.</text>
+    <text x="8" y="70" fill="#e8a846" font-size="13" font-family="system-ui">🟡 NEUTRAL</text>
+    <text x="90" y="70" fill="#e8a846" font-size="10" font-weight="700" font-family="system-ui">— IBOV ligeiramente abaixo da SMA30</text>
+    <text x="8" y="85" fill="#888" font-size="10" font-family="system-ui">Cautela. Reduza tamanho das posições em 30–50%.</text>
+    <text x="8" y="120" fill="#ef5350" font-size="13" font-family="system-ui">🔴 BEAR</text>
+    <text x="65" y="120" fill="#ef5350" font-size="10" font-weight="700" font-family="system-ui">— IBOV &gt; 3% abaixo da SMA30</text>
+    <text x="8" y="135" fill="#888" font-size="10" font-family="system-ui">Sinais BUY suspensos. 70–80% das ações caem em Bear.</text>
+  </svg>`, 'Verifique o regime ANTES de agir em qualquer sinal.');
+
+// Capital mgmt topic
+CHART_REGISTRY['chartPositionSizing'] = () => _svgWrap('Tamanho de Posição — Fórmula ATR', 'Ações compradas = Risco máximo ÷ (2 × ATR)',
+  `<svg viewBox="0 0 440 150" width="100%" style="display:block">
+    <rect x="0" y="5" width="440" height="50" rx="6" fill="#22d3ee11" stroke="#22d3ee44" stroke-width="1"/>
+    <text x="220" y="25" text-anchor="middle" fill="#22d3ee" font-size="12" font-weight="700" font-family="system-ui">Fórmula: N = Risco ÷ (2 × ATR)</text>
+    <text x="220" y="42" text-anchor="middle" fill="#888" font-size="10" font-family="system-ui">N = número de ações  ·  Risco = patrimônio × 2%</text>
+    <text x="10" y="80" fill="#888" font-size="11" font-family="system-ui">Patrimônio R$10.000 · Risco 2% = R$200</text>
+    ${[
+      ['ATR R$1 (baixa volatilidade)','100 ações','#4caf50',90],
+      ['ATR R$2 (média volatilidade)','50 ações','#e8a846',110],
+      ['ATR R$4 (alta volatilidade)','25 ações','#ef5350',130],
+    ].map(([label,result,color,y]) =>
+      `<text x="10" y="${y}" fill="#aaa" font-size="10" font-family="system-ui">${label}</text>
+       <text x="430" y="${y}" text-anchor="end" fill="${color}" font-size="10" font-weight="700" font-family="system-ui">→ ${result}</text>`
+    ).join('')}
+    <text x="220" y="148" text-anchor="middle" fill="#555" font-size="9" font-family="system-ui">ATR maior = posição menor. Risco em reais sempre constante.</text>
+  </svg>`, 'Exemplo hipotético educacional. O app calcula automaticamente o tamanho sugerido.');
+
+// ─── UNIVERSAL LESSON RENDERER ───────────────────────────────────────────────
 function renderLessonSection() {
-  const SECTIONS = [
-    {
-      icon: '📉', title: 'Seu Dinheiro Está Encolhendo',
-      hook: 'Você sabia que o dinheiro parado na sua conta perde valor todo ano, mesmo sem você gastar nada?',
-      content: `<p style="font-size:14px;color:var(--ink-2);line-height:1.7;margin-bottom:var(--s-3)">Quando a economia vai mal, bancos centrais criam dinheiro novo — eletronicamente, do nada — e injetam no sistema. Isso aconteceu no mundo inteiro durante a pandemia. No Brasil, a base monetária (M2) cresceu <strong style="color:var(--ink-1)">+68% entre 2019 e 2023</strong>. Mais dinheiro circulando com a mesma quantidade de bens = preços mais altos.</p>
-<p style="font-size:14px;color:var(--ink-2);line-height:1.7;margin-bottom:var(--s-4)">A poupança rendeu cerca de <strong style="color:var(--ink-1)">+90%</strong> de 2010 a 2024. Mas a inflação (IPCA) foi de <strong style="color:#ef5350">+104%</strong>. Quem manteve dinheiro na poupança perdeu poder de compra sem perceber.</p>
-<div style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;padding:14px;margin-bottom:var(--s-3);font-family:var(--font-mono);font-size:12px;line-height:2">
-<span style="color:#e8a846">R$10.000 guardados em 2010</span><br>
-<span style="color:#ef5350">2024: compra o equivalente a R$4.900 de 2010</span><br>
-<span style="color:#555">O dinheiro estava seguro. O poder de compra, não.</span>
-</div>`,
-      chart: 'returns'
-    },
-    {
-      icon: '🏢', title: 'Isso Não É Jogo — É Ser Dono de Empresa',
-      hook: 'Quando você compra uma ação, você não está apostando — você está virando sócio de uma empresa de verdade.',
-      content: `<p style="font-size:14px;color:var(--ink-2);line-height:1.7;margin-bottom:var(--s-3)">Uma ação é um pedaço real de uma empresa: ela tem funcionários, fábricas, clientes e receita. Quando você compra PETR4, você se torna sócio da Petrobras. Quando a empresa vai bem, você vai bem também.</p>
-<div style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;padding:14px;margin-bottom:var(--s-4)">
-  <div style="font-size:11px;color:#666;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">As 3 objeções mais comuns</div>
-  <div style="margin-bottom:10px"><span style="color:#e8a846;font-weight:600">❝ Bolsa é jogo de azar ❞</span><br><span style="font-size:13px;color:var(--ink-3)">Jogo tem valor esperado negativo — a banca sempre ganha. O Ibovespa acumulou +280% em 14 anos. Empresas vendem produtos reais — não são loteria.</span></div>
-  <div style="margin-bottom:10px"><span style="color:#e8a846;font-weight:600">❝ Não tenho dinheiro suficiente ❞</span><br><span style="font-size:13px;color:var(--ink-3)">Com ações fracionárias (ex: PETR4F), você pode começar com R$50/mês. Não existe mínimo. A barreira é psicológica, não financeira.</span></div>
-  <div><span style="color:#e8a846;font-weight:600">❝ O mercado caiu em 2020 ❞</span><br><span style="font-size:13px;color:var(--ink-3)">Sim — e voltou às máximas históricas em 18 meses. Toda crise da história foi seguida por recuperação. Quem precisou vender na hora errada sofreu; quem ficou quieto, ganhou.</span></div>
-</div>
-<p style="font-size:14px;color:var(--ink-2);line-height:1.7">Pense em imóveis: o Ibovespa historicamente dobra em ~10 anos, igual a um bom imóvel. Mas você vende uma ação em dois minutos com três cliques. Vender um apartamento leva meses de papelada. <strong style="color:var(--ink-1)">Ações são como imóveis que você pode comprar e vender com um clique</strong> — sem escritura, corretor ou financiamento.</p>`,
-      chart: null
-    },
-    {
-      icon: '💰', title: 'Começar Com Pouco Já Muda Tudo',
-      hook: 'Você não precisa ser rico para investir — você precisa investir para não continuar sem dinheiro.',
-      content: `<p style="font-size:14px;color:var(--ink-2);line-height:1.7;margin-bottom:var(--s-3)">Na B3, existe um tipo de ação chamada <strong style="color:var(--ink-1)">ação fracionária</strong> — o ticker termina em F (ex: PETR4F, VALE3F). Ela permite comprar menos do que uma ação inteira. Resultado: dá para começar com R$30, R$50, qualquer valor. Não existe mínimo obrigatório.</p>
-<p style="font-size:14px;color:var(--ink-2);line-height:1.7;margin-bottom:var(--s-3)">O segredo dos juros compostos é simples: a diferença de taxa que parece pequena mês a mês vira uma fortuna ao longo de décadas. Veja o que acontece com o mesmo R$500/mês em 25 anos:</p>`,
-      chart: 'compound'
-    },
-    {
-      icon: '⏳', title: 'O Custo de Não Fazer Nada',
-      hook: 'Não investir também é uma escolha — e ela tem um preço que a maioria nunca calcula.',
-      content: `<p style="font-size:14px;color:var(--ink-2);line-height:1.7;margin-bottom:var(--s-3)">As pessoas se preocupam em perder dinheiro investindo. Quase ninguém calcula o custo de não começar. Veja o impacto de esperar apenas 5 ou 10 anos:</p>`,
-      chart: 'waiting',
-      extra: `<p style="font-size:14px;color:var(--ink-2);line-height:1.7;margin-top:var(--s-3)">Quem começa aos 40 em vez dos 30 acumula <strong style="color:#ef5350">71% a menos</strong> — com o mesmo esforço mensal, a mesma taxa. O tempo é o ingrediente mais poderoso dos juros compostos, e ele não volta.</p>
-<div style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;padding:14px;margin-top:var(--s-4)">
-  <div style="font-size:11px;color:#666;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Conteúdo educacional — CVM</div>
-  <p style="font-size:11px;color:#555;margin:0;line-height:1.5">Este conteúdo tem finalidade exclusivamente educacional e informativa. Não constitui recomendação de investimento, consultoria financeira ou oferta de qualquer produto. Rentabilidade passada não garante rentabilidade futura. Todo investimento envolve riscos, incluindo perda do capital investido. Momentum não é corretora ou consultora de valores mobiliários registrada na CVM.</p>
-</div>`
-    }
-  ];
-
-  if (_lessonStep === 5) return renderLessonQuiz();
-
-  const sec = SECTIONS[_lessonStep - 1];
+  const lesson = window.LESSON_DATA && window.LESSON_DATA[_eduTopic];
+  if (!lesson) return '<p style="color:var(--ink-3);font-size:14px">Conteúdo em breve...</p>';
+  if (_lessonStep === lesson.totalSteps) return renderLessonQuiz();
+  const sec = lesson.sections[_lessonStep - 1];
   let h = '';
   h += `<div style="font-size:22px;margin-bottom:var(--s-2)">${sec.icon}</div>`;
   h += `<h3 style="color:var(--ink-1);font-size:18px;margin-bottom:var(--s-3);line-height:1.3">${sec.title}</h3>`;
   h += `<p style="font-size:15px;color:#22d3ee;font-style:italic;margin-bottom:var(--s-4);line-height:1.6;border-left:3px solid #22d3ee33;padding-left:12px">${sec.hook}</p>`;
   h += sec.content;
-  if (sec.chart === 'returns') h += chartRealReturns();
-  if (sec.chart === 'compound') h += chartCompoundInterest();
-  if (sec.chart === 'waiting') h += chartCostOfWaiting();
+  if (sec.chart && CHART_REGISTRY[sec.chart]) h += CHART_REGISTRY[sec.chart]();
   if (sec.extra) h += sec.extra;
   return h;
 }
 
 function renderLessonQuiz() {
-  const allAnswered = LESSON_QUIZ_DATA.every((_, i) => _quizAnswers[i] !== undefined);
+  const lesson = window.LESSON_DATA && window.LESSON_DATA[_eduTopic];
+  const quizData = lesson ? lesson.quiz : [];
+  const allAnswered = quizData.length > 0 && quizData.every((_, i) => _quizAnswers[i] !== undefined);
   let score = 0;
   if (_quizSubmitted) {
-    LESSON_QUIZ_DATA.forEach((q, i) => { if (_quizAnswers[i] === q.correct) score++; });
+    quizData.forEach((q, i) => { if (_quizAnswers[i] === q.correct) score++; });
   }
 
   let h = '';
@@ -5763,7 +6138,7 @@ function renderLessonQuiz() {
     h += `</div>`;
   }
 
-  LESSON_QUIZ_DATA.forEach((q, qi) => {
+  quizData.forEach((q, qi) => {
     const selected = _quizAnswers[qi];
     const isCorrect = _quizSubmitted && selected === q.correct;
     const isWrong = _quizSubmitted && selected !== undefined && selected !== q.correct;
@@ -5793,7 +6168,7 @@ function renderLessonQuiz() {
   if (!_quizSubmitted) {
     h += `<button class="${allAnswered ? 'btn-primary' : 'btn-ghost'}" style="width:100%;margin-top:var(--s-2);opacity:${allAnswered ? '1' : '.4'}" ${allAnswered ? 'onclick="submitQuiz()"' : 'disabled'}>Ver Resultado</button>`;
     if (!allAnswered) {
-      const remaining = LESSON_QUIZ_DATA.filter((_, i) => _quizAnswers[i] === undefined).length;
+      const remaining = quizData.filter((_, i) => _quizAnswers[i] === undefined).length;
       h += `<p style="font-size:11px;color:#555;text-align:center;margin-top:8px">${remaining} pergunta${remaining !== 1 ? 's' : ''} sem resposta</p>`;
     }
   }
@@ -5801,8 +6176,11 @@ function renderLessonQuiz() {
   return h;
 }
 
-function renderInteractiveLesson(isDone) {
-  const TITLES = ['Seu Dinheiro Está Encolhendo', 'Isso Não É Jogo', 'Começar Com Pouco', 'O Custo de Esperar', 'Quiz Final'];
+function renderInteractiveLesson(topicId, isDone) {
+  const lesson = window.LESSON_DATA && window.LESSON_DATA[topicId];
+  if (!lesson) return '<p style="color:var(--ink-3);font-size:14px">Conteúdo em breve...</p>';
+  const totalSteps = lesson.totalSteps;
+  const TITLES = lesson.sections.map(s => s.title).concat(['Quiz Final']);
   let h = '';
 
   // Progress pills
@@ -5811,10 +6189,12 @@ function renderInteractiveLesson(isDone) {
     const step = i + 1;
     const active = _lessonStep === step;
     const done = _lessonStep > step;
-    const bg = active ? 'var(--primary)' : done ? '#4caf5033' : '#1a1a1a';
-    const col = active ? '#000' : done ? '#4caf50' : '#555';
-    const border = active ? 'var(--primary)' : done ? '#4caf5055' : '#2a2a2a';
-    h += `<button onclick="lessonGoTo(${step})" style="background:${bg};color:${col};border:1px solid ${border};border-radius:20px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:${active ? '700' : '400'};white-space:nowrap">${done ? '✓' : step} ${active ? title : ''}</button>`;
+    const bg = active ? 'var(--primary)' : done ? '#1c2e1c' : '#252525';
+    const col = active ? '#000' : done ? '#4caf50' : '#e0e0e0';
+    const border = active ? 'var(--primary)' : done ? '#4caf5099' : '#606060';
+    const fw = active ? '700' : done ? '600' : '500';
+    const label = active ? `${step} ${title}` : done ? `✓ ${step}` : `${step}`;
+    h += `<button onclick="lessonGoTo(${step})" style="background:${bg};color:${col};border:2px solid ${border};border-radius:22px;padding:6px 15px;font-size:12px;cursor:pointer;font-weight:${fw};white-space:nowrap;min-width:36px">${label}</button>`;
   });
   h += `</div>`;
 
@@ -5826,13 +6206,13 @@ function renderInteractiveLesson(isDone) {
   // Nav
   h += `<div style="display:flex;gap:var(--s-3);margin-top:var(--s-5);padding-top:var(--s-4);border-top:1px solid var(--line);align-items:center;flex-wrap:wrap">`;
   if (_lessonStep > 1) h += `<button class="btn-ghost" onclick="lessonPrev()">← Anterior</button>`;
-  if (_lessonStep < 5) h += `<button class="btn-primary" style="margin-left:auto" onclick="lessonNext()">Próximo →</button>`;
+  if (_lessonStep < totalSteps) h += `<button class="btn-primary" style="margin-left:auto" onclick="lessonNext()">Próximo →</button>`;
 
   // Mark complete on sections 4+ when not already done
-  if (_lessonStep >= 4 && !isDone) {
-    h += `<button class="btn-ghost" style="font-size:12px;${_lessonStep < 5 ? '' : 'margin-left:auto'}" onclick="toggleTopicComplete('why')">Marcar como concluído ✓</button>`;
-  } else if (_lessonStep >= 4 && isDone) {
-    h += `<span style="font-size:12px;color:#4caf50;${_lessonStep < 5 ? '' : 'margin-left:auto'}">✅ Concluído</span>`;
+  if (_lessonStep >= totalSteps - 1 && !isDone) {
+    h += `<button class="btn-ghost" style="font-size:12px;${_lessonStep < totalSteps ? '' : 'margin-left:auto'}" onclick="toggleTopicComplete('${topicId}')">Marcar como concluído ✓</button>`;
+  } else if (_lessonStep >= totalSteps - 1 && isDone) {
+    h += `<span style="font-size:12px;color:#4caf50;${_lessonStep < totalSteps ? '' : 'margin-left:auto'}">✅ Concluído</span>`;
   }
   h += `</div>`;
 
@@ -5942,11 +6322,11 @@ function renderEdu() {
     html += `<p style="color:var(--ink-3);font-size:13px;margin-bottom:var(--s-5);max-width:320px;margin-left:auto;margin-right:auto">Este tópico faz parte do curso completo, disponível apenas para assinantes Pro. Acesse todas as ${allTopics.length} aulas de análise técnica, renda fixa e estratégia.</p>`;
     html += `<button class="btn-primary" onclick="showUpgradeModal()">Assinar Pro — R$29,90/mês</button>`;
     html += `</div>`;
-  } else if (current.id === 'why') {
+  } else if (window.LESSON_DATA && window.LESSON_DATA[current.id]) {
   html += `<div class="card" style="margin-bottom:var(--s-4)">`;
-  html += `<div class="kicker" style="margin-bottom:var(--s-3);color:var(--primary)">🌱 Por Que Investir? · Primeiros Passos</div>`;
+  html += `<div class="kicker" style="margin-bottom:var(--s-3);color:var(--primary)">${current.icon} ${current.name} · Primeiros Passos</div>`;
   html += `<p style="font-size:11px;color:#555;margin-bottom:var(--s-4);padding:8px 10px;background:#0d0d0d;border-radius:6px;border:1px solid #1a1a1a">📋 Conteúdo educacional — Não constitui recomendação de investimento. Momentum não é registrado como consultor de valores mobiliários junto à CVM.</p>`;
-  html += renderInteractiveLesson(isDone);
+  html += renderInteractiveLesson(current.id, isDone);
   html += `</div>`;
   } else {
   html += `<div class="card" style="margin-bottom:var(--s-4)">`;
@@ -6010,7 +6390,7 @@ function switchEduTopic(id) {
     showUpgradeModal();
     return;
   }
-  if (id !== 'why') { _lessonStep = 1; _quizAnswers = {}; _quizSubmitted = false; }
+  _lessonStep = 1; _quizAnswers = {}; _quizSubmitted = false;
   setState('_eduTopic', id);
   const dash = document.getElementById('dashboard');
   if (dash) dash.scrollTop = 0;
