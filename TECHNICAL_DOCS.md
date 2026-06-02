@@ -1,6 +1,6 @@
 # MOMENTUM — Technical Documentation
 
-*Version 5.2 — May 2026*
+*Version 5.3 — June 2026*
 
 ---
 
@@ -32,6 +32,8 @@
    - [Technical Analysis Engine](#64-technical-analysis-engine)
    - [Chart Renderer](#65-chart-renderer)
    - [Portfolio Engine](#66-portfolio-engine)
+   - [Pattern Finder](#67-pattern-finder-patterns-tab)
+   - [Interactive Lesson System](#68-interactive-primeiros-passos-lesson-system)
 7. [Stock Universes](#7-stock-universes)
 8. [Data Flow Diagrams](#8-data-flow-diagrams)
 9. [Docker & Deployment](#9-docker--deployment)
@@ -49,7 +51,7 @@ MOMENTUM is a **monolithic, server-rendered single-page application** deliberate
 ┌─────────────────────────────────────────────────────┐
 │                     Browser                         │
 │                                                     │
-│  stock-dashboard.html  (Vanilla JS SPA ~3,900 lines)│
+│  stock-dashboard.html  (Vanilla JS SPA ~6,500 lines)│
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐            │
 │  │  Auth UI │ │ Scanner  │ │Portfolio │  ...        │
 │  └──────────┘ └──────────┘ └──────────┘            │
@@ -96,12 +98,19 @@ MOMENTUM is a **monolithic, server-rendered single-page application** deliberate
 ```
 Momentum/
 ├── server.js                 # Full backend — auth, stock proxy, Stripe, admin
-├── stock-dashboard.html      # Full frontend SPA — all UI, charts, logic
+├── stock-dashboard.html      # Full frontend SPA — all UI, charts, logic (~6,500 lines)
 ├── legend.html               # Static legend/help page
 ├── package.json              # Dependencies: jsonwebtoken, stripe
 ├── Dockerfile                # Node 22 Alpine, non-root appuser
 ├── docker-compose.yml        # Port 8081→8080, env vars, volume mount
 ├── .env.example              # Template for required environment variables
+├── static/
+│   ├── app.css               # Global stylesheet
+│   ├── fx.js                 # Currency / FX helpers (~111 lines)
+│   ├── i18n.js               # Translation strings — LANGS.en + LANGS.pt (~1,011 lines)
+│   ├── indicators.js         # TA indicator stubs / exports (~37 lines)
+│   ├── lessons.js            # Interactive lesson data — window.LESSON_DATA (~2,188 lines)
+│   └── patterns.js           # Chart pattern definitions (~83 lines)
 ├── data/
 │   └── users.json            # User database (created at first signup)
 ├── .claude/
@@ -119,6 +128,7 @@ Momentum/
 |---|---|---|
 | `data/users.json` | First signup | Persistent user records |
 | `data/users.json.tmp.<pid>` | During save | Atomic write temp file (auto-deleted) |
+| `data/feature-flags.json` | First admin toggle | Feature flag overrides (defaults in `server.js`) |
 
 ---
 
@@ -134,8 +144,10 @@ Copy `.env.example` to `.env` and fill in values before running.
 | `PORT` | No | `8080` | Port the server listens on inside the container |
 | `HOST` | No | `0.0.0.0` | Bind address |
 | `STRIPE_SECRET_KEY` | No | — | Stripe secret key (`sk_live_...`). Leave blank to disable payments |
-| `STRIPE_PRICE_PRO_MONTHLY` | No | — | Stripe Price ID for the €9/month Pro plan (`price_...`) |
+| `STRIPE_PRICE_PRO_MONTHLY` | No | — | Stripe Price ID for the Pro plan (`price_...`) |
 | `STRIPE_WEBHOOK_SECRET` | No | — | Stripe webhook signing secret (`whsec_...`) |
+| `RESEND_API_KEY` | No | — | Resend API key for transactional email (verification, password reset) |
+| `BRAPI_TOKEN` | No | — | brapi.dev token for official B3 data. Falls back to Yahoo Finance if unset |
 
 **Production safety guard:**
 
@@ -763,6 +775,11 @@ let _simDir         = 'all';   // 'all' | 'bull' | 'bear' | 'neutral'
 let _simExpanded    = null;    // ticker of expanded pattern-finder row
 let _simCandles     = [];      // candles for currently expanded row
 let _portfolioMonthFilter = 'all'; // '3m'|'6m'|'12m'|'all'|'YYYY-MM'
+// Primeiros Passos lesson state
+let _eduTopic     = 'strategy'; // active topic id
+let _lessonStep   = 1;          // 1–4 = content section, 5 = quiz
+let _quizAnswers  = {};         // { questionIndex: answerIndex }
+let _quizSubmitted = false;     // true after "Ver Resultado" clicked
 ```
 
 **Persistent state (localStorage keys):**
@@ -1105,6 +1122,133 @@ Each entry has:
 
 ---
 
+### 6.8 Interactive Primeiros Passos Lesson System
+
+All 23 education topics render as **interactive multi-section lessons** with inline SVG charts and a 6-question quiz. Static body-text rendering was fully replaced in Sprint 4.
+
+#### Data Source — `static/lessons.js`
+
+The file is loaded via `<script src="/static/lessons.js">` and populates `window.LESSON_DATA`:
+
+```js
+window.LESSON_DATA = {
+  'why': {
+    totalSteps: 5,           // 4 content sections + 1 quiz step
+    sections: [              // array of 4 objects
+      {
+        icon:    '📉',
+        title:   'Seu Dinheiro Está Encolhendo',
+        hook:    'Você sabia que...',      // italic callout quote
+        content: '<p>...</p>',             // innerHTML string
+        chart:   'chartRealReturns'        // CHART_REGISTRY key or null
+      },
+      // ... 3 more sections
+    ],
+    quiz: [                  // array of 6 objects
+      {
+        q:               'Pergunta?',
+        options:         ['A', 'B', 'C', 'D'],
+        correct:         2,             // 0-based index
+        correctFeedback: 'Exatamente!',
+        wrongFeedback:   'Na verdade...'
+      },
+      // ... 5 more questions
+    ]
+  },
+  'strategy': { ... },
+  // ... 21 more topics
+};
+```
+
+All 23 topics are defined: `why`, `strategy`, `diversify`, `brazilstats`, `sectors`, `realcases`, `chart_basics`, `rsi`, `macd`, `adx`, `atr`, `sma`, `bb`, `patterns`, `tesouro`, `cdb_cdi`, `lci_lca`, `juros_compostos`, `darf`, `momentum_signal`, `smart_exit`, `market_regime`, `capital_mgmt`.
+
+#### CHART_REGISTRY
+
+28 inline SVG chart functions are defined in `stock-dashboard.html` and registered by name in `CHART_REGISTRY` (a `const` in the inline script — not on `window`):
+
+```js
+const CHART_REGISTRY = {};
+CHART_REGISTRY['chartRealReturns']     = chartRealReturns;
+CHART_REGISTRY['chartCompoundInterest'] = chartCompoundInterest;
+// ... 26 more entries
+```
+
+Each function returns an HTML string containing an inline `<svg>` element with CSS `@keyframes` animations. No external chart library is used.
+
+**Chart functions by topic:**
+
+| Key | Topic |
+|---|---|
+| `chartRealReturns` | why |
+| `chartCompoundInterest` | why |
+| `chartCostOfWaiting` | why |
+| `chartPyramid` | strategy |
+| `chartDiversificationRisk` | diversify |
+| `chartPieAllocation` | diversify |
+| `chartIbovVsSP500` | brazilstats |
+| `chartSectorWeights` | sectors |
+| `chartSectorRotation` | sectors |
+| `chartCandlestick` | chart_basics |
+| `chartTrendlines` | chart_basics |
+| `chartRSIZones` | rsi |
+| `chartRSIDivergence` | rsi |
+| `chartMACDHistogram` | macd |
+| `chartMACDCrossover` | macd |
+| `chartADXStrength` | adx |
+| `chartATRVolatility` | atr |
+| `chartSMAGoldenCross` | sma |
+| `chartBollingerBands` | bb |
+| `chartBollingerSqueeze` | bb |
+| `chartCandlePatterns` | patterns |
+| `chartTesouroTypes` | tesouro |
+| `chartCDIvsSelicRate` | cdb_cdi |
+| `chartTaxComparison` | lci_lca |
+| `chartCompoundSimple` | juros_compostos |
+| `chartDARFCalendar` | darf |
+| `chartMomentumScore` | momentum_signal |
+| `chartTrailingStop` | smart_exit |
+| `chartMarketRegime` | market_regime |
+| `chartPositionSizing` | capital_mgmt |
+
+#### Universal Renderer
+
+`renderEdu()` detects whether the current topic has lesson data and routes accordingly:
+
+```js
+} else if (window.LESSON_DATA && window.LESSON_DATA[current.id]) {
+  html += renderInteractiveLesson(current.id, isDone);
+} else {
+  // fallback: static body text (used only if a topic has no LESSON_DATA entry)
+}
+```
+
+`renderInteractiveLesson(topicId, isDone)` builds:
+1. **Progress pills** — one per section title + "Quiz Final"; active pill shows full title, completed pills show `✓ N`.
+2. **Content area** — delegates to `renderLessonSection()`.
+3. **Nav bar** — ← Anterior / Próximo → buttons; "Marcar como concluído" appears from step 4 onward.
+
+`renderLessonSection()` reads `LESSON_DATA[_eduTopic].sections[_lessonStep - 1]`, renders `icon → title → hook → content`, then calls `CHART_REGISTRY[sec.chart]()` if a chart key is set.
+
+`renderLessonQuiz()` reads `LESSON_DATA[_eduTopic].quiz` and renders all 6 questions with radio-style option buttons. After `submitQuiz()`, it shows per-question feedback and a total score badge.
+
+#### Gating
+
+`FREE_EDU_TOPICS = ['why']` — only the `why` topic is accessible without a Pro subscription. All other topics trigger `showUpgradeModal()` via `switchEduTopic()`.
+
+#### Lesson State Functions
+
+| Function | Action |
+|---|---|
+| `lessonGoTo(step)` | Set `_lessonStep`, re-render edu |
+| `lessonNext()` | Advance to `min(step+1, totalSteps)` |
+| `lessonPrev()` | Retreat to `max(step-1, 1)` |
+| `selectQuizAnswer(qIdx, aIdx)` | Record answer, re-render |
+| `submitQuiz()` | Set `_quizSubmitted = true`, re-render |
+| `retryQuiz()` | Clear answers and submitted flag, re-render |
+| `switchEduTopic(id)` | Reset lesson state, set `_eduTopic`, re-render |
+
+---
+
 ## 7. Stock Universes
 
 The universe is defined in `server.js` as a static `UNIVERSES` object.
@@ -1277,6 +1421,26 @@ docker compose logs -f
 docker compose down
 ```
 
+### Deploying to Railway or Render
+
+**Railway** and **Render** are the recommended platforms for this app. Both support persistent filesystems and long-running Node.js servers — no code changes required.
+
+**Railway:**
+1. Connect GitHub repo at [railway.app](https://railway.app).
+2. Railway auto-detects `npm start` from `package.json`.
+3. Add env vars in the Railway dashboard (JWT_SECRET, APP_URL, etc.).
+4. Optionally add a Railway volume mounted at `/app/data` to persist `users.json` across deploys.
+
+**Render:**
+1. Create a new **Web Service** at [render.com](https://render.com), connect GitHub.
+2. Set **Build Command:** `npm install --omit=dev`; **Start Command:** `node server.js`.
+3. Add env vars in the Render dashboard.
+4. Add a **Disk** at `/app/data` (any size — the JSON file stays small until thousands of users).
+
+**Why not Vercel?**
+
+Vercel's serverless functions have a **read-only filesystem** — writing to `data/users.json` is not possible. Deploying on Vercel would require migrating user storage to an external database (e.g. Neon Postgres or Vercel KV). Railway/Render are drop-in compatible with the current architecture.
+
 ### Healthcheck
 
 The Docker healthcheck polls `http://localhost:8080/` every 30 seconds. The container is considered healthy when the endpoint returns HTTP 200. Unhealthy containers are restarted by Docker.
@@ -1384,8 +1548,7 @@ SQLite requires no separate process, fits in the current Docker-first model, and
 
 ### i18n Coverage
 
-**Status (Sprint 1):** Partial — ~7 keys covered static DOM only.
-**Status (Sprint 2):** Resolved. Full translation expansion complete — ~180 keys per language, all render functions wired to `t()`, `navigator.language` auto-detection in `init()`, public language toggle.
+**Status:** Resolved. ~180 keys per language across EN and PT, all render functions wired to `t()`, `navigator.language` auto-detection, public language toggle. Education lesson content (`lessons.js`) is currently PT-only — EN lesson content is a future sprint item.
 
 ### localStorage Portfolio
 
@@ -1483,4 +1646,4 @@ Both are optional at runtime:
 
 ---
 
-*End of Technical Documentation — v1.0*
+*End of Technical Documentation — v5.3 · June 2026*
