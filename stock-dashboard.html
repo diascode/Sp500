@@ -134,8 +134,8 @@
   <div class="scan-controls" id="sinaisControls">
     <div id="regionSeg" style="display:none"></div>
     <div class="filter-chips" id="signalFilterChips">
-      <button class="chip chip-active" data-signal="buy" onclick="filterSignal('buy')">⭐ Alta Convicção</button>
-      <button class="chip" data-signal="watchlist" onclick="filterSignal('watchlist')">👁 Monitorar</button>
+      <button class="chip chip-active" data-signal="buy" onclick="filterSignal('buy')">📊 Score 3.5+</button>
+      <button class="chip" data-signal="watchlist" onclick="filterSignal('watchlist')">📊 Score 2.5–3.4</button>
       <button class="chip" data-signal="neutral" onclick="filterSignal('neutral')">Aguardar</button>
       <button class="chip" data-signal="sell" onclick="filterSignal('sell')">Venda</button>
       <button class="chip" data-signal="all" onclick="filterSignal('all')">Todos</button>
@@ -1332,9 +1332,9 @@ function updateRegimeIndicator() {
   if (!el || state.market !== 'brasil') { if (el) el.style.display = 'none'; return; }
   const regime = state.marketRegime;
   const cfg = {
-    risk_on:  { icon:'🟢', label:'Mercado Favorável',   bg:'color-mix(in srgb,#22c55e 12%,transparent)', color:'#22c55e', border:'color-mix(in srgb,#22c55e 30%,transparent)' },
-    neutral:  { icon:'🟡', label:'Mercado Neutro',      bg:'color-mix(in srgb,#ca8a04 12%,transparent)', color:'#ca8a04', border:'color-mix(in srgb,#ca8a04 30%,transparent)' },
-    risk_off: { icon:'🔴', label:'Mercado em Alerta',   bg:'color-mix(in srgb,#ef4444 12%,transparent)', color:'#ef4444', border:'color-mix(in srgb,#ef4444 30%,transparent)' },
+    risk_on:  { icon:'🟢', label:'Condição Favorável',         bg:'color-mix(in srgb,#22c55e 12%,transparent)', color:'#22c55e', border:'color-mix(in srgb,#22c55e 30%,transparent)' },
+    neutral:  { icon:'🟡', label:'Condição Neutra (filtro ativo)',  bg:'color-mix(in srgb,#ca8a04 12%,transparent)', color:'#ca8a04', border:'color-mix(in srgb,#ca8a04 30%,transparent)' },
+    risk_off: { icon:'🔴', label:'Condição de Alerta (filtro ativo)', bg:'color-mix(in srgb,#ef4444 12%,transparent)', color:'#ef4444', border:'color-mix(in srgb,#ef4444 30%,transparent)' },
   };
   const c = cfg[regime] ?? cfg.risk_on;
   el.style.display    = 'block';
@@ -1753,128 +1753,70 @@ function stockFlag(d) {
   return m === 'brasil' ? '🇧🇷' : m === 'us' ? '🇺🇸' : m === 'europe' ? '🇪🇺' : '🌍';
 }
 function feedCardWhy(d) {
-  const sig = d.signal;
-  const score = d.score != null ? d.score : '?';
-  const sigLabel = sig === 'buy' ? 'ALTA CONVICÇÃO' : sig === 'watchlist' ? 'MONITORAR' : sig === 'sell' ? 'VENDA' : 'AGUARDAR';
-  const lines = [];
+  const score = d.score != null ? parseFloat(d.score).toFixed(1) : '?';
 
-  // Structural health gate
   if (d.structuralWeak) {
-    lines.push(`🔴 Saúde estrutural fraca — SMA200 em queda ou preço >35% abaixo da máxima de 52 semanas. Sinal bloqueado automaticamente.`);
+    return `<span style="display:block;color:var(--sell);font-size:.85rem">⛔ Saúde estrutural bloqueada — SMA200 em queda ou preço >35% abaixo da máxima de 52 semanas.</span>`;
+  }
+
+  const rows = [];
+  let met = 0;
+
+  function row(name, val, isMet, ref) {
+    if (isMet) met++;
+    const icon = isMet ? '<span style="color:#22c55e">✓</span>' : '<span style="color:var(--sell)">✗</span>';
+    return `<span style="display:grid;grid-template-columns:110px 58px 18px 1fr;gap:0 6px;margin-top:3px;font-size:.78rem;align-items:baseline">` +
+      `<span style="color:var(--ink-2)">${name}</span>` +
+      `<span style="font-family:var(--font-mono);color:var(--ink-1)">${val}</span>` +
+      icon +
+      `<span style="color:var(--ink-4);font-size:.72rem">${ref}</span>` +
+      `</span>`;
   }
 
   // 1. SMA50
-  if (d.pA50) {
-    lines.push('✅ SMA50 — preço acima da média de 50 dias (tendência de médio prazo)');
-  } else {
-    lines.push('❌ SMA50 — preço abaixo da média de 50 dias — pressão vendedora no médio prazo');
-  }
-
-  // SMA200
-  if (d.pA200) {
-    lines.push('✅ SMA200 — preço acima da média de 200 dias (regime de alta estrutural)');
-  } else {
-    lines.push('❌ SMA200 — preço abaixo da média de 200 dias — bear market confirmado');
-  }
-
-  // 2. MACD
+  rows.push(row('SMA50', d.pA50 ? 'acima' : 'abaixo', !!d.pA50, 'preço > média 50d'));
+  // 2. SMA200
+  rows.push(row('SMA200', d.pA200 ? 'acima' : 'abaixo', !!d.pA200, 'preço > média 200d'));
+  // 3. MACD value
   const macdVal = d.macd != null ? +d.macd : null;
+  const macdSign = macdVal != null ? (macdVal >= 0 ? '+' : '') : '';
+  rows.push(row('MACD', macdVal != null ? `${macdSign}${macdVal.toFixed(2)}` : '—', macdVal != null && macdVal > 0, '> 0'));
+  // 4. MACD acceleration
   const macdHist = d.macdHist != null ? +d.macdHist : null;
-  if (macdVal !== null) {
-    const sign = macdVal >= 0 ? '+' : '';
-    if (macdVal > 0 && macdHist != null && macdHist > 0) {
-      lines.push(`✅ MACD ${sign}${macdVal.toFixed(2)} e acelerando — momentum de compra em desenvolvimento`);
-    } else if (macdVal > 0) {
-      lines.push(`⚠️ MACD ${sign}${macdVal.toFixed(2)} positivo mas sem aceleração — momentum fraco`);
-    } else {
-      lines.push(`❌ MACD ${sign}${macdVal.toFixed(2)} negativo — momentum de venda dominante`);
-    }
-  }
-
-  // 3. RSI
+  rows.push(row('MACD aceleração', macdHist != null ? (macdHist > 0 ? 'sim' : 'não') : '—', macdHist != null && macdHist > 0, 'histograma > 0'));
+  // 5. RSI
   const rsiVal = d.rsi != null ? +d.rsi : null;
-  if (rsiVal !== null) {
-    if (rsiVal >= 50 && rsiVal <= 65) {
-      lines.push(`✅ RSI ${rsiVal.toFixed(0)} — zona saudável de tendência (50–65), sem sobrecompra`);
-    } else if (rsiVal > 65 && rsiVal <= 70) {
-      lines.push(`⚠️ RSI ${rsiVal.toFixed(0)} — momentum forte, mas próximo de sobrecompra`);
-    } else if (rsiVal > 70) {
-      lines.push(`❌ RSI ${rsiVal.toFixed(0)} — sobrecomprado, risco de realização`);
-    } else if (rsiVal >= 40 && rsiVal < 50) {
-      lines.push(`⚠️ RSI ${rsiVal.toFixed(0)} — abaixo de 50, momentum enfraquecendo`);
-    } else if (rsiVal >= 25 && rsiVal < 40) {
-      lines.push(`⚠️ RSI ${rsiVal.toFixed(0)} — queda sem sobrevendido extremo, sem sinal de reversão`);
-    } else {
-      lines.push(`❌ RSI ${rsiVal.toFixed(0)} — sobrevendido extremo`);
-    }
-  }
-
-  // 4. Volume
+  const rsiMet = rsiVal != null && rsiVal >= 50 && rsiVal <= 65;
+  rows.push(row('RSI', rsiVal != null ? rsiVal.toFixed(0) : '—', rsiMet, 'intervalo 50–65'));
+  // 6. Volume
   const vol = d.volRatio != null ? +d.volRatio : null;
-  if (vol !== null) {
-    if (vol > 1.2) {
-      lines.push(`✅ Volume ${vol.toFixed(1)}× acima da média — pressão compradora presente`);
-    } else {
-      lines.push(`❌ Volume ${vol.toFixed(1)}× na média — sem convicção direcional`);
-    }
-  }
-
-  // 5. ADX
+  rows.push(row('Volume', vol != null ? `${vol.toFixed(1)}×` : '—', vol != null && vol > 1.2, '> 1.2× média 20d'));
+  // 7. ADX
   const adxVal = d.adx != null ? +d.adx : null;
-  if (adxVal !== null) {
-    if (adxVal > 25) {
-      lines.push(`✅ ADX ${adxVal.toFixed(0)} — tendência forte (> 25), direção definida`);
-    } else {
-      lines.push(`⚠️ ADX ${adxVal.toFixed(0)} — tendência ainda fraca (< 25), aguardar confirmação`);
-    }
-  }
-
-  // 6. Regime gate warning (below SMA200 caps score)
-  if (d.pA200 === false) {
-    lines.push(`🔴 Regime de mercado: ativo abaixo da SMA200 — sinais de compra bloqueados`);
-  }
-
-  // 7. 52-week high proximity
-  if (d.distFromHigh != null) {
-    const pct = (d.distFromHigh * 100).toFixed(0);
-    if (d.distFromHigh <= 0.05) {
-      lines.push(`✅ Máx 52s: ${pct}% abaixo — ativo próximo do topo, força de breakout (+0.75)`);
-    } else if (d.distFromHigh <= 0.15) {
-      lines.push(`✅ Máx 52s: ${pct}% abaixo — próximo do topo, momentum estrutural (+0.50)`);
-    } else if (d.distFromHigh > 0.40) {
-      lines.push(`❌ Máx 52s: ${pct}% abaixo — colapso estrutural, penalidade (−1.0)`);
-    } else {
-      lines.push(`⚠️ Máx 52s: ${pct}% abaixo da máxima de 52 semanas (+0)`);
-    }
-  }
-
-  // 8. RSI slope
-  if (d.rsiSlope != null) {
-    if (d.rsiSlope >= 5) {
-      lines.push(`✅ Slope RSI: +${d.rsiSlope.toFixed(1)} pts em 5 dias — momentum acelerando (+0.50)`);
-    } else if (d.rsiSlope <= -5 && rsiVal != null && rsiVal < 60) {
-      lines.push(`❌ Slope RSI: ${d.rsiSlope.toFixed(1)} pts em 5 dias — momentum deteriorando (−0.50)`);
-    } else {
-      lines.push(`⚠️ Slope RSI: ${d.rsiSlope >= 0 ? '+' : ''}${d.rsiSlope.toFixed(1)} pts — neutro (+0)`);
-    }
-  }
-
-  // 9. ATR regime
+  rows.push(row('ADX', adxVal != null ? adxVal.toFixed(0) : '—', adxVal != null && adxVal > 25, '> 25'));
+  // 8. 52-week proximity
+  const dist = d.distFromHigh;
+  const distMet = dist != null && dist <= 0.15;
+  rows.push(row('Máx. 52 semanas', dist != null ? `-${(dist * 100).toFixed(0)}%` : '—', distMet, 'dentro de 15%'));
+  // 9. Volatility
+  let volNormal = true;
+  let volLabel = 'normal';
   if (d.atrPctNow != null && d.atrPctAvg != null && d.atrPctAvg > 0) {
     const ratio = d.atrPctNow / d.atrPctAvg;
-    if (ratio > 1.5) {
-      lines.push(`❌ Volatilidade ${ratio.toFixed(1)}× acima da média — regime de pânico, penalidade (−0.50)`);
-    } else {
-      lines.push(`✅ Volatilidade normal (${ratio.toFixed(1)}× média) — ambiente favorável (+0)`);
-    }
+    volNormal = ratio <= 1.5;
+    volLabel = `${ratio.toFixed(1)}× média`;
   }
+  rows.push(row('Volatilidade', volLabel, volNormal, '≤ 1.5× média'));
 
-  const header = `<strong>${sigLabel} · ${score}/6.0</strong>`;
-  return header + '<br>' + lines.map(l => `<span style="display:block;margin-top:4px">${l}</span>`).join('');
+  const total = 9;
+  const header = `<strong style="font-size:.85rem">📊 Critérios técnicos: ${met}/${total} · Score ${score}/6.0</strong>`;
+  const body = `<span style="display:block;margin-top:5px">${rows.join('')}</span>`;
+  const disclaimer = `<span style="display:block;margin-top:7px;font-size:.73rem;color:var(--ink-4)">⚠️ Dados técnicos para análise pessoal. <a href="#" onclick="setState('_eduTopic','momentum_signal');return false;" style="color:var(--primary)">Entender os critérios →</a></span>`;
+  return header + body + disclaimer;
 }
-function feedCardPillLabel(sig) { return sig === 'buy' ? 'Alta Convicção' : sig === 'watchlist' ? 'Monitorar' : sig === 'sell' ? 'Venda' : 'Aguardar'; }
+function feedCardPillLabel(sig) { return sig === 'buy' ? 'Score ≥ 3.5' : sig === 'watchlist' ? 'Score 2.5–3.4' : sig === 'sell' ? 'Score < 2.0' : 'Score < 2.5'; }
 function signalBadgeHtml(sig, score) {
-  const label = sig === 'buy' ? 'Alta Convicção' : sig === 'watchlist' ? 'Monitorar' : sig === 'sell' ? 'Venda' : 'Aguardar';
+  const label = sig === 'buy' ? 'Score ≥ 3.5' : sig === 'watchlist' ? 'Score 2.5–3.4' : sig === 'sell' ? 'Score < 2.0' : 'Score < 2.5';
   const cls = sig === 'buy' ? 'buy' : sig === 'watchlist' ? 'watchlist' : sig === 'sell' ? 'sell' : 'hold';
   const scoreStr = (score != null) ? ` · ${parseFloat(score).toFixed(1)}` : '';
   const titleAttr = (score != null) ? ` title="Score: ${parseFloat(score).toFixed(1)} / 6.0 máximo"` : '';
@@ -1926,12 +1868,14 @@ function buildFeedCard(d, idx) {
     const _rr       = ((_target - d.price) / (d.price - _stopInit)).toFixed(1);
     const _tgtPct   = ((_target - d.price) / d.price * 100).toFixed(1);
     const _stpPct   = ((_stopInit - d.price) / d.price * 100).toFixed(1);
-    _targetLine = `<div style="font-size:.78rem;margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-      <span>Alvo: <strong style="color:var(--buy)">${fmtBRL(_target)} (+${_tgtPct}%)</strong></span>
-      <span style="color:var(--ink-4)">·</span>
-      <span>Stop: <strong style="color:var(--sell)">${fmtBRL(_stopInit)} (${_stpPct}%)</strong></span>
-      <span style="color:var(--ink-4)">·</span>
-      <span style="color:var(--ink-2)">R/R: ${_rr}x</span>
+    _targetLine = `<div style="font-size:.76rem;margin-top:5px;padding:5px 8px;background:rgba(255,255,255,.04);border-radius:6px;border:1px solid var(--line-2)">
+      <span style="color:var(--ink-3)">📐 Exemplo ATR (2×): </span>
+      <span>Stop educacional: <strong style="color:var(--sell)">${fmtBRL(_stopInit)}</strong></span>
+      <span style="color:var(--ink-4);margin:0 4px">·</span>
+      <span>Alvo educacional: <strong style="color:var(--buy)">${fmtBRL(_target)}</strong></span>
+      <span style="color:var(--ink-4);margin:0 4px">·</span>
+      <span style="color:var(--ink-2)">R/R: ${_rr}×</span>
+      <span style="display:block;margin-top:3px;font-size:.7rem;color:var(--ink-4)">⚠️ Valores ilustrativos baseados em ATR. Não são previsões de preço. <a href="#" onclick="setState('_eduTopic','atr');return false;" style="color:var(--primary)">Como usar ATR →</a></span>
     </div>`;
   }
   // US-240: Sector exposure bar
@@ -1971,7 +1915,7 @@ function buildFeedCard(d, idx) {
         <span class="chip chip-pattern">${d.patternName && d.patternName !== 'none' ? d.patternName : d.maAlign || 'Análise'}</span>
       </div>
       <div class="card-actions">
-        <button class="btn-default flex-1 track-btn" data-ticker="${d.ticker}" data-market="${state.market}" data-price="${d.price}" data-tp="${d.tp}" data-sl="${d.sl}">⭐ Acompanhar</button>
+        <button class="btn-default flex-1 track-btn" data-ticker="${d.ticker}" data-market="${state.market}" data-price="${d.price}" data-tp="${d.tp}" data-sl="${d.sl}">📌 Salvar na Lista</button>
         <button class="btn-primary flex-1" onclick="openStockDetail('${d.ticker}', ${idx})">Ver gráfico →</button>
       </div>
     </div>`;
@@ -2033,9 +1977,9 @@ function updateScanHed(stocks, generatedAt) {
   const watchCount = (stocks || []).filter(s => s.signal === 'watchlist').length;
   if (buyCount > 0 || watchCount > 0) {
     let msg = '';
-    if (buyCount > 0) msg += `<span class="text-primary">⭐ ${buyCount} Alta Convicção</span>`;
+    if (buyCount > 0) msg += `<span class="text-primary">📊 ${buyCount} Score ≥ 3.5</span>`;
     if (buyCount > 0 && watchCount > 0) msg += ' · ';
-    if (watchCount > 0) msg += `<span style="color:#ca8a04">👁 ${watchCount} Monitorar</span>`;
+    if (watchCount > 0) msg += `<span style="color:#ca8a04">📊 ${watchCount} Score 2.5–3.4</span>`;
     hed.innerHTML = msg + '.';
   } else {
     hed.innerHTML = 'Nenhum sinal de compra no momento.';
@@ -2127,7 +2071,7 @@ function openStockDetail(ticker, idx) {
         <div style="background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);padding:var(--s-4)"><div style="font-size:11px;color:var(--ink-3)">Padrão</div><div style="font-size:13px;font-weight:600;color:var(--hold)">${d.patternName && d.patternName !== 'none' ? d.patternName : d.maAlign}</div></div>
       </div>
       <div style="margin-top:var(--s-4);display:flex;gap:var(--s-3)">
-        <button class="btn-default flex-1 track-btn" data-ticker="${d.ticker}" data-market="${state.market}" data-price="${d.price}" data-tp="${d.tp}" data-sl="${d.sl}">⭐ Acompanhar</button>
+        <button class="btn-default flex-1 track-btn" data-ticker="${d.ticker}" data-market="${state.market}" data-price="${d.price}" data-tp="${d.tp}" data-sl="${d.sl}">📌 Salvar na Lista</button>
         <button class="btn-primary flex-1 portfolio-add-btn" data-ticker="${d.ticker}" data-price="${d.price}">💰 Adicionar à carteira</button>
       </div>
     </div>`;
@@ -2238,13 +2182,13 @@ function renderDashboard() {
     if (state.marketRegime === 'risk_off') {
       display = display.filter(d => d.signal !== 'buy');
       regimeBannerHtml = `<div style="grid-column:1/-1;padding:var(--s-4);border-radius:10px;background:color-mix(in srgb,#ef4444 10%,transparent);border:1px solid color-mix(in srgb,#ef4444 25%,transparent);color:#ef4444;font-size:.9rem;text-align:center">
-        🔴 <strong>Mercado em Alerta</strong> — sinais de compra pausados durante queda do IBOV.
+        🔴 <strong>Condição de Alerta (filtro de ruído ativo)</strong> — sinais de alta pontuação não exibidos durante queda do IBOV. Filtro técnico, não instrução de compra/venda.
         <a href="#" onclick="setState('_eduTopic','market_regime');return false;" style="color:inherit;text-decoration:underline;margin-left:.5em">Entenda →</a>
       </div>`;
     } else if (state.marketRegime === 'neutral') {
       display = display.filter(d => d.signal !== 'buy' || (d.score ?? 0) >= 4.0);
       regimeBannerHtml = `<div style="grid-column:1/-1;padding:var(--s-4);border-radius:10px;background:color-mix(in srgb,#ca8a04 10%,transparent);border:1px solid color-mix(in srgb,#ca8a04 25%,transparent);color:#ca8a04;font-size:.9rem;text-align:center">
-        🟡 <strong>Mercado Neutro</strong> — exibindo apenas Alta Convicção (pontuação ≥ 4.0) durante período de cautela.
+        🟡 <strong>Condição Neutra (filtro de ruído ativo)</strong> — exibindo apenas score ≥ 4.0 durante período de cautela. Filtro técnico, não instrução de compra/venda.
         <a href="#" onclick="setState('_eduTopic','market_regime');return false;" style="color:inherit;text-decoration:underline;margin-left:.5em">Entenda →</a>
       </div>`;
     }
@@ -2369,14 +2313,7 @@ function renderBacktest() {
   html += `<h3 class="hed3" style="margin-top:0;margin-bottom:var(--s-3)">O que é o Histórico?</h3>`;
   html += `<p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0 0 var(--s-3) 0">O Histórico aplica os critérios do Momentum (RSI, MACD, ADX, Volume, SMA50, SMA200, proximidade de topo, slope do RSI e regime de volatilidade) sobre todos os pregões disponíveis, identificando cada data em que uma ação teria gerado um sinal. Em seguida, mede o retorno real da ação nos <strong>10, 20 e 30 pregões seguintes</strong>.</p>`;
   html += `<p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0 0 var(--s-3) 0">O resultado mostra a <strong>taxa de acerto histórica</strong> — quantas vezes o sinal foi seguido de valorização — e o <strong>retorno médio</strong>, indicando se os ganhos compensaram as perdas.</p>`;
-  html += `<p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0">Use o Histórico para calibrar sua confiança: sinais de <strong style="color:var(--buy)">Alta Convicção</strong> (score ≥ 3.5) tendem a ter taxa de acerto e retorno médio maiores do que sinais de <strong style="color:#ca8a04">Monitorar</strong> (score 2.5–3.4).</p>`;
-  html += `</div>`;
-
-  // Disclaimers
-  html += `<div style="font-size:12px;color:var(--ink-3);margin-bottom:var(--s-5);line-height:1.8">`;
-  html += `⚠️ <strong>Backtest in-sample</strong> · Os critérios foram calibrados com visão do passado — resultados reais podem ser menores.<br>`;
-  html += `⚠️ <strong>Não inclui</strong> custos de corretagem, spread, IR ou slippage.<br>`;
-  html += `⚠️ <strong>Survivorship bias</strong>: apenas ações que existem hoje são analisadas.`;
+  html += `<p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0">Use o Histórico para comparar o desempenho histórico entre score ≥ 3.5 e score 2.5–3.4. Os dados são exibidos como foram — sem promessa de resultado futuro.</p>`;
   html += `</div>`;
 
   if (!res) {
@@ -2436,7 +2373,7 @@ function renderBacktest() {
       if (hc) {
         const rc = parseFloat(hc.avgRet) >= 0 ? 'var(--buy)' : 'var(--sell)';
         html += `<tr>`;
-        html += `<td><span class="status-badge active" style="white-space:nowrap">⭐ Alta Convicção ≥3.5</span></td>`;
+        html += `<td><span class="status-badge active" style="white-space:nowrap">📊 Score ≥ 3.5</span></td>`;
         html += `<td style="font-family:var(--font-mono)">${hc.n}</td>`;
         html += `<td style="font-family:var(--font-mono);color:${parseFloat(hc.winPct)>=55?'var(--buy)':parseFloat(hc.winPct)>=45?'var(--hold)':'var(--sell)'}">${hc.winPct}%</td>`;
         html += `<td style="font-family:var(--font-mono);color:${rc}">${parseFloat(hc.avgRet)>=0?'+':''}${hc.avgRet}%</td>`;
@@ -2448,7 +2385,7 @@ function renderBacktest() {
       if (wl) {
         const rw = parseFloat(wl.avgRet) >= 0 ? 'var(--buy)' : 'var(--sell)';
         html += `<tr>`;
-        html += `<td><span class="status-badge watchlist" style="white-space:nowrap">👁 Monitorar 2.5–3.4</span></td>`;
+        html += `<td><span class="status-badge watchlist" style="white-space:nowrap">📊 Score 2.5–3.4</span></td>`;
         html += `<td style="font-family:var(--font-mono)">${wl.n}</td>`;
         html += `<td style="font-family:var(--font-mono);color:${parseFloat(wl.winPct)>=55?'var(--buy)':parseFloat(wl.winPct)>=45?'var(--hold)':'var(--sell)'}">${wl.winPct}%</td>`;
         html += `<td style="font-family:var(--font-mono);color:${rw}">${parseFloat(wl.avgRet)>=0?'+':''}${wl.avgRet}%</td>`;
@@ -2460,7 +2397,7 @@ function renderBacktest() {
       html += `</tbody></table></div>`;
     }
 
-    // Per-stock breakdown (20d, sorted by Alta Convicção signal count)
+    // Per-stock breakdown (20d, sorted by score ≥ 3.5 signal count)
     const byStock = {};
     buyAll.forEach(s => {
       if (!byStock[s.ticker]) byStock[s.ticker] = { buy: [], watch: [] };
@@ -2476,9 +2413,9 @@ function renderBacktest() {
 
     if (stockRows.length > 0) {
       html += `<div class="card-flush" style="overflow-x:auto">`;
-      html += `<div style="padding:var(--s-4) var(--s-4) var(--s-2)"><span style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em">Por Ação — Alta Convicção (20 dias)</span></div>`;
+      html += `<div style="padding:var(--s-4) var(--s-4) var(--s-2)"><span style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em">Por Ação — Score ≥ 3.5 (20 dias)</span></div>`;
       html += `<table class="tracked-table"><thead><tr>`;
-      html += `<th>Ticker</th><th>Alta Conv.</th><th>Acerto%</th><th>Ret. Médio</th><th>Monitorar</th><th>Acerto%</th><th>Ret. Médio</th>`;
+      html += `<th>Ticker</th><th>≥ 3.5</th><th>Acerto%</th><th>Ret. Médio</th><th>2.5–3.4</th><th>Acerto%</th><th>Ret. Médio</th>`;
       html += `</tr></thead><tbody>`;
       stockRows.forEach(({ t, buy, watch }) => {
         const bs = btStats(buy,   20);
@@ -2505,6 +2442,16 @@ function renderBacktest() {
       });
       html += `</tbody></table></div>`;
     }
+
+    // US-283: Disclaimer after results
+    html += `<div style="margin-top:var(--s-5);padding:var(--s-4);border-radius:10px;background:rgba(239,83,80,.08);border:1px solid rgba(239,83,80,.3);font-size:13px;line-height:1.8;color:var(--ink-2)">`;
+    html += `<strong style="color:#ef4444">⚠️ AVISO — Desempenho Histórico</strong><br>`;
+    html += `• Desempenho passado <strong>NÃO garante</strong> resultados futuros.<br>`;
+    html += `• Este backtest é <strong>in-sample</strong>: os critérios foram desenvolvidos usando os mesmos dados testados.<br>`;
+    html += `• Resultados reais serão menores após: corretagem, spread bid/ask, IR (15–20%) e slippage.<br>`;
+    html += `• <strong>Viés de sobrevivência</strong>: apenas ações que ainda existem hoje foram analisadas.<br>`;
+    html += `• Uma "Taxa de Acerto de 63%" significa: 63 de cada 100 sinais históricos tiveram ganho no período testado — 37 tiveram perdas. Seu resultado real pode ser diferente.`;
+    html += `</div>`;
   }
 
   html += `</div>`;
@@ -2566,10 +2513,10 @@ function renderHomeLista() {
 
   const sigBadge = (s) => {
     if (!s) return '<span style="color:var(--ink-4)">—</span>';
-    if (s === 'buy')       return `<span class="status-badge active">Alta Convicção</span>`;
-    if (s === 'watchlist') return `<span class="status-badge watchlist">Monitorar</span>`;
-    if (s === 'sell')      return `<span class="status-badge sl">Venda</span>`;
-    return `<span style="font-size:10px;color:var(--hold);font-weight:600">Aguardar</span>`;
+    if (s === 'buy')       return `<span class="status-badge active">Score ≥ 3.5</span>`;
+    if (s === 'watchlist') return `<span class="status-badge watchlist">Score 2.5–3.4</span>`;
+    if (s === 'sell')      return `<span class="status-badge sl">Score < 2.0</span>`;
+    return `<span style="font-size:10px;color:var(--hold);font-weight:600">Score < 2.5</span>`;
   };
 
   let html = `<div class="shell" style="padding-top:var(--s-5);padding-bottom:var(--s-8)">`;
@@ -3704,10 +3651,10 @@ function showSimulatorView() {
 }
 
 function simConvictionLabel(score) {
-  if (score >= 3.5) return { text: 'Alta Convicção', color: 'var(--buy)' };
-  if (score >= 2.5) return { text: 'Monitorar — confirmar antes de entrar', color: '#ca8a04' };
-  if (score >= 1.5) return { text: 'Sinal fraco', color: 'var(--hold)' };
-  return { text: 'Aguardar — sinal muito fraco', color: 'var(--ink-3)' };
+  if (score >= 3.5) return { text: 'Score ≥ 3.5', color: 'var(--buy)' };
+  if (score >= 2.5) return { text: 'Score 2.5–3.4', color: '#ca8a04' };
+  if (score >= 1.5) return { text: 'Score < 2.5', color: 'var(--hold)' };
+  return { text: 'Score < 1.5', color: 'var(--ink-3)' };
 }
 
 function renderSimulator() {
@@ -6479,10 +6426,10 @@ function renderEdu() {
     { id:'tesouro',         icon:'🏛️', name:'Tesouro Direto',           color:'#22d3ee', title:'Tesouro Direto — A Renda Fixa do Governo', subtitle:'Selic, IPCA+ e Prefixado: qual escolher e quando.', body:t('edu_tesouroBody') },
     { id:'lci_lca',         icon:'🌾', name:'LCI e LCA',                color:'#4caf50', title:'LCI e LCA — Renda Fixa Isenta de IR',      subtitle:'Por que a isenção importa e quando compensa mais que o Tesouro.', body:t('edu_lciLcaBody') },
     { id:'juros_compostos', icon:'📐', name:'Juros Compostos',          color:'#ff6a00', title:'O Poder dos Juros Compostos',               subtitle:'A força que transforma disciplina em patrimônio ao longo do tempo.', body:t('edu_jurosCompostosBody') },
-    { id:'momentum_signal', icon:'🎯', name:'Sinal Momentum', color:'#22d3ee', title:'Como o Momentum Calcula os Sinais', subtitle:'Entenda os 9 critérios do scoring v3, o tier Monitorar e a pontuação máxima de 6.0.', body:t('edu_momentumSignalBody') },
+    { id:'momentum_signal', icon:'🎯', name:'Sinal Momentum', color:'#22d3ee', title:'Como o Momentum Calcula os Scores', subtitle:'Entenda os 9 critérios do scoring v3, as faixas de score e a pontuação máxima de 6.0.', body:t('edu_momentumSignalBody') },
     { id:'cdb_cdi',    icon:'🏦', name:'CDB e CDI',        color:'#4caf50', title:'CDB e CDI — Renda Fixa Bancária',                subtitle:'O que é CDI, como o CDB rende sobre ele, e quando compensa mais que o Tesouro.', body:t('edu_cdbCdiBody') },
     { id:'smart_exit', icon:'🛡️', name:'Saída Inteligente', color:'#ef5350', title:'Saída Inteligente — Stop Móvel e o Prazo de 20 Dias', subtitle:'Por que sair em 20 dias, como o stop móvel protege seus ganhos e quando sair antes do prazo.', body:t('edu_smartExitBody') },
-    { id:'market_regime', icon:'🌡️', name:'Regime de Mercado', color:'#ef9a00', title:'Regime de Mercado — Quando Investir e Quando Esperar', subtitle:'Entenda os três estados do mercado (🟢🟡🔴) e por que o app pausa sinais durante quedas do IBOV.', body:t('edu_marketRegimeBody') },
+    { id:'market_regime', icon:'🌡️', name:'Regime de Mercado', color:'#ef9a00', title:'Regime de Mercado — Filtro Técnico de Ruído', subtitle:'Entenda os três estados do IBOV (🟢🟡🔴) e como o app usa isso como filtro de dados — não como instrução de investimento.', body:t('edu_marketRegimeBody') },
     { id:'capital_mgmt', icon:'💰', name:'Gestão de Capital', color:'#22d3ee', title:'Gestão de Capital — Tamanho de Posição, Juros Compostos e Diversificação', subtitle:'Por que o app varia o tamanho das posições e como os juros compostos potencializam seus ganhos.', body:t('edu_capitalMgmtBody') },
   ];
 
@@ -6962,7 +6909,7 @@ init();
     <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:28px">
       <div style="display:flex;gap:12px;align-items:flex-start">
         <span style="font-size:22px;flex-shrink:0">📡</span>
-        <div><strong style="color:var(--ink)">Passo 1 — Simule uma varredura</strong><br><span style="font-size:13px;color:var(--ink-3)">Clique em "Varrer" para simular análise técnica. O app calcula RSI, MACD, ADX e exibe um sinal educacional: Alta Convicção, Monitorar, Aguardar ou Venda. Nenhuma operação real é realizada.</span></div>
+        <div><strong style="color:var(--ink)">Passo 1 — Simule uma varredura</strong><br><span style="font-size:13px;color:var(--ink-3)">Clique em "Varrer" para calcular RSI, MACD, ADX e ver os dados técnicos de cada ativo com score numérico. Nenhuma operação real é realizada.</span></div>
       </div>
       <div style="display:flex;gap:12px;align-items:flex-start">
         <span style="font-size:22px;flex-shrink:0">⭐</span>
@@ -6977,7 +6924,10 @@ init();
         <div><strong style="color:var(--ink)">Passo 4 — Aprenda análise técnica</strong><br><span style="font-size:13px;color:var(--ink-3)">Em Aulas, explore RSI, MACD, ADX, regimes de mercado, DARF e mais — 16 módulos educacionais com exemplos práticos do mercado brasileiro.</span></div>
       </div>
     </div>
-    <div style="border-top:1px solid var(--line);padding-top:12px;margin-bottom:16px;font-size:11px;color:var(--ink-4);text-align:center">⚠ Simulação educacional · Dados para fins didáticos · Não constitui recomendação de investimento</div>
+    <div style="border-top:1px solid var(--line);padding-top:12px;margin-bottom:12px;font-size:11px;color:var(--ink-4);line-height:1.6;text-align:center">
+      ⚠ Simulação educacional · Dados para fins didáticos · Não constitui recomendação de investimento<br>
+      <strong style="color:var(--ink-3)">📋 Sobre o Momentum:</strong> Este app é um screener de análise técnica — <strong>não é</strong> corretora, distribuidora, analista de valores mobiliários ou assessor de investimentos registrado na CVM. Os scores são gerados por algoritmo matemático. Você é responsável por suas próprias decisões.
+    </div>
     <div style="display:flex;gap:12px">
       <button onclick="completeOnboarding()" style="flex:1;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px">Começar agora →</button>
       <button onclick="dismissOnboarding()" style="padding:12px 16px;background:transparent;color:var(--ink-3);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px">Ver depois</button>

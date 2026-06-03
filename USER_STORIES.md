@@ -3990,7 +3990,7 @@ Atualmente o endpoint remove completamente o usuário. Mudar para:
 
 ---
 
-### US-280 — Remover Linguagem de Recomendação dos Labels de Sinal
+### US-280 — Remover Linguagem de Recomendação dos Labels de Sinal `✅ Done`
 
 **Como** produto em conformidade com a Resolução CVM 62/2022,  
 **Quero** que os sinais exibam dados técnicos em vez de julgamentos de convicção —  
@@ -4039,7 +4039,7 @@ Os labels "Alta Convicção", "Monitorar" e "Venda" constituem linguagem de conv
 
 ---
 
-### US-281 — Reescrever Seção "Por Quê" como Dados Técnicos (não Justificativa de Recomendação)
+### US-281 — Reescrever Seção "Por Quê" como Dados Técnicos (não Justificativa de Recomendação) `✅ Done`
 
 **Como** produto em conformidade com CVM,  
 **Quero** que a explicação do sinal exiba dados brutos e critérios técnicos —  
@@ -4094,7 +4094,7 @@ Drawdown       ✗ > 15% da máxima de 52 semanas
 
 ---
 
-### US-282 — Remover ou Reformular Preço-Alvo ("Alvo: R$47,20")
+### US-282 — Remover ou Reformular Preço-Alvo ("Alvo: R$47,20") `✅ Done`
 
 **Como** produto que não é analista registrado na CVM,  
 **Quero** não exibir preços-alvo específicos por ativo —  
@@ -4135,7 +4135,7 @@ Drawdown       ✗ > 15% da máxima de 52 semanas
 
 ---
 
-### US-283 — Reposicionar Disclaimers do Backtest (Acima → Abaixo dos Resultados)
+### US-283 — Reposicionar Disclaimers do Backtest (Acima → Abaixo dos Resultados) `✅ Done`
 
 **Como** produto em conformidade com CDC Art. 37,  
 **Quero** que os disclaimers de backtest apareçam APÓS os resultados numéricos —  
@@ -4180,7 +4180,7 @@ Atualmente, o disclaimer aparece em texto pequeno ACIMA dos cards coloridos de "
 
 ---
 
-### US-284 — Reformular Regime de Mercado como Filtro de Dados (não Regra de Operação)
+### US-284 — Reformular Regime de Mercado como Filtro de Dados (não Regra de Operação) `✅ Done`
 
 **Como** produto em conformidade com CVM,  
 **Quero** que o módulo de Regime de Mercado seja apresentado como filtro técnico —  
@@ -4231,7 +4231,7 @@ ou não comprar. Você decide quando e se investir. [Saiba mais sobre IBOV →]
 
 ---
 
-### US-285 — Adicionar Disclosure de Não-Registro CVM no App
+### US-285 — Adicionar Disclosure de Não-Registro CVM no App `✅ Done`
 
 **Como** produto operando sem registro como Analista de Valores Mobiliários,  
 **Quero** divulgar explicitamente esse status aos usuários —  
@@ -5151,7 +5151,7 @@ Se a API retornar 503:
 | 41 | 56 | US-269–270 | Perfil e Faturamento: user billing page, failed payment banner | 📋 Planned |
 | 42 | 57 | US-271–274 | Admin Pagamentos: revenue dashboard, payment history, cancel/extend subscription | 📋 Planned |
 | 43 | 58 | US-275–279, US-286–287 | Conformidade Legal: CVM disclaimer, BRL verification, SQLite spike, NFS-e spike, LGPD retention, Termos de Uso, Política de Privacidade LGPD | 📋 Planned |
-| 44 | 59 | US-280–285 | CVM Signal Redesign: remove recommendation labels, rewrite Por Que as raw data, reformulate price targets, reposition backtest disclaimers, market regime as filter, CVM non-registration disclosure | 📋 Planned |
+| 44 | 59 | US-280–285 | CVM Signal Redesign: remove recommendation labels, rewrite Por Que as raw data, reformulate price targets, reposition backtest disclaimers, market regime as filter, CVM non-registration disclosure | ✅ Done |
 | 45 | 55, 56, 59 | US-288–291 | Bug fixes + UX polish: tier upgrade fallback, billing view fix, modal opacity, education-first copy | 📋 Planned |
 | 46 | 55, 59 | US-292–293 | Stripe hardening: remove footer version tagline, prevent duplicate subscriptions | 📋 Planned |
 | 47 | 60 | US-294–298 | UI Bug Fixes: billing screen overlap, mobile tab overflow, mobile stock header overflow, checkout not redirecting, onboarding modal opacity + simulation copy | 📋 Planned |

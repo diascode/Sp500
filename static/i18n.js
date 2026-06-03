@@ -424,35 +424,34 @@ Exit. No hesitation. The stop was calculated on the ATR — the normal volatilit
 ✅ The app alerts you to both — you just need to act`,
 
     edu_marketRegimeBody: `
-<p>Momentum reads the current state of the IBOV index (via BOVA11.SA) to decide whether the environment is favorable for new buy signals.</p>
-<h4 style="margin:1rem 0 .5rem">The three market states</h4>
+<p>Momentum reads BOVA11.SA candles to classify the current state of the IBOV index. This classification is used as a <strong>noise filter</strong> — it controls which score ranges are displayed. It is not a trading instruction.</p>
+<p style="margin-top:.5rem;padding:.6rem .8rem;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:6px;font-size:.85rem">⚠️ The market regime is a <strong>technical noise filter</strong>, not a recommendation to buy or sell. You decide when and whether to invest.</p>
+<h4 style="margin:1rem 0 .5rem">The three technical conditions</h4>
 <table style="width:100%;border-collapse:collapse;font-size:.9rem">
   <tr style="border-bottom:1px solid rgba(255,255,255,.1)">
     <td style="padding:.5rem"><span style="font-size:1.2rem">🟢</span></td>
-    <td style="padding:.5rem"><strong>Favorable</strong></td>
-    <td style="padding:.5rem;color:var(--muted)">Price above SMA200, SMA50 above SMA200, drawdown &lt; 8%. Buy signals shown normally.</td>
+    <td style="padding:.5rem"><strong>Favorable Condition</strong></td>
+    <td style="padding:.5rem;color:var(--muted)">IBOV above SMA200, SMA50 above SMA200, drawdown &lt; 8%.<br><em>Historical observation:</em> in past periods with these conditions, high-score signals had a higher average win rate in backtests. This is historical data, not a forecast.<br><em>Filter applied:</em> all score ranges displayed.</td>
   </tr>
   <tr style="border-bottom:1px solid rgba(255,255,255,.1)">
     <td style="padding:.5rem"><span style="font-size:1.2rem">🟡</span></td>
-    <td style="padding:.5rem"><strong>Neutral</strong></td>
-    <td style="padding:.5rem;color:var(--muted)">Market undecided. Only High Conviction signals (score ≥ 4.0) are shown. Caution advised.</td>
+    <td style="padding:.5rem"><strong>Neutral Condition</strong></td>
+    <td style="padding:.5rem;color:var(--muted)">Market without clear direction or in moderate correction.<br><em>Historical observation:</em> lower-score signals had more irregular performance in these periods.<br><em>Filter applied:</em> only scores ≥ 4.0 displayed (noise reduction).</td>
   </tr>
   <tr>
     <td style="padding:.5rem"><span style="font-size:1.2rem">🔴</span></td>
-    <td style="padding:.5rem"><strong>Alert</strong></td>
-    <td style="padding:.5rem;color:var(--muted)">Price below SMA200, or drawdown &gt; 15%, or excess volatility (ATR% &gt; 2.5%). Buy signals paused.</td>
+    <td style="padding:.5rem"><strong>Alert Condition</strong></td>
+    <td style="padding:.5rem;color:var(--muted)">IBOV below SMA200, or drawdown &gt; 15%, or excess volatility (ATR% &gt; 2.5%).<br><em>Historical observation:</em> during broad selloffs, individual stocks also fell regardless of their own indicators.<br><em>Filter applied:</em> high-score signals not displayed (maximum noise reduction).</td>
   </tr>
 </table>
-<h4 style="margin:1rem 0 .5rem">Why pause signals?</h4>
-<p>During broad market selloffs, even fundamentally strong stocks tend to fall. In 2022, the IBOV dropped over 10% between January and July — stocks generating buy signals during that period averaged a <strong>–18%</strong> return over 20 days. Pausing or filtering signals avoids buying into the wrong tide.</p>
-<h4 style="margin:1rem 0 .5rem">How the regime is calculated</h4>
-<p>The app fetches BOVA11.SA candles on every scan. The logic is simple and transparent:</p>
+<h4 style="margin:1rem 0 .5rem">How the condition is calculated</h4>
+<p>The app fetches BOVA11.SA candles on every scan. The logic is transparent:</p>
 <ul style="padding-left:1.2rem;line-height:1.8">
   <li>🔴 Alert if: price &lt; SMA200 <strong>OR</strong> drawdown &gt; 15% <strong>OR</strong> ATR% &gt; 2.5%</li>
   <li>🟢 Favorable if: price &gt; SMA200 <strong>AND</strong> SMA50 &gt; SMA200 <strong>AND</strong> drawdown &lt; 8%</li>
   <li>🟡 Neutral: all other cases</li>
 </ul>
-<p style="margin-top:1rem;padding:.75rem;background:rgba(255,255,255,.05);border-radius:8px;font-size:.85rem;color:var(--muted)">💡 The regime indicator appears below the mode buttons on the main screen. Click it to return here at any time.</p>
+<p style="margin-top:1rem;padding:.75rem;background:rgba(255,255,255,.05);border-radius:8px;font-size:.85rem;color:var(--muted)">💡 The condition indicator appears below the mode buttons on the main screen. Click it to return here at any time.</p>
 `,
 
     edu_capitalMgmtBody: `
@@ -965,35 +964,34 @@ Sai. Sem hesitação. O stop foi calculado sobre o ATR — a volatilidade normal
 ✅ O app avisa os dois — você só precisa agir`,
 
     edu_marketRegimeBody: `
-<p>O Momentum analisa o estado atual do IBOV (via BOVA11.SA) para determinar se o ambiente é favorável a novas compras.</p>
-<h4 style="margin:1rem 0 .5rem">Os três estados do mercado</h4>
+<p>O Momentum analisa as cotações do BOVA11.SA para classificar a condição atual do IBOV. Essa classificação é usada como um <strong>filtro de ruído técnico</strong> — controla quais faixas de score são exibidas. Não é uma instrução de investimento.</p>
+<p style="margin-top:.5rem;padding:.6rem .8rem;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:6px;font-size:.85rem">⚠️ O regime de mercado é um <strong>filtro técnico de ruído</strong>, não uma recomendação de comprar ou não comprar. Você decide quando e se investir.</p>
+<h4 style="margin:1rem 0 .5rem">As três condições técnicas</h4>
 <table style="width:100%;border-collapse:collapse;font-size:.9rem">
   <tr style="border-bottom:1px solid rgba(255,255,255,.1)">
     <td style="padding:.5rem"><span style="font-size:1.2rem">🟢</span></td>
-    <td style="padding:.5rem"><strong>Favorável</strong></td>
-    <td style="padding:.5rem;color:var(--muted)">Preço acima da SMA200, SMA50 acima da SMA200, drawdown &lt; 8%. Sinais de compra ativos normalmente.</td>
+    <td style="padding:.5rem"><strong>Condição Favorável</strong></td>
+    <td style="padding:.5rem;color:var(--muted)">IBOV acima da SMA200, SMA50 acima da SMA200, drawdown &lt; 8%.<br><em>Observação histórica:</em> em períodos com essas condições, sinais de alta pontuação tiveram taxa de acerto média maior no backtest. Isso é dado histórico, não previsão.<br><em>Filtro aplicado:</em> todas as faixas de score são exibidas.</td>
   </tr>
   <tr style="border-bottom:1px solid rgba(255,255,255,.1)">
     <td style="padding:.5rem"><span style="font-size:1.2rem">🟡</span></td>
-    <td style="padding:.5rem"><strong>Neutro</strong></td>
-    <td style="padding:.5rem;color:var(--muted)">Mercado indeciso. Somente Alta Convicção (pontuação ≥ 4.0) é exibida. Cautela recomendada.</td>
+    <td style="padding:.5rem"><strong>Condição Neutra</strong></td>
+    <td style="padding:.5rem;color:var(--muted)">Mercado sem direção clara ou em correção moderada.<br><em>Observação histórica:</em> sinais de menor pontuação tiveram desempenho mais irregular nesses períodos.<br><em>Filtro aplicado:</em> apenas score ≥ 4.0 exibido (redução de ruído).</td>
   </tr>
   <tr>
     <td style="padding:.5rem"><span style="font-size:1.2rem">🔴</span></td>
-    <td style="padding:.5rem"><strong>Alerta</strong></td>
-    <td style="padding:.5rem;color:var(--muted)">Preço abaixo da SMA200, ou drawdown &gt; 15%, ou volatilidade excessiva (ATR% &gt; 2.5%). Sinais de compra pausados.</td>
+    <td style="padding:.5rem"><strong>Condição de Alerta</strong></td>
+    <td style="padding:.5rem;color:var(--muted)">IBOV abaixo da SMA200, ou drawdown &gt; 15%, ou volatilidade elevada (ATR% &gt; 2.5%).<br><em>Observação histórica:</em> durante quedas amplas, a maioria dos ativos individuais também recuou independentemente dos próprios indicadores.<br><em>Filtro aplicado:</em> sinais de alta pontuação não exibidos (redução de ruído máxima).</td>
   </tr>
 </table>
-<h4 style="margin:1rem 0 .5rem">Por que pausar sinais?</h4>
-<p>Durante quedas do mercado, mesmo ações individuais com bons fundamentos tendem a cair junto. Em 2022, o IBOV recuou mais de 10% entre janeiro e julho — ações que geravam sinal de compra nesse período apresentaram retorno médio de <strong>–18%</strong> em 20 dias. Pausar ou filtrar esses sinais evita entrar na maré errada.</p>
-<h4 style="margin:1rem 0 .5rem">Como o regime é calculado</h4>
+<h4 style="margin:1rem 0 .5rem">Como a condição é calculada</h4>
 <p>O app busca as cotações do BOVA11.SA a cada varredura. A lógica é simples e transparente:</p>
 <ul style="padding-left:1.2rem;line-height:1.8">
   <li>🔴 Alerta se: preço &lt; SMA200 <strong>OU</strong> drawdown &gt; 15% <strong>OU</strong> ATR% &gt; 2.5%</li>
   <li>🟢 Favorável se: preço &gt; SMA200 <strong>E</strong> SMA50 &gt; SMA200 <strong>E</strong> drawdown &lt; 8%</li>
   <li>🟡 Neutro: todos os outros casos</li>
 </ul>
-<p style="margin-top:1rem;padding:.75rem;background:rgba(255,255,255,.05);border-radius:8px;font-size:.85rem;color:var(--muted)">💡 O indicador de regime aparece abaixo dos botões de modo na tela principal. Clique nele para chegar aqui a qualquer momento.</p>
+<p style="margin-top:1rem;padding:.75rem;background:rgba(255,255,255,.05);border-radius:8px;font-size:.85rem;color:var(--muted)">💡 O indicador de condição aparece abaixo dos botões de modo na tela principal. Clique nele para chegar aqui a qualquer momento.</p>
 `,
 
     edu_capitalMgmtBody: '<strong>Gestão de capital não é sobre ganhar mais — é sobre não perder o suficiente para continuar jogando.</strong> O maior erro do investidor iniciante não é escolher a ação errada. É colocar dinheiro demais numa única posição e, quando ela cai, perder a calma junto com o dinheiro.<br><br><strong>A regra dos 10% por posição</strong><br>O Momentum calcula automaticamente o tamanho ideal de cada posição com base no seu patrimônio. A lógica: se você tem R$10.000, cada posição deve usar no máximo R$1.000 (10%). Se a ação cair 30%, você perde R$300 — ruim, mas você sobrevive. Se você colocar R$5.000 e a ação cair 30%, você perde R$1.500 — e provavelmente entra em pânico e vende no pior momento.<div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  Patrimônio: R$ 10.000<br>  Posição base (10%): R$ 1.000<br><br>  Score 3.5 → Posição: R$ 800  (5% do capital)<br>  Score 4.0 → Posição: R$ 1.000 (10% do capital)<br>  Score 4.5 → Posição: R$ 1.500 (15% do capital)<br>  Score 5.0 → Posição: R$ 2.000 (20% do capital)<br><br>  ATR alto (ação volátil)  → tamanho reduzido<br>  ATR baixo (ação estável) → tamanho mantido</div><strong>Cap por setor: máximo 25% do patrimônio</strong><br>Ter três ações do setor bancário que somam 60% do portfólio é concentração disfarçada de diversificação. O Momentum avisa quando um setor está com peso excessivo.<br><br><strong>Juros compostos: por que o tempo vale mais que o talento</strong><br>Dois investidores. Ana começa aos 25 com R$500/mês. Bruno começa aos 35 com R$1.000/mês — o dobro. Aos 65 anos:<div style="background:#0a0703;border:1px solid #2a1c12;border-radius:6px;padding:12px 14px;margin:10px 0;font-family:monospace;font-size:11px;line-height:2;color:#e8d5c0">  Ana (40 anos, R$500/mês, 10% a.a.):  R$ 2.655.000<br>  Bruno (30 anos, R$1.000/mês, 10% a.a.): R$ 2.261.000<br><br>  Ana ganhou com tempo, não com aporte maior.</div>A conclusão desconfortável: começar 10 anos antes vale mais que dobrar o aporte. Você não precisa de mais dinheiro — precisa de mais tempo. E o tempo começa agora.<br><br><strong>CDI como aliado, não inimigo</strong><br>Enquanto você aguarda o momento certo para entrar numa posição, seu dinheiro não precisa ficar parado. O Momentum mostra a estimativa do CDI que você está gerando sobre o capital não alocado. Com CDI a ~13,75% a.a., R$1.000 parado por 30 dias rende cerca de R$11 — pequeno, mas não zero.',
@@ -1005,7 +1003,7 @@ Sai. Sem hesitação. O stop foi calculado sobre o ATR — a volatilidade normal
 
     // Footer
     footer_version: '',
-    footer_disclaimer: '⚠ SIMULAÇÃO DE OPERAÇÕES — APENAS PARA FINS EDUCACIONAIS. O MOMENTUM é um simulador de análise técnica. Nada neste site constitui conselho financeiro, recomendação de investimento ou solicitação de compra ou venda de valores mobiliários. Todas as operações são simuladas. Resultados passados não garantem resultados futuros. Consulte um assessor financeiro qualificado antes de tomar decisões de investimento reais. Ao usar este aplicativo, você concorda que estas são apenas operações simuladas.',
+    footer_disclaimer: '⚠ SIMULAÇÃO DE OPERAÇÕES — APENAS PARA FINS EDUCACIONAIS. O MOMENTUM é um screener de análise técnica — NÃO é corretora, distribuidora, analista de valores mobiliários ou assessor de investimentos registrado na CVM (Res. CVM 62/2022). Os scores são gerados por algoritmo matemático. Nada neste site constitui recomendação de investimento ou solicitação de compra ou venda de valores mobiliários. Resultados passados não garantem resultados futuros. Você é responsável por suas próprias decisões de investimento.',
   },
 };
 function t(key) { return LANGS[_lang]?.[key] || LANGS.en[key] || key; }
