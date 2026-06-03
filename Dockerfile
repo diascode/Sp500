@@ -5,8 +5,10 @@ RUN npm install --omit=dev
 COPY server.js stock-dashboard.html legend.html ./
 COPY lib/ ./lib/
 COPY static/ ./static/
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-RUN mkdir -p /app/data && chown -R appuser:appgroup /app
-USER appuser
+COPY entrypoint.sh ./
+RUN apk add --no-cache su-exec \
+ && addgroup -S appgroup && adduser -S appuser -G appgroup \
+ && mkdir -p /app/data && chown -R appuser:appgroup /app \
+ && chmod +x /app/entrypoint.sh
 EXPOSE 8080
-CMD ["node", "server.js"]
+ENTRYPOINT ["/app/entrypoint.sh"]
