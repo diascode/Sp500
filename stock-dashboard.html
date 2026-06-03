@@ -1463,8 +1463,8 @@ async function scanMarket(market) {
 
 async function scanAll() {
   if (!authUser) { showAuthModal(); return; }
-  const btn = document.getElementById('refreshBtn');
-  if (btn) { btn.innerHTML = '⟳ Varrendo...'; btn.disabled = true; }
+  const btn = document.getElementById('scanBtn');
+  if (btn) { btn.innerHTML = '⚡ Varrendo...'; btn.disabled = true; }
   await scanMarket(state.market);
   // Market regime (Brasil only)
   if (state.market === 'brasil') {
@@ -1494,7 +1494,7 @@ async function scanAll() {
   if (statusEl2) statusEl2.textContent = t('status_ready');
   const updateEl = document.getElementById('updateTime');
   if (updateEl) updateEl.textContent = new Date().toISOString().replace('T',' ').slice(0,19)+' UTC';
-  if (btn) { btn.innerHTML = '⟳ Varrer'; btn.disabled = false; }
+  if (btn) { btn.innerHTML = '⚡ Varrer'; btn.disabled = false; }
   autoFetchFxRates(false);
 }
 
@@ -4887,8 +4887,8 @@ function applyLang() {
   setQ('.brand-sub', t('brand'));
 
   // Scan button
-  const scanBtn = document.getElementById('refreshBtn');
-  if (scanBtn) scanBtn.innerHTML = '⟳ ' + t('scan');
+  const scanBtn = document.getElementById('scanBtn');
+  if (scanBtn && !scanBtn.disabled) scanBtn.innerHTML = '⚡ ' + t('scan');
 
   // Login button
   const loginBtnEl = document.getElementById('loginBtn');
