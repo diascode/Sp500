@@ -94,6 +94,12 @@
   <button class="btn" onclick="upgradeToPro()" style="font-size:11px;padding:4px 12px;white-space:nowrap;background:var(--sell);color:#fff;border-color:var(--sell)">Atualizar cartão</button>
 </div>
 
+<div id="verifyEmailBanner" style="display:none;background:rgba(34,211,238,0.08);border-bottom:1px solid rgba(34,211,238,0.25);padding:8px 16px;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center">
+  <span style="font-size:13px;color:var(--ink-1)">📧 Confirme seu email — enviamos um link para <strong id="verifyBannerEmail"></strong></span>
+  <button id="resendVerifyBtn" onclick="resendVerificationEmail()" style="font-size:11px;padding:4px 12px;white-space:nowrap;background:rgba(34,211,238,0.15);border:1px solid rgba(34,211,238,0.4);border-radius:6px;color:#22d3ee;cursor:pointer">Reenviar email</button>
+  <button onclick="dismissVerifyBanner()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:16px;line-height:1;padding:0 4px" title="Fechar">×</button>
+</div>
+
 <div id="marketTabs" style="display:none">
   <span id="trackedCount">0</span>
   <button id="trackedTabBtn" onclick="showTrackedView()"></button>
@@ -467,6 +473,17 @@ async function updateAuthUI() {
       failedBanner.style.display = 'none';
     }
   }
+  // Email verification banner: show until verified
+  const verifyBanner = document.getElementById('verifyEmailBanner');
+  if (verifyBanner) {
+    if (authUser && authUser.emailVerified === false) {
+      const emailSpan = document.getElementById('verifyBannerEmail');
+      if (emailSpan) emailSpan.textContent = authUser.email;
+      verifyBanner.style.display = 'flex';
+    } else {
+      verifyBanner.style.display = 'none';
+    }
+  }
 }
 
 function formatCPF(v) {
@@ -776,6 +793,32 @@ function dismissUpgradeBanner() {
   localStorage.setItem('momentum_upgrade_dismissed', '1');
   const b = document.getElementById('upgradeBanner');
   if (b) b.style.display = 'none';
+}
+
+function dismissVerifyBanner() {
+  const b = document.getElementById('verifyEmailBanner');
+  if (b) b.style.display = 'none';
+}
+
+async function resendVerificationEmail() {
+  const btn = document.getElementById('resendVerifyBtn');
+  if (btn) { btn.textContent = 'Enviando...'; btn.disabled = true; }
+  try {
+    const data = await apiPost('/api/auth/resend-verification', {});
+    if (data.alreadyVerified) {
+      if (authUser) authUser.emailVerified = true;
+      updateAuthUI();
+      showToast('Email já verificado!', true, 3000);
+    } else if (data.ok) {
+      showToast('Email reenviado! Verifique sua caixa de entrada.', true, 4000);
+    } else {
+      showToast(data.error || 'Não foi possível reenviar. Tente em breve.', false, 4000);
+    }
+  } catch {
+    showToast('Erro ao reenviar. Tente novamente.', false, 4000);
+  } finally {
+    if (btn) { btn.textContent = 'Reenviar email'; btn.disabled = false; }
+  }
 }
 
 function showUpgradeModal() {
@@ -6562,8 +6605,13 @@ async function init() {
     fetch('/api/auth/verify-email?token=' + encodeURIComponent(verifyToken))
       .then(r => r.json())
       .then(data => {
-        if (data.ok) showToast('Email verificado! Você já pode entrar.', true, 4000);
-        else showToast('Link de verificação expirado. Entre e solicite um novo.', false, 5000);
+        if (data.ok) {
+          if (authUser) authUser.emailVerified = true;
+          updateAuthUI();
+          showToast('✅ Email verificado! Conta ativada com sucesso.', true, 5000);
+        } else {
+          showToast('Link de verificação expirado. Entre e clique em "Reenviar email".', false, 6000);
+        }
       })
       .catch(() => showToast('Não foi possível verificar o email. Tente novamente.', false, 4000));
   }

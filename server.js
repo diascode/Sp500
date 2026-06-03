@@ -170,12 +170,14 @@ async function handleRequest(req, res) {
       _verifyTokens.set(vToken, { email: user.email, expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
       _verifyCooldown.set(user.email, Date.now());
       const vLink = `${APP_URL_BASE}/?verify=${vToken}`;
-      sendEmail(user.email, 'Verify your Momentum email', `
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
-          <h2 style="color:#c85a17">Momentum — Verify your email</h2>
-          <p>Thanks for signing up! Click the button below to verify your email address.</p>
-          <a href="${vLink}" style="display:inline-block;background:#c85a17;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;margin:16px 0">Verify Email</a>
-          <p style="color:#888;font-size:12px">Link: <a href="${vLink}">${vLink}</a></p>
+      sendEmail(user.email, 'Confirme seu email — Momentum', `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0a;padding:32px;border-radius:12px;color:#e0e0e0">
+          <h2 style="color:#4ade80;margin:0 0 8px">Momentum</h2>
+          <p style="color:#aaa;font-size:13px;margin:0 0 24px">Análise técnica para o investidor brasileiro</p>
+          <p style="font-size:15px;margin:0 0 8px">Olá!</p>
+          <p style="font-size:14px;color:#ccc;margin:0 0 24px">Obrigado por criar sua conta. Clique no botão abaixo para confirmar seu endereço de email e ativar sua conta.</p>
+          <a href="${vLink}" style="display:inline-block;background:#4ade80;color:#000;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;margin-bottom:24px">Confirmar email →</a>
+          <p style="color:#666;font-size:12px;margin:0">Este link expira em 24 horas. Se você não criou uma conta, ignore este email.</p>
         </div>`);
       return sendJSON(res, 201, { token: signToken(user), user: { id: user.id, email: user.email, tier: user.tier }, emailVerified: false });
     }
@@ -306,11 +308,13 @@ async function handleRequest(req, res) {
       _verifyTokens.set(vToken, { email: user.email, expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
       _verifyCooldown.set(user.email, Date.now());
       const vLink = `${APP_URL_BASE}/?verify=${vToken}`;
-      await sendEmail(user.email, 'Verify your Momentum email', `
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
-          <h2 style="color:#c85a17">Momentum — Verify your email</h2>
-          <p>Click the button below to verify your email address.</p>
-          <a href="${vLink}" style="display:inline-block;background:#c85a17;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;margin:16px 0">Verify Email</a>
+      await sendEmail(user.email, 'Confirme seu email — Momentum', `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0a;padding:32px;border-radius:12px;color:#e0e0e0">
+          <h2 style="color:#4ade80;margin:0 0 8px">Momentum</h2>
+          <p style="color:#aaa;font-size:13px;margin:0 0 24px">Análise técnica para o investidor brasileiro</p>
+          <p style="font-size:14px;color:#ccc;margin:0 0 24px">Clique no botão abaixo para confirmar seu endereço de email.</p>
+          <a href="${vLink}" style="display:inline-block;background:#4ade80;color:#000;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;margin-bottom:24px">Confirmar email →</a>
+          <p style="color:#666;font-size:12px;margin:0">Este link expira em 24 horas. Se você não solicitou isso, ignore este email.</p>
         </div>`);
       return sendJSON(res, 200, { ok: true });
     }
