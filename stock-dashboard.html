@@ -572,12 +572,12 @@ async function submitChangePassword() {
   const confirm = document.getElementById('cpConfirm').value;
   const errEl = document.getElementById('cpError');
   if (!old || !pw) { errEl.textContent = t('errors_fillFields'); errEl.style.display='block'; return; }
-  if (pw.length < 6) { errEl.textContent = 'Password must be at least 6 chars'; errEl.style.display='block'; return; }
-  if (pw !== confirm) { errEl.textContent = 'Passwords do not match'; errEl.style.display='block'; return; }
+  if (pw.length < 6) { errEl.textContent = 'A senha deve ter pelo menos 6 caracteres'; errEl.style.display='block'; return; }
+  if (pw !== confirm) { errEl.textContent = 'As senhas não coincidem'; errEl.style.display='block'; return; }
   errEl.style.display = 'none';
   const data = await apiPost('/api/auth/change-password', { oldPassword: old, newPassword: pw });
   if (data.ok) { showToast('Senha alterada com sucesso!', true, 3000); renderDashboard(); }
-  else { errEl.textContent = data.error || 'Failed'; errEl.style.display='block'; }
+  else { errEl.textContent = data.error || 'Falha ao alterar senha'; errEl.style.display='block'; }
 }
 
 function showAuthModal() {
@@ -642,18 +642,18 @@ async function submitForgotPassword() {
   const email = document.getElementById('forgotEmail').value.trim();
   if (!email) return;
   const btn = document.getElementById('forgotSubmitBtn');
-  btn.disabled = true; btn.textContent = 'Sending...';
+  btn.disabled = true; btn.textContent = 'Enviando...';
   try {
     await fetch('/api/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
     const msg = document.getElementById('forgotMsg');
     msg.style.display = ''; msg.style.color = 'var(--buy)';
-    msg.textContent = 'If that email is registered, a reset link has been sent. Check your inbox.';
+    msg.textContent = 'Se esse email estiver cadastrado, um link de redefinição foi enviado. Verifique sua caixa de entrada.';
   } catch(e) {
     const msg = document.getElementById('forgotMsg');
     msg.style.display = ''; msg.style.color = 'var(--sell)';
-    msg.textContent = 'Something went wrong. Please try again.';
+    msg.textContent = 'Algo deu errado. Tente novamente.';
   }
-  btn.disabled = false; btn.textContent = 'SEND LINK';
+  btn.disabled = false; btn.textContent = 'ENVIAR LINK';
 }
 
 let _resetToken = null;
@@ -662,22 +662,22 @@ function submitResetPassword() {
   const p1 = document.getElementById('resetPassword').value;
   const p2 = document.getElementById('resetPassword2').value;
   const msg = document.getElementById('resetMsg');
-  if (!p1 || p1.length < 6) { msg.style.color = 'var(--sell)'; msg.textContent = 'Password must be at least 6 characters.'; return; }
-  if (p1 !== p2) { msg.style.color = 'var(--sell)'; msg.textContent = 'Passwords do not match.'; return; }
+  if (!p1 || p1.length < 6) { msg.style.color = 'var(--sell)'; msg.textContent = 'A senha deve ter pelo menos 6 caracteres.'; return; }
+  if (p1 !== p2) { msg.style.color = 'var(--sell)'; msg.textContent = 'As senhas não coincidem.'; return; }
   const btn = document.getElementById('resetSubmitBtn');
-  btn.disabled = true; btn.textContent = 'Updating...';
+  btn.disabled = true; btn.textContent = 'Atualizando...';
   fetch('/api/auth/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: _resetToken, password: p1 }) })
     .then(r => r.json())
     .then(data => {
       if (data.ok) {
-        msg.style.color = 'var(--buy)'; msg.textContent = 'Password updated! You can now sign in.';
+        msg.style.color = 'var(--buy)'; msg.textContent = 'Senha atualizada! Você já pode entrar.';
         setTimeout(() => { document.getElementById('resetModal').classList.remove('show'); showAuthModal(); }, 2000);
       } else {
-        msg.style.color = 'var(--sell)'; msg.textContent = data.error || 'Link expired. Please request a new reset link.';
+        msg.style.color = 'var(--sell)'; msg.textContent = data.error || 'Link expirado. Solicite um novo link de redefinição.';
       }
     })
-    .catch(() => { msg.style.color = 'var(--sell)'; msg.textContent = 'Something went wrong.'; })
-    .finally(() => { btn.disabled = false; btn.textContent = 'UPDATE PASSWORD'; });
+    .catch(() => { msg.style.color = 'var(--sell)'; msg.textContent = 'Algo deu errado.'; })
+    .finally(() => { btn.disabled = false; btn.textContent = 'ATUALIZAR SENHA'; });
 }
 
 function toggleAuthMode() {
@@ -717,7 +717,7 @@ async function submitAuth() {
       await checkAuth();
       closeAuthModal();
       if (authMode === 'signup') {
-        showToast('📧 Check your email for a verification link.', true, 5000);
+        showToast('📧 Verifique seu email para confirmar o cadastro.', true, 5000);
       }
       if (authUser && !authUser.onboardingDone) {
         setTimeout(showOnboardingModal, 800);
@@ -3006,7 +3006,7 @@ async function refreshTracked() {
 }
 
 function clearTracked() {
-  if (!confirm('Clear all tracked picks?')) return;
+  if (!confirm('Limpar todos os ativos acompanhados?')) return;
   state.trackedPicks = [];
   saveTrackedPicks();
   updateTrackedCount();
@@ -4131,12 +4131,12 @@ function updateSellPreview(index) {
   const profitPct = p.buyPrice > 0 ? ((sellPrice - p.buyPrice) / p.buyPrice * 100) : 0;
   const remaining = p.quantity - qty;
   previewEl.innerHTML = '';
-  previewEl.innerHTML += '<div>Selling: <strong>' + qty + ' of ' + p.quantity + ' shares</strong></div>';
-  previewEl.innerHTML += '<div>Realized P&amp;L: <strong class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + getCurrencySymbol(p.ticker) + profit.toFixed(2) + ' (' + (profitPct >= 0 ? '+' : '') + profitPct.toFixed(2) + '%)</strong></div>';
+  previewEl.innerHTML += '<div>Vendendo: <strong>' + qty + ' de ' + p.quantity + ' ações</strong></div>';
+  previewEl.innerHTML += '<div>P&amp;L Realizado: <strong class="' + (profit >= 0 ? 'pnl-up' : 'pnl-dn') + '">' + (profit >= 0 ? '+' : '') + getCurrencySymbol(p.ticker) + profit.toFixed(2) + ' (' + (profitPct >= 0 ? '+' : '') + profitPct.toFixed(2) + '%)</strong></div>';
   if (remaining > 0) {
-    previewEl.innerHTML += '<div style="margin-top:4px;color:var(--primary)">Remaining holding: <strong>' + remaining + ' shares @ ' + getCurrencySymbol(p.ticker) + p.buyPrice.toFixed(2) + '</strong></div>';
+    previewEl.innerHTML += '<div style="margin-top:4px;color:var(--primary)">Saldo remanescente: <strong>' + remaining + ' ações @ ' + getCurrencySymbol(p.ticker) + p.buyPrice.toFixed(2) + '</strong></div>';
   }
-  previewEl.innerHTML += '<div style="margin-top:4px;font-size:10px;color:var(--ink-3)">' + (remaining > 0 ? 'Sold portion will be recorded as closed; remaining stays as holding.' : 'Full position will be closed.') + '</div>';
+  previewEl.innerHTML += '<div style="margin-top:4px;font-size:10px;color:var(--ink-3)">' + (remaining > 0 ? 'A parcela vendida será registrada como encerrada; o restante permanece como holding.' : 'Posição completa será encerrada.') + '</div>';
 }
 
 function confirmSell(index) {
@@ -6716,7 +6716,7 @@ async function init() {
     savePortfolio();
     updatePortfolioSidebar();
     // Toast notification + button flash
-    showToast('✅ ' + ticker + ' added to MY STOCKS!', true);
+    showToast('✅ ' + ticker + ' adicionado à sua carteira!', true);
     const origText = btn.textContent;
     btn.textContent = '✅ ADDED!';
     btn.style.background = 'rgba(76,175,80,0.25)';

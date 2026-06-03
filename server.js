@@ -147,7 +147,7 @@ async function handleRequest(req, res) {
   // Auth rate limiting (IP-based)
   const clientIp = req.socket.remoteAddress || 'unknown';
   if ((pathname === '/api/auth/login' || pathname === '/api/auth/signup' || pathname === '/api/auth/forgot-password') && req.method === 'POST') {
-    if (!checkAuthRateLimit(clientIp)) return sendError(res, 429, 'Too many attempts. Please wait 15 minutes before trying again.');
+    if (!checkAuthRateLimit(clientIp)) return sendError(res, 429, 'Muitas tentativas. Aguarde 15 minutos antes de tentar novamente.');
   }
 
   try {
@@ -155,14 +155,14 @@ async function handleRequest(req, res) {
     if (pathname === '/api/auth/signup' && req.method === 'POST') {
       const body = await readBody(req);
       const { email, password } = body;
-      if (!email || !password || password.length < 6) return sendError(res, 400, 'Email and password (min 6 chars) required');
+      if (!email || !password || password.length < 6) return sendError(res, 400, 'Email e senha (mínimo 6 caracteres) são obrigatórios');
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) return sendError(res, 400, 'Email inválido');
       const cpfDigits = (body.cpf || '').replace(/\D/g, '');
       if (featureFlags.cpf_required !== false && !cpfDigits) return sendError(res, 400, 'CPF é obrigatório para cadastro');
       if (!validateCPF(cpfDigits)) return sendError(res, 400, 'CPF inválido');
       if (users.some(u => u.cpf === cpfDigits)) return sendError(res, 409, 'CPF já cadastrado');
-      if (findUser(email)) return sendError(res, 409, 'Email already registered');
+      if (findUser(email)) return sendError(res, 409, 'Email já cadastrado');
       const user = { id: nextId(), email: email.toLowerCase(), password: await hashPassword(password), cpf: cpfDigits, tier: 'free', createdAt: new Date().toISOString(), stripeCustomerId: null, stripeSubId: null, subStatus: null, paymentMethodLast4: null, failedPaymentCount: 0, paymentHistory: [], subscriptionEnd: null, emailVerified: false };
       users.push(user); saveUsers(users);
       // Send verification email (non-blocking)
@@ -185,26 +185,26 @@ async function handleRequest(req, res) {
     if (pathname === '/api/auth/login' && req.method === 'POST') {
       const body = await readBody(req);
       const { email, password } = body;
-      if (!email || !password) return sendError(res, 400, 'Email and password required');
+      if (!email || !password) return sendError(res, 400, 'Email e senha são obrigatórios');
       const user = findUser(email);
-      if (!user || !await verifyPassword(password, user.password)) return sendError(res, 401, 'Invalid email or password');
+      if (!user || !await verifyPassword(password, user.password)) return sendError(res, 401, 'Email ou senha inválidos');
       return sendJSON(res, 200, { token: signToken(user), user: { id: user.id, email: user.email, tier: user.tier } });
     }
 
     if (pathname === '/api/auth/me') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       const user = findUser(authUser.email);
-      if (!user) return sendError(res, 401, 'User not found');
+      if (!user) return sendError(res, 401, 'Usuário não encontrado');
       return sendJSON(res, 200, { id: user.id, email: user.email, name: user.name || null, tier: user.tier, subscriptionEnd: user.subscriptionEnd, subStatus: user.subStatus || null, failedPaymentCount: user.failedPaymentCount || 0, cancelAtPeriodEnd: user.cancelAtPeriodEnd || false, paymentHistory: (user.paymentHistory || []).slice(-6).reverse(), emailVerified: user.emailVerified !== false, isAdmin: user.isAdmin || false, onboardingDone: user.onboardingDone || false });
     }
 
     if (pathname === '/api/auth/profile' && req.method === 'POST') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       const body = await readBody(req);
       const user = findUser(authUser.email);
-      if (!user) return sendError(res, 404, 'User not found');
+      if (!user) return sendError(res, 404, 'Usuário não encontrado');
       const cpf = (body.cpf || '').replace(/\D/g, '');
       if (cpf && !validateCPF(cpf)) return sendError(res, 400, 'CPF inválido');
       if (cpf && users.some(u => u.cpf === cpf && u.email !== user.email)) return sendError(res, 409, 'CPF já cadastrado');
@@ -215,7 +215,7 @@ async function handleRequest(req, res) {
 
     if (pathname === '/api/user/profile' && req.method === 'GET') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       const user = findUser(authUser.email);
       if (!user) return sendError(res, 404, 'Usuário não encontrado');
       const { password, passwordHash, ...safe } = user;
@@ -224,10 +224,10 @@ async function handleRequest(req, res) {
 
     if (pathname === '/api/user/profile' && req.method === 'PATCH') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       const body = await readBody(req);
       const user = findUser(authUser.email);
-      if (!user) return sendError(res, 404, 'User not found');
+      if (!user) return sendError(res, 404, 'Usuário não encontrado');
       if (body.onboardingDone === true) user.onboardingDone = true;
       saveUsers(users);
       return sendJSON(res, 200, { ok: true });
@@ -235,13 +235,13 @@ async function handleRequest(req, res) {
 
     if (pathname === '/api/auth/change-password' && req.method === 'POST') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       const body = await readBody(req);
       const user = findUser(authUser.email);
-      if (!user) return sendError(res, 404, 'User not found');
-      if (!body.oldPassword) return sendError(res, 400, 'Current password is required');
-      if (!await verifyPassword(body.oldPassword, user.password)) return sendError(res, 400, 'Current password is incorrect');
-      if (!body.newPassword || body.newPassword.length < 6) return sendError(res, 400, 'New password must be at least 6 characters');
+      if (!user) return sendError(res, 404, 'Usuário não encontrado');
+      if (!body.oldPassword) return sendError(res, 400, 'Senha atual é obrigatória');
+      if (!await verifyPassword(body.oldPassword, user.password)) return sendError(res, 400, 'Senha atual incorreta');
+      if (!body.newPassword || body.newPassword.length < 6) return sendError(res, 400, 'Nova senha deve ter pelo menos 6 caracteres');
       user.password = await hashPassword(body.newPassword);
       user.passwordChangedAt = new Date().toISOString();
       saveUsers(users);
@@ -257,26 +257,28 @@ async function handleRequest(req, res) {
         const token = makeToken();
         _resetTokens.set(token, { email, expiresAt: Date.now() + 60 * 60 * 1000 }); // 1 hour
         const link = `${APP_URL_BASE}/?reset=${token}`;
-        await sendEmail(email, 'Reset your Momentum password', `
-          <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
-            <h2 style="color:#c85a17">Momentum — Password Reset</h2>
-            <p>You requested a password reset. Click the button below to set a new password. This link expires in <strong>1 hour</strong>.</p>
-            <a href="${link}" style="display:inline-block;background:#c85a17;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;margin:16px 0">Reset Password</a>
-            <p style="color:#888;font-size:12px">If you didn't request this, you can safely ignore this email. Your password has not changed.</p>
-            <p style="color:#888;font-size:12px">Link: <a href="${link}">${link}</a></p>
+        await sendEmail(email, 'Redefinição de senha — Momentum', `
+          <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0a;padding:32px;border-radius:12px;color:#e0e0e0">
+            <h2 style="color:#c85a17;margin:0 0 8px">Momentum</h2>
+            <p style="color:#aaa;font-size:13px;margin:0 0 24px">Análise técnica para o investidor brasileiro</p>
+            <p style="font-size:15px;margin:0 0 8px">Olá!</p>
+            <p style="font-size:14px;color:#ccc;margin:0 0 24px">Você solicitou a redefinição de senha. Clique no botão abaixo para criar uma nova senha. Este link expira em <strong>1 hora</strong>.</p>
+            <a href="${link}" style="display:inline-block;background:#c85a17;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;margin-bottom:24px">Redefinir senha →</a>
+            <p style="color:#666;font-size:12px;margin:0">Se você não solicitou isso, pode ignorar este email. Sua senha não foi alterada.</p>
+            <p style="color:#666;font-size:12px;margin:8px 0 0">Link: <a href="${link}" style="color:#c85a17">${link}</a></p>
           </div>`);
       }
-      return sendJSON(res, 200, { ok: true, message: 'If that email is registered, a reset link has been sent.' });
+      return sendJSON(res, 200, { ok: true, message: 'Se esse email estiver cadastrado, um link de redefinição foi enviado.' });
     }
 
     if (pathname === '/api/auth/reset-password' && req.method === 'POST') {
       const body = await readBody(req);
       const { token, password } = body;
-      if (!token || !password || password.length < 6) return sendError(res, 400, 'Token and password (min 6 chars) required');
+      if (!token || !password || password.length < 6) return sendError(res, 400, 'Token e senha (mínimo 6 caracteres) são obrigatórios');
       const entry = _resetTokens.get(token);
-      if (!entry || entry.expiresAt < Date.now()) return sendError(res, 400, 'Reset link has expired or is invalid. Please request a new one.');
+      if (!entry || entry.expiresAt < Date.now()) return sendError(res, 400, 'Link de redefinição expirado ou inválido. Solicite um novo.');
       const user = findUser(entry.email);
-      if (!user) return sendError(res, 404, 'User not found');
+      if (!user) return sendError(res, 404, 'Usuário não encontrado');
       user.password = await hashPassword(password);
       user.passwordChangedAt = new Date().toISOString();
       saveUsers(users);
@@ -287,9 +289,9 @@ async function handleRequest(req, res) {
     if (pathname === '/api/auth/verify-email' && req.method === 'GET') {
       const token = url.searchParams.get('token') || '';
       const entry = _verifyTokens.get(token);
-      if (!entry || entry.expiresAt < Date.now()) return sendError(res, 400, 'Verification link has expired or is invalid.');
+      if (!entry || entry.expiresAt < Date.now()) return sendError(res, 400, 'Link de verificação expirado ou inválido.');
       const user = findUser(entry.email);
-      if (!user) return sendError(res, 404, 'User not found');
+      if (!user) return sendError(res, 404, 'Usuário não encontrado');
       user.emailVerified = true;
       saveUsers(users);
       _verifyTokens.delete(token);
@@ -298,12 +300,12 @@ async function handleRequest(req, res) {
 
     if (pathname === '/api/auth/resend-verification' && req.method === 'POST') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       const user = findUser(authUser.email);
-      if (!user) return sendError(res, 404, 'User not found');
+      if (!user) return sendError(res, 404, 'Usuário não encontrado');
       if (user.emailVerified) return sendJSON(res, 200, { ok: true, alreadyVerified: true });
       const lastSent = _verifyCooldown.get(user.email) || 0;
-      if (Date.now() - lastSent < 60_000) return sendError(res, 429, 'Please wait before requesting another verification email.');
+      if (Date.now() - lastSent < 60_000) return sendError(res, 429, 'Aguarde antes de solicitar outro email de verificação.');
       const vToken = makeToken();
       _verifyTokens.set(vToken, { email: user.email, expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
       _verifyCooldown.set(user.email, Date.now());
@@ -322,9 +324,9 @@ async function handleRequest(req, res) {
     // ─── GDPR / ACCOUNT ─────────────────────────────────────────
     if (pathname === '/api/auth/data-export' && req.method === 'GET') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       const user = findUser(authUser.email);
-      if (!user) return sendError(res, 404, 'User not found');
+      if (!user) return sendError(res, 404, 'Usuário não encontrado');
       return sendJSON(res, 200, {
         id: user.id, email: user.email, tier: user.tier,
         cpf: user.cpf || null,
@@ -338,10 +340,10 @@ async function handleRequest(req, res) {
 
     if (pathname === '/api/auth/account' && req.method === 'DELETE') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       if (authUser.email.toLowerCase() === ADMIN_EMAIL) return sendError(res, 400, 'Cannot delete admin account');
       const idx = users.findIndex(u => u.email.toLowerCase() === authUser.email.toLowerCase());
-      if (idx === -1) return sendError(res, 404, 'User not found');
+      if (idx === -1) return sendError(res, 404, 'Usuário não encontrado');
       users.splice(idx, 1);
       saveUsers(users);
       return sendJSON(res, 200, { ok: true, message: 'Account deleted. All server-side personal data has been removed.' });
@@ -350,15 +352,15 @@ async function handleRequest(req, res) {
     // ─── PORTFOLIO ───────────────────────────────────────────────
     if (pathname === '/api/portfolio' && req.method === 'GET') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       const user = findUser(authUser.email);
-      if (!user) return sendError(res, 404, 'User not found');
+      if (!user) return sendError(res, 404, 'Usuário não encontrado');
       return sendJSON(res, 200, user.portfolio || []);
     }
 
     if (pathname === '/api/portfolio' && req.method === 'PUT') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       const body = await readBody(req);
       if (!Array.isArray(body)) return sendError(res, 400, 'Portfolio must be an array');
       if (body.length > 500) return sendError(res, 400, 'Payload too large');
@@ -368,7 +370,7 @@ async function handleRequest(req, res) {
         if (item.buyPrice != null && typeof item.buyPrice !== 'number') return sendError(res, 400, 'Invalid price');
       }
       const user = findUser(authUser.email);
-      if (!user) return sendError(res, 404, 'User not found');
+      if (!user) return sendError(res, 404, 'Usuário não encontrado');
       user.portfolio = body;
       saveUsers(users);
       return sendJSON(res, 200, { ok: true });
@@ -377,15 +379,15 @@ async function handleRequest(req, res) {
     // ─── TRACKED PICKS ───────────────────────────────────────────
     if (pathname === '/api/tracked' && req.method === 'GET') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       const user = findUser(authUser.email);
-      if (!user) return sendError(res, 404, 'User not found');
+      if (!user) return sendError(res, 404, 'Usuário não encontrado');
       return sendJSON(res, 200, user.trackedPicks || []);
     }
 
     if (pathname === '/api/tracked' && req.method === 'PUT') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       const body = await readBody(req);
       if (!Array.isArray(body)) return sendError(res, 400, 'Tracked picks must be an array');
       if (body.length > 500) return sendError(res, 400, 'Payload too large');
@@ -394,7 +396,7 @@ async function handleRequest(req, res) {
         if (item.entryPrice != null && typeof item.entryPrice !== 'number') return sendError(res, 400, 'Invalid price');
       }
       const user = findUser(authUser.email);
-      if (!user) return sendError(res, 404, 'User not found');
+      if (!user) return sendError(res, 404, 'Usuário não encontrado');
       user.trackedPicks = body;
       saveUsers(users);
       return sendJSON(res, 200, { ok: true });
@@ -415,7 +417,7 @@ async function handleRequest(req, res) {
     // ─── ADMIN ───────────────────────────────────────────────────
     if (pathname === '/api/admin/users' && req.method === 'GET') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
       const safe = users.map(u => ({
         id: u.id, email: u.email, tier: u.tier, createdAt: u.createdAt,
@@ -439,12 +441,12 @@ async function handleRequest(req, res) {
 
     if (pathname === '/api/admin/set-admin' && req.method === 'POST') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
       const body = await readBody(req);
       const targetEmail = (body.email || '').toLowerCase();
       const targetUser = findUser(targetEmail);
-      if (!targetUser) return sendError(res, 404, 'User not found');
+      if (!targetUser) return sendError(res, 404, 'Usuário não encontrado');
       targetUser.tier = body.admin === true || body.admin === 'true' ? 'admin' : 'free';
       saveUsers(users);
       return sendJSON(res, 200, { ok: true, email: targetEmail, tier: targetUser.tier });
@@ -452,7 +454,7 @@ async function handleRequest(req, res) {
 
     if (pathname === '/api/admin/set-tier' && req.method === 'POST') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
       const body = await readBody(req);
       const targetEmail = (body.email || '').toLowerCase();
@@ -460,7 +462,7 @@ async function handleRequest(req, res) {
       if (!['free', 'pro'].includes(newTier)) return sendError(res, 400, 'tier must be free or pro');
       if (targetEmail === ADMIN_EMAIL) return sendError(res, 400, 'Cannot change admin tier');
       const targetUser = findUser(targetEmail);
-      if (!targetUser) return sendError(res, 404, 'User not found');
+      if (!targetUser) return sendError(res, 404, 'Usuário não encontrado');
       targetUser.tier = newTier;
       if (newTier === 'pro') {
         const existingEnd = targetUser.subscriptionEnd ? new Date(targetUser.subscriptionEnd) : null;
@@ -478,7 +480,7 @@ async function handleRequest(req, res) {
 
     if (pathname === '/api/admin/revenue' && req.method === 'GET') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
       const now = new Date();
       const PRO_PRICE_BRL = 29.90;
@@ -508,13 +510,13 @@ async function handleRequest(req, res) {
 
     if (pathname === '/api/admin/cancel-subscription' && req.method === 'POST') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
       if (!stripe) return sendError(res, 503, 'Stripe not configured');
       const body = await readBody(req);
       const targetEmail = (body.email || '').toLowerCase();
       const targetUser = findUser(targetEmail);
-      if (!targetUser) return sendError(res, 404, 'User not found');
+      if (!targetUser) return sendError(res, 404, 'Usuário não encontrado');
       if (!targetUser.stripeSubId) return sendError(res, 400, 'No Stripe subscription found');
       try {
         await stripe.subscriptions.update(targetUser.stripeSubId, { cancel_at_period_end: true });
@@ -526,14 +528,14 @@ async function handleRequest(req, res) {
 
     if (pathname === '/api/admin/extend-subscription' && req.method === 'POST') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
       const body = await readBody(req);
       const targetEmail = (body.email || '').toLowerCase();
       const days = parseInt(body.days) || 30;
       if (days < 1 || days > 90) return sendError(res, 400, 'days must be 1–90');
       const targetUser = findUser(targetEmail);
-      if (!targetUser) return sendError(res, 404, 'User not found');
+      if (!targetUser) return sendError(res, 404, 'Usuário não encontrado');
       let base = targetUser.subscriptionEnd ? new Date(targetUser.subscriptionEnd) : new Date();
       if (base < new Date()) base = new Date();
       base.setDate(base.getDate() + days);
@@ -551,7 +553,7 @@ async function handleRequest(req, res) {
 
     if (pathname === '/api/admin/feature-flags' && req.method === 'POST') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
       const body = await readBody(req);
       for (const [key, val] of Object.entries(body)) {
@@ -569,7 +571,7 @@ async function handleRequest(req, res) {
     if (pathname === '/api/stripe/create-checkout') {
       if (!stripe) return sendError(res, 503, 'Stripe not configured');
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       const user = findUser(authUser.email);
       // Guard: only block if user is already Pro AND has an active Stripe sub
       if (user && user.tier === 'pro' && user.stripeSubId && user.subStatus === 'active') {
@@ -604,7 +606,7 @@ async function handleRequest(req, res) {
     if (pathname === '/api/stripe/create-portal') {
       if (!stripe) return sendError(res, 503, 'Stripe not configured');
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Not authenticated');
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
       const user = findUser(authUser.email);
       if (!user || !user.stripeCustomerId) return sendError(res, 400, 'No active subscription');
       const reqProto = req.headers['x-forwarded-proto'] || 'http';
@@ -619,7 +621,7 @@ async function handleRequest(req, res) {
     if (pathname === '/api/stripe/verify-session') {
       if (!stripe) return sendError(res, 503, 'Stripe not configured');
       const authUserReq = getAuthUser(req);
-      if (!authUserReq) return sendError(res, 401, 'Not authenticated');
+      if (!authUserReq) return sendError(res, 401, 'Não autenticado');
       const sessionId = new URL('http://x' + req.url).searchParams.get('session_id');
       if (!sessionId) return sendError(res, 400, 'session_id required');
       try {
@@ -781,9 +783,9 @@ async function handleRequest(req, res) {
     const historyMatch = pathname.match(/^\/api\/history\/([A-Za-z0-9.=%]+)$/);
     if (historyMatch) {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Sign in required to scan');
+      if (!authUser) return sendError(res, 401, 'É necessário estar logado para escanear');
       const limit = checkScanLimit(authUser.email);
-      if (!limit.allowed) return sendJSON(res, 429, { error: 'Scan limit reached for today', limit, tier: limit.tier });
+      if (!limit.allowed) return sendJSON(res, 429, { error: 'Limite de varredura diário atingido', limit, tier: limit.tier });
       try {
         const ticker = decodeURIComponent(historyMatch[1]);
         const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'pt';
@@ -807,9 +809,9 @@ async function handleRequest(req, res) {
 
     if (pathname === '/api/scan') {
       const authUser = getAuthUser(req);
-      if (!authUser) return sendError(res, 401, 'Sign in required to scan');
+      if (!authUser) return sendError(res, 401, 'É necessário estar logado para escanear');
       const limit = checkScanLimit(authUser.email);
-      if (!limit.allowed) return sendJSON(res, 429, { error: 'Daily scan limit reached', limit, tier: limit.tier });
+      if (!limit.allowed) return sendJSON(res, 429, { error: 'Limite de varredura diário atingido', limit, tier: limit.tier });
       const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'pt';
       const results = {};
       for (const [market, stocks] of Object.entries(UNIVERSES)) {
