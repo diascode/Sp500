@@ -4880,6 +4880,247 @@ O curso atualmente tem 22+ tópicos cobrindo fundamentos, análise técnica, est
 
 ---
 
+## Epic 66 — Sprint 57: i18n — Tradução de Mensagens PT-BR (Banners, Toasts, Erros de Servidor)
+
+### US-314 — Traduzir Mensagens de Erro e Toasts Expostos ao Usuário para PT-BR
+**As a** usuário brasileiro do Momentum,
+**I want** que todos os banners, toasts e respostas de erro do servidor apareçam em português,
+**so that** a experiência seja consistente e compreensível, sem mensagens em inglês quebrando o fluxo em PT-BR.
+
+**Known messages to fix:**
+- Servidor retorna HTTP 429 em `/auth/resend-verification`: `"Please wait before requesting another verification email."` → `"Aguarde antes de solicitar outro email de verificação."`
+- Toast exibido quando o link de verificação expira: revisar texto atual e garantir que esteja em PT-BR correto e alinhado ao tom do app.
+- Auditar todas as rotas de autenticação (`/auth/signup`, `/auth/login`, `/auth/reset-password`, `/auth/resend-verification`) e demais endpoints que retornem strings de erro em inglês visíveis ao usuário.
+- Auditar o frontend: verificar todos os `showToast()`, banners inline e mensagens de estado vazio que ainda estejam em inglês.
+
+**Acceptance Criteria:**
+- O endpoint `POST /auth/resend-verification` retorna a mensagem de rate-limit em PT-BR: `"Aguarde antes de solicitar outro email de verificação."` quando o status for 429.
+- O toast exibido ao usuário quando o link de verificação expirou está em PT-BR, sem texto em inglês misturado.
+- Nenhuma string de erro de servidor visível ao usuário final contém texto em inglês em qualquer fluxo de autenticação (cadastro, login, redefinição de senha, reenvio de verificação).
+- Nenhum toast ou banner de feedback (sucesso, aviso, erro) exibido ao usuário final contém texto em inglês.
+- Mensagens de estado vazio (listas, seções sem dados) estão todas em PT-BR.
+- Os textos em inglês que são exclusivamente internos (logs de servidor, console de desenvolvedor) não precisam ser traduzidos.
+- Regressão: todos os fluxos de autenticação continuam funcionando corretamente após as alterações.
+
+**Status:** 🔲 To Do · **Sprint:** 57 · **Effort:** 2h · **Priority:** 🟡 Medium · **Epic:** 66
+
+---
+
+## Epic 67 — Sprint 58: Varrer Mobile — Cache de Fechamento Diário
+
+### US-315 — Varrer Instantâneo no Mobile via Cache de Fechamento Diário `✅ Done`
+**As a** usuário mobile do Momentum,
+**I want** que o botão Varrer retorne os resultados imediatamente, sem esperar 30–45 segundos,
+**so that** posso analisar os ativos educacionalmente mesmo em conexões móveis lentas ou instáveis, sem o risco de perder o progresso se o app for para o segundo plano.
+
+**Contexto e diagnóstico:**
+O fluxo atual faz 40–51 requisições HTTP sequenciais (uma por ticker) com 80 ms de intervalo entre elas. No mobile, o round-trip Brasil → Railway (US-East) → Yahoo Finance → volta acumula latência suficiente para que um scan do mercado Brasil leve 23–45 segundos. No iOS, se o usuário sair do app durante o scan, o Safari suspende os timers JavaScript e cancela os fetches em andamento — o scan morre silenciosamente e todo o progresso é perdido. Como o app é educacional (RSI, MACD, ADX são todos calculados em candles de fechamento diário), dados do último fechamento são exatamente os mesmos que qualquer livro de análise técnica referencia: não há perda de valor pedagógico.
+
+**Arquitetura escolhida: Cache de Fechamento Diário (server-side)**
+
+O servidor escaneia todos os 140 tickers uma vez por dia, persiste os dados OHLCV brutos em arquivos JSON por mercado no volume `/app/data/`, e serve o resultado em uma única requisição batch. O frontend recebe os dados crus e computa os indicadores localmente (exatamente como hoje). O resultado é armazenado também em IndexedDB no cliente para sobreviver ao backgrounding do iOS.
+
+```
+[Fluxo atual]  Varrer → 40–51 requests sequenciais → 23–45s → morto se background
+
+[Novo fluxo]   Varrer → GET /api/scan/cached?market=brasil → 1 request → ~1s → persiste IndexedDB
+```
+
+---
+
+**Backend — Implementação**
+
+**1. Arquivos de cache por mercado (não um arquivo monolítico)**
+
+```
+/app/data/
+  scan-cache-brasil.json
+  scan-cache-us.json
+  scan-cache-europe.json
+  scan-cache-emerging.json
+```
+
+Cada arquivo contém:
+```json
+{
+  "generatedAt": "2026-06-03T22:00:00.000Z",
+  "market": "brasil",
+  "stocks": [
+    {
+      "ticker": "PETR4.SA",
+      "name": "Petrobras PN",
+      "data": { /* raw Yahoo OHLCV — mesmo formato de /api/history */ },
+      "lastClose": "2026-06-03",
+      "stale": false
+    }
+  ]
+}
+```
+
+Arquivos por mercado = melhor isolamento de falha + payloads menores no mobile + writes paralelos possíveis.
+
+**2. Atomic write (obrigatório)**
+
+```js
+// Nunca sobrescrever o cache bom antes de ter o novo pronto
+const tmp = `${filePath}.tmp`;
+fs.writeFileSync(tmp, JSON.stringify(payload));
+fs.renameSync(tmp, filePath);   // rename POSIX é atômico — Railway usa ext4
+```
+
+Um crash durante o write nunca corrompe o cache do dia anterior.
+
+**3. Refresh agendado via setInterval — não dependente de cold start**
+
+```js
+// server.js — após app.listen()
+scheduleDailyScanRefresh();
+
+function scheduleDailyScanRefresh() {
+  refresh();                                    // executa uma vez na inicialização (se cache > 12h)
+  setInterval(refresh, 6 * 60 * 60 * 1000);   // 06:00 / 12:00 / 18:00 / 00:00 UTC
+}
+```
+
+A função `refresh()` deve:
+- Verificar a idade do cache de cada mercado antes de buscar. Se `< 12h`, pular esse mercado.
+- Usar concorrência 4–6 tickers simultâneos (não serial) para reduzir o tempo do scan diário de ~45s para ~10s.
+- Em caso de falha num ticker: manter o dado do dia anterior para aquele ticker, marcando `"stale": true` no objeto. Nunca dropar um ticker do universo por falha pontual.
+- Mutex por mercado: se uma atualização já está em andamento, ignorar o trigger duplicado.
+- Nunca deletar o cache antigo antes de ter o novo salvo com sucesso.
+
+**4. Endpoint de leitura**
+
+```
+GET /api/scan/cached?market=brasil
+```
+
+- Requer autenticação (mesmo nível que `/api/history`).
+- Lê o arquivo `scan-cache-brasil.json` do disco.
+- Retorna `200` com `{ generatedAt, market, stocks[] }`.
+- Retorna `503 { status: "warming_up", retryAfter: 30 }` se o arquivo não existir (primeira execução / volume zerado).
+- Retorna o cache mesmo que tenha mais de 24h (`cacheAge` no response header) — nunca bloqueia o usuário por dados velhos; apenas informa.
+- Suporta `If-Modified-Since` / `ETag` baseados no mtime do arquivo — retorna `304 Not Modified` para re-fetches do mesmo cliente sem reenviar os dados.
+- Response comprimido com gzip (`compression` middleware — verificar que já está ativo).
+
+**5. Endpoint de saúde**
+
+```
+GET /api/scan/health   (público, sem auth)
+```
+
+Retorna:
+```json
+{
+  "markets": {
+    "brasil":   { "lastRefresh": "2026-06-03T22:00:00Z", "ageHours": 1.3, "stockCount": 40, "staleCount": 0 },
+    "us":       { "lastRefresh": "2026-06-03T22:00:00Z", "ageHours": 1.3, "stockCount": 51, "staleCount": 2 },
+    "europe":   { ... },
+    "emerging": { ... }
+  }
+}
+```
+
+Útil para debug em produção sem precisar de deploy.
+
+**6. Refresh manual (admin)**
+
+```
+POST /api/scan/refresh?market=brasil&force=true
+Authorization: requer is_admin
+```
+
+Permite forçar re-scan de um mercado sem redeploy — para corrigir dados ruins sem esperar o próximo ciclo de 6h.
+
+---
+
+**Frontend — Implementação**
+
+**1. Novo fluxo em `scanMarket(market)`**
+
+```js
+async function scanMarket(market) {
+  // 1. Tentar IndexedDB (dados < 12h)
+  const cached = await idbGet(`scan_${market}`);
+  if (cached && Date.now() - cached.generatedAt < 12 * 3600_000) {
+    return processScanData(cached.stocks);
+  }
+
+  // 2. Tentar /api/scan/cached
+  try {
+    const res = await fetch(`/api/scan/cached?market=${market}`);
+    if (res.ok) {
+      const payload = await res.json();
+      await idbSet(`scan_${market}`, { ...payload, generatedAt: Date.parse(payload.generatedAt) });
+      return processScanData(payload.stocks);
+    }
+    if (res.status === 503) {
+      showToast('Dados de mercado sendo preparados. Tente novamente em alguns segundos.');
+      return;
+    }
+  } catch {}
+
+  // 3. Fallback: fluxo atual (requisições individuais por ticker)
+  return scanMarketLegacy(market);
+}
+```
+
+**2. IndexedDB helper (simples, sem lib externa)**
+
+```js
+function idbGet(key) { /* abre 'momentum-scan', object store 'cache', getItem(key) */ }
+function idbSet(key, value) { /* put(key, value) */ }
+```
+
+IndexedDB sobrevive ao backgrounding do iOS, ao reload da página e à pressão de memória — resolve o problema original de perda de progresso.
+
+**3. UX — Label de dados honestos e proeminentes**
+
+No topo dos resultados do scan, exibir sempre:
+```
+Análise do último fechamento — 03/jun às 19:32  [🔄 Atualizar]
+```
+
+- Data e hora formatados com `toLocaleDateString('pt-BR')`.
+- Botão "🔄 Atualizar" chama `scanMarket(market)` forçando bypass do IndexedDB — rate-limited no frontend a 1x por hora por mercado.
+- Framing intencional: "Análise do último fechamento" é vocabulário de análise técnica, não "cache".
+- Nunca ocultar a data em rodapé — exibir no header da lista de resultados.
+
+**4. Estado de warming up**
+
+Se a API retornar 503:
+- Exibir banner: *"Estamos preparando os dados de mercado. Isso leva alguns segundos na primeira execução."*
+- Retry automático após 15s (uma vez).
+- Após retry: fallback para fluxo legacy.
+
+---
+
+**Acceptance Criteria:**
+
+- Clicar "⚡ Varrer" em conexão mobile retorna resultados em ≤ 2 segundos quando o cache do dia está disponível.
+- O frontend lê IndexedDB antes de fazer qualquer requisição. Se os dados tiverem < 12h, nenhuma requisição de rede é feita.
+- Se o IndexedDB estiver vazio ou expirado, uma única requisição para `/api/scan/cached?market=X` retorna todos os tickers do mercado.
+- O fallback para requisições individuais por ticker só ocorre se `/api/scan/cached` retornar erro ≠ 503.
+- A data do último fechamento é exibida no header dos resultados — nunca oculta.
+- O botão "🔄 Atualizar" respeita o rate limit de 1x/hora por mercado (aviso em toast se chamado antes).
+- O cache do servidor usa atomic write (write-to-tmp + rename). Um container crash durante o refresh nunca corrompe o cache anterior.
+- Um ticker com falha no refresh diário mantém o dado do dia anterior com `stale: true`. O ticker não desaparece do universo.
+- `/api/scan/health` retorna o estado de frescor de cada mercado sem autenticação.
+- Se o cache não existe (primeira execução / volume zerado), `/api/scan/cached` retorna `503` com `retryAfter`. O frontend exibe o banner de warming up, não um erro genérico.
+- O refresh agendado não é acionado se o cache tiver menos de 12h — nenhum request desnecessário ao Yahoo Finance em restarts/redeploys.
+- Response de `/api/scan/cached` é comprimido com gzip e suporta `304 Not Modified` via `ETag`/`If-Modified-Since`.
+- Nenhuma regressão no fluxo de scan individual (`/api/history/:ticker`) — continua funcionando para o detalhe de um ativo.
+
+**Notas de implementação:**
+- Não adicionar nenhuma dependência nova (sem node-cron, sem bull, sem agenda). `setInterval` nativo é suficiente.
+- Concorrência no refresh: 4–6 tickers simultâneos com `Promise.all` em batches — não serial com 80ms delay.
+- Não implementar o endpoint de refresh admin (POST /api/scan/refresh) neste sprint — parkar para sprint futuro.
+- O IndexedDB helper deve ser implementado sem lib externa (< 30 linhas, Promises nativas).
+
+**Status:** 🔲 To Do · **Sprint:** 58 · **Effort:** 4h · **Priority:** 🔴 High · **Epic:** 67
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -4923,5 +5164,7 @@ O curso atualmente tem 22+ tópicos cobrindo fundamentos, análise técnica, est
 | 54 | 65 | US-308, US-309, US-310 | Primeiros Passos: 3 SVG data visualizations (compound, returns, cost-of-waiting) | 📋 Planned |
 | 55 | 65 | US-311, US-312 | Primeiros Passos: 6-question interactive quiz + results flow | 📋 Planned |
 | 56 | 65 | US-313 | Primeiros Passos: CVM compliance disclaimers + language polish | 📋 Planned |
+| 57 | 66 | US-314 | i18n: traduzir toasts, banners e erros de servidor para PT-BR | 📋 Planned |
+| 58 | 67 | US-315 | Varrer Mobile: cache de fechamento diário — scan instantâneo + IndexedDB | ✅ Done |
 
 *Completed sprints → USER_STORIES_COMPLETED.md*

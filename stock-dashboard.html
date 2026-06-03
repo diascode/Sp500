@@ -282,7 +282,7 @@
 <script src="/static/fx.js"></script>
 <script>
 // ─── STATE ─────────────────────────────────────────────────────────────
-let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], closedTrades: JSON.parse(localStorage.getItem('momentum_closed') || '[]'), universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, showBilling: false, displayedStocks: [], homeMode: localStorage.getItem('momentum_home_mode') || 'sinais', backtestResults: null, marketRegime: 'risk_on', simCapital: parseInt(localStorage.getItem('momentum_sim_capital') || '1000', 10), trackedView: localStorage.getItem('momentum_tracked_view') || 'cards', trackedTab: 'abertas' };
+let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], closedTrades: JSON.parse(localStorage.getItem('momentum_closed') || '[]'), universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, showBilling: false, displayedStocks: [], homeMode: localStorage.getItem('momentum_home_mode') || 'sinais', backtestResults: null, marketRegime: 'risk_on', simCapital: parseInt(localStorage.getItem('momentum_sim_capital') || '1000', 10), trackedView: localStorage.getItem('momentum_tracked_view') || 'cards', trackedTab: 'abertas', scanGeneratedAt: {} };
 function businessDaysBetween(d1str, d2str) {
   const ms = Date.parse(d2str) - Date.parse(d1str);
   const calDays = ms / (1000 * 60 * 60 * 24);
@@ -1199,15 +1199,22 @@ async function apiPost(path, data) { const token = getToken(); const headers = {
 
 // ─── YAHOO DATA ────────────────────────────────────────────────────────
 async function fetchHistory(ticker, signal) {
-  const data = await api('/api/history/' + ticker + '?lang=' + _lang, signal);
-  const result = data.chart.result[0];
-  const ts = result.timestamp, q = result.indicators.quote[0];
-  const cdl = [];
-  for (let i = 0; i < ts.length; i++) {
-    if (q.open[i] == null || q.close[i] == null) continue;
-    cdl.push({ o:q.open[i], h:q.high[i], l:q.low[i], c:q.close[i], v:q.volume[i]||0, d:new Date(ts[i]*1000) });
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 12000);
+  if (signal) signal.addEventListener('abort', () => controller.abort(signal.reason), { once: true });
+  try {
+    const data = await api('/api/history/' + ticker + '?lang=' + _lang, controller.signal);
+    const result = data.chart.result[0];
+    const ts = result.timestamp, q = result.indicators.quote[0];
+    const cdl = [];
+    for (let i = 0; i < ts.length; i++) {
+      if (q.open[i] == null || q.close[i] == null) continue;
+      cdl.push({ o:q.open[i], h:q.high[i], l:q.low[i], c:q.close[i], v:q.volume[i]||0, d:new Date(ts[i]*1000) });
+    }
+    return { candles: cdl, why: data.why || null };
+  } finally {
+    clearTimeout(tid);
   }
-  return { candles: cdl, why: data.why || null };
 }
 
 // ─── SENTIMENT ANALYZER ──────────────────────────────────────────────────
@@ -1454,6 +1461,94 @@ function drawChart(canvas, candles, extra) {
   for(let gy=0;gy<5;gy++)ctx.fillText((extra.ticker?getCurrencySymbol(extra.ticker):'$')+(lo+(1-gy/4)*range).toFixed(2),pad.l-2,pad.t+(gy/4)*ch+3);
 }
 
+// ─── INDEXEDDB CACHE (scan results survive iOS backgrounding) ────────────
+const _IDB_NAME = 'momentum-scan-cache';
+const _IDB_STORE = 'scans';
+let _idbReady = null;
+
+function _openIDB() {
+  if (_idbReady) return _idbReady;
+  _idbReady = new Promise((resolve, reject) => {
+    const req = indexedDB.open(_IDB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(_IDB_STORE);
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = () => reject(req.error);
+  });
+  return _idbReady;
+}
+
+async function idbGet(key) {
+  try {
+    const db = await _openIDB();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(_IDB_STORE, 'readonly');
+      const req = tx.objectStore(_IDB_STORE).get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  } catch { return undefined; }
+}
+
+async function idbSet(key, value) {
+  try {
+    const db = await _openIDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(_IDB_STORE, 'readwrite');
+      const req = value === null ? tx.objectStore(_IDB_STORE).delete(key) : tx.objectStore(_IDB_STORE).put(value, key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch {}
+}
+
+function parseCachedStock(stock, lang) {
+  try {
+    const result = stock.data.chart.result[0];
+    const ts = result.timestamp, q = result.indicators.quote[0];
+    const cdl = [];
+    for (let i = 0; i < ts.length; i++) {
+      if (q.open[i] == null || q.close[i] == null) continue;
+      cdl.push({ o: q.open[i], h: q.high[i], l: q.low[i], c: q.close[i], v: q.volume[i] || 0, d: new Date(ts[i] * 1000) });
+    }
+    const why = (lang === 'en' && stock.whyEn) ? stock.whyEn : (stock.why || null);
+    return { candles: cdl, why };
+  } catch { return null; }
+}
+
+const _scanRefreshRateLimit = {};
+
+async function scanMarketCached(market) {
+  const IDB_KEY = `scan_${market}`;
+  const STALE_MS = 12 * 60 * 60 * 1000;
+
+  // 1. Check IndexedDB first
+  const idbEntry = await idbGet(IDB_KEY);
+  if (idbEntry && (Date.now() - new Date(idbEntry.generatedAt).getTime()) < STALE_MS) {
+    return idbEntry;
+  }
+
+  // 2. Fetch from server
+  const token = getToken();
+  const headers = {};
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  if (idbEntry) headers['If-None-Match'] = `"${new Date(idbEntry.generatedAt).getTime()}"`;
+
+  const r = await fetch(`/api/scan/cached?market=${market}`, { headers });
+
+  if (r.status === 304 && idbEntry) return idbEntry;  // server says cache is still fresh
+
+  if (r.status === 503) {
+    const body = await r.json().catch(() => ({}));
+    throw Object.assign(new Error('warming_up'), { warmingUp: true, retryAfter: body.retryAfter || 30 });
+  }
+
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+
+  const payload = await r.json();
+  await idbSet(IDB_KEY, payload);
+  return payload;
+}
+
 // ─── SCAN LOGIC ─────────────────────────────────────────────────────────
 async function scanMarket(market) {
   if (_scanAbort) _scanAbort.abort();
@@ -1462,6 +1557,65 @@ async function scanMarket(market) {
 
   const statusEl = document.getElementById('scanStatus');
   if (statusEl) statusEl.textContent = t('status_scanning') + ' ' + market.toUpperCase();
+
+  // ── Try cached path (IndexedDB → server batch) ──────────────────────
+  try {
+    if (signal.aborted) return [];
+    updateScanProgress(50, '');
+    const payload = await scanMarketCached(market);
+    if (signal.aborted) return [];
+
+    const results = [];
+    for (const stock of payload.stocks) {
+      const parsed = parseCachedStock(stock, _lang);
+      if (!parsed || parsed.candles.length < 30) continue;
+      const a = analyze(stock.t, stock.n, stock.s || '', parsed.candles);
+      if (parsed.why) a.why = parsed.why;
+      results.push(a);
+      if (a.signal === 'buy' || a.signal === 'neutral') {
+        fetchNews(stock.t).then(news => { a.news = news; renderDashboard(); renderNewsSentiment(); }).catch(() => {});
+      }
+    }
+
+    state.analyzed[market] = results;
+    state.scanGeneratedAt[market] = payload.generatedAt;
+    updateScanProgress(100, '');
+    return results;
+  } catch (err) {
+    if (err.warmingUp) {
+      showToast('Estamos preparando os dados de mercado. Isso leva alguns segundos na primeira execução.', false, 5000);
+      // Auto-retry once after retryAfter seconds
+      const retryAfter = (err.retryAfter || 30) * 1000;
+      await new Promise(r => setTimeout(r, retryAfter));
+      if (!signal.aborted) {
+        try {
+          const payload2 = await scanMarketCached(market);
+          if (!signal.aborted) {
+            const results = [];
+            for (const stock of payload2.stocks) {
+              const parsed = parseCachedStock(stock, _lang);
+              if (!parsed || parsed.candles.length < 30) continue;
+              const a = analyze(stock.t, stock.n, stock.s || '', parsed.candles);
+              if (parsed.why) a.why = parsed.why;
+              results.push(a);
+              if (a.signal === 'buy' || a.signal === 'neutral') {
+                fetchNews(stock.t).then(news => { a.news = news; renderDashboard(); renderNewsSentiment(); }).catch(() => {});
+              }
+            }
+            state.analyzed[market] = results;
+            state.scanGeneratedAt[market] = payload2.generatedAt;
+            return results;
+          }
+        } catch {}
+      }
+    }
+    if (signal.aborted) return [];
+    // Fall back to legacy sequential scan
+    console.warn('[scan] cached path failed, falling back to legacy:', err.message);
+  }
+
+  // ── Legacy path: sequential per-stock requests ───────────────────────
+  state.scanGeneratedAt[market] = null;
   const stocks = await loadUniverse(market);
   const results = [];
   let completed = 0;
@@ -1480,10 +1634,10 @@ async function scanMarket(market) {
       fetchHistory(s.t, signal).then(({ candles: c, why: serverWhy }) => {
         if (signal.aborted) return;
         if (c.length >= 30) {
-          const a = analyze(s.t, s.n, s.s||'', c);
+          const a = analyze(s.t, s.n, s.s || '', c);
           if (serverWhy) a.why = serverWhy;
           if (a.signal === 'buy' || a.signal === 'neutral') {
-            fetchNews(s.t).then(news => { a.news = news; renderDashboard(); renderNewsSentiment(); }).catch(()=>{});
+            fetchNews(s.t).then(news => { a.news = news; renderDashboard(); renderNewsSentiment(); }).catch(() => {});
           }
           results.push(a);
         }
@@ -1504,22 +1658,40 @@ async function scanMarket(market) {
   });
 }
 
+async function forceRefreshScan() {
+  const market = state.market;
+  const now = Date.now();
+  if (_scanRefreshRateLimit[market] && now - _scanRefreshRateLimit[market] < 3_600_000) {
+    const waitMin = Math.ceil((3_600_000 - (now - _scanRefreshRateLimit[market])) / 60_000);
+    showToast(`Aguarde ${waitMin} minuto${waitMin > 1 ? 's' : ''} para atualizar novamente.`, false, 3000);
+    return;
+  }
+  _scanRefreshRateLimit[market] = now;
+  await idbSet(`scan_${market}`, null);
+  state.scanGeneratedAt[market] = null;
+  scanAll();
+}
+
 async function scanAll() {
   if (!authUser) { showAuthModal(); return; }
   const btn = document.getElementById('scanBtn');
   if (btn) { btn.innerHTML = '⚡ Varrendo...'; btn.disabled = true; }
+  // Start BOVA11 regime fetch concurrently with the main scan
+  const bovaPromise = state.market === 'brasil'
+    ? fetchHistory('BOVA11.SA').catch(() => null)
+    : null;
   await scanMarket(state.market);
-  // Market regime (Brasil only)
-  if (state.market === 'brasil') {
+  // Market regime (Brasil only) — awaiting promise already in flight
+  if (bovaPromise) {
     try {
-      const bova = await fetchHistory('BOVA11.SA');
+      const bova = await bovaPromise;
       if (bova?.candles?.length > 210) {
         state.marketRegime = calcMarketRegime(bova.candles);
       }
     } catch (_) {}
     updateRegimeIndicator();
   }
-  updateScanHed(state.analyzed[state.market] || []);
+  updateScanHed(state.analyzed[state.market] || [], state.scanGeneratedAt[state.market] || null);
   renderDashboard();
   updateStats();
   // Fetch market-pulse news for broad market indices
@@ -1854,7 +2026,7 @@ function hideScanProgress() {
   if (grid && grid.style.display === 'none') grid.style.display = '';
 }
 
-function updateScanHed(stocks) {
+function updateScanHed(stocks, generatedAt) {
   const hed = document.getElementById('scanHed');
   if (!hed) return;
   const buyCount = (stocks || []).filter(s => s.signal === 'buy').length;
@@ -1867,6 +2039,22 @@ function updateScanHed(stocks) {
     hed.innerHTML = msg + '.';
   } else {
     hed.innerHTML = 'Nenhum sinal de compra no momento.';
+  }
+
+  let labelEl = document.getElementById('scanCacheLabel');
+  if (!labelEl) {
+    labelEl = document.createElement('div');
+    labelEl.id = 'scanCacheLabel';
+    labelEl.style.cssText = 'font-size:12px;color:var(--ink-3);margin-top:6px';
+    hed.insertAdjacentElement('afterend', labelEl);
+  }
+  if (generatedAt) {
+    const d = new Date(generatedAt);
+    const dateStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    labelEl.innerHTML = `Análise do último fechamento — ${dateStr} às ${timeStr} · <button onclick="forceRefreshScan()" style="background:none;border:none;cursor:pointer;color:var(--primary);font-size:12px;padding:0;text-decoration:underline">🔄 Atualizar</button>`;
+  } else {
+    labelEl.textContent = '';
   }
 }
 
@@ -2063,7 +2251,7 @@ function renderDashboard() {
   }
 
   state.displayedStocks = display;
-  updateScanHed(results);
+  updateScanHed(display, state.scanGeneratedAt[state.market] || null);
   hideScanProgress();
 
   if (grid) {

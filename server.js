@@ -105,6 +105,99 @@ function checkPublicRateLimit(ip, endpoint, maxPerMin) {
 }
 setInterval(() => { const now = Date.now(); for (const [k, v] of _publicRateLimits) if (v.resetAt < now) _publicRateLimits.delete(k); }, 5 * 60_000);
 
+// ─── DAILY SCAN CACHE ───────────────────────────────────────────────────
+const SCAN_CACHE_STALE_MS = 12 * 60 * 60 * 1000;   // skip refresh if cache < 12h
+const SCAN_REFRESH_EVERY_MS = 6 * 60 * 60 * 1000;  // scheduled interval
+const _scanRefreshInFlight = new Set();
+
+function scanCachePath(market) {
+  return path.join(DIR, 'data', `scan-cache-${market}.json`);
+}
+
+function loadScanCache(market) {
+  try { return JSON.parse(fs.readFileSync(scanCachePath(market), 'utf8')); }
+  catch { return null; }
+}
+
+function saveScanCache(market, payload) {
+  const p = scanCachePath(market);
+  const tmp = p + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(payload));
+  fs.renameSync(tmp, p);
+}
+
+async function refreshMarketCache(market) {
+  if (_scanRefreshInFlight.has(market)) return;
+  _scanRefreshInFlight.add(market);
+  console.log(`[scan-cache] refreshing ${market}...`);
+  try {
+    const stocks = UNIVERSES[market];
+    const prev = loadScanCache(market);
+    const prevMap = {};
+    if (prev) prev.stocks.forEach(s => { prevMap[s.t] = s; });
+
+    const results = [];
+    const CONCURRENCY = 5;
+    for (let i = 0; i < stocks.length; i += CONCURRENCY) {
+      const batch = stocks.slice(i, i + CONCURRENCY);
+      const settled = await Promise.allSettled(batch.map(async (stock) => {
+        const data = await yahooFetch(stock.t);
+        const closes = extractCloses(data);
+        const rsi = closes.length >= 15 ? serverCalcRSI(closes) : 50;
+        const macd = closes.length >= 26 ? serverCalcMACD(closes) : 0;
+        return {
+          ...stock,
+          data,
+          why:   generateWhy(rsi, macd, 20, null, 'pt'),
+          whyEn: generateWhy(rsi, macd, 20, null, 'en'),
+          _rsi:  +rsi.toFixed(1),
+          _macd: +macd.toFixed(3),
+          stale: false,
+        };
+      }));
+      for (let j = 0; j < settled.length; j++) {
+        if (settled[j].status === 'fulfilled') {
+          results.push(settled[j].value);
+        } else {
+          const stock = batch[j];
+          console.warn(`[scan-cache] failed ${stock.t}: ${settled[j].reason?.message}`);
+          if (prevMap[stock.t]) results.push({ ...prevMap[stock.t], stale: true });
+        }
+      }
+    }
+
+    const payload = { generatedAt: new Date().toISOString(), market, stocks: results };
+    saveScanCache(market, payload);
+    const staleCount = results.filter(s => s.stale).length;
+    console.log(`[scan-cache] ${market} done — ${results.length} stocks, ${staleCount} stale`);
+  } catch (err) {
+    console.error(`[scan-cache] refresh failed for ${market}:`, err.message);
+  } finally {
+    _scanRefreshInFlight.delete(market);
+  }
+}
+
+function scheduleDailyScanRefresh() {
+  // On startup: refresh markets whose cache is older than SCAN_CACHE_STALE_MS
+  for (const market of Object.keys(UNIVERSES)) {
+    const c = loadScanCache(market);
+    const age = c ? Date.now() - new Date(c.generatedAt).getTime() : Infinity;
+    if (age > SCAN_CACHE_STALE_MS) {
+      refreshMarketCache(market).catch(err => console.error('[scan-cache] startup error:', err));
+    }
+  }
+  // Re-check every 6 hours
+  setInterval(() => {
+    for (const market of Object.keys(UNIVERSES)) {
+      const c = loadScanCache(market);
+      const age = c ? Date.now() - new Date(c.generatedAt).getTime() : Infinity;
+      if (age > SCAN_CACHE_STALE_MS) {
+        refreshMarketCache(market).catch(err => console.error('[scan-cache] scheduled error:', err));
+      }
+    }
+  }, SCAN_REFRESH_EVERY_MS);
+}
+
 // ─── HTTP HELPERS ──────────────────────────────────────────────────────
 function sendJSON(res, code, data) {
   const origin = ENV.APP_URL || 'http://localhost:8080';
@@ -807,6 +900,35 @@ async function handleRequest(req, res) {
       } catch (err) { return sendError(res, 502, err.message); }
     }
 
+    if (pathname === '/api/scan/health') {
+      const healthData = {};
+      for (const market of Object.keys(UNIVERSES)) {
+        const c = loadScanCache(market);
+        if (c) {
+          const ageMs = Date.now() - new Date(c.generatedAt).getTime();
+          healthData[market] = { lastRefresh: c.generatedAt, ageHours: +(ageMs / 3_600_000).toFixed(1), stockCount: c.stocks.length, staleCount: c.stocks.filter(s => s.stale).length, inFlight: _scanRefreshInFlight.has(market) };
+        } else {
+          healthData[market] = { lastRefresh: null, ageHours: null, stockCount: 0, staleCount: 0, inFlight: _scanRefreshInFlight.has(market) };
+        }
+      }
+      return sendJSON(res, 200, { markets: healthData });
+    }
+
+    if (pathname === '/api/scan/cached') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'É necessário estar logado para acessar o scan');
+      const market = url.searchParams.get('market') || 'brasil';
+      if (!UNIVERSES[market]) return sendError(res, 400, 'Mercado inválido');
+      const cache = loadScanCache(market);
+      if (!cache) return sendJSON(res, 503, { status: 'warming_up', retryAfter: 30, message: 'Dados de mercado sendo preparados. Tente novamente em alguns instantes.' });
+      const etag = `"${new Date(cache.generatedAt).getTime()}"`;
+      if (req.headers['if-none-match'] === etag) { res.writeHead(304); res.end(); return; }
+      const ageMs = Date.now() - new Date(cache.generatedAt).getTime();
+      res.setHeader('ETag', etag);
+      res.setHeader('X-Cache-Age', String(Math.round(ageMs / 1000)));
+      return sendJSON(res, 200, cache);
+    }
+
     if (pathname === '/api/scan') {
       const authUser = getAuthUser(req);
       if (!authUser) return sendError(res, 401, 'É necessário estar logado para escanear');
@@ -889,6 +1011,7 @@ server.listen(PORT, HOST, () => {
   console.log(`📁  Data: ${auth.DB_PATH}`);
   console.log(`🔒  Auth rate limit: ${AUTH_MAX} attempts per ${AUTH_WINDOW_MS / 60000} min per IP`);
   console.log(`💾  Yahoo cache TTL: ${CACHE_TTL_MS / 1000}s\n`);
+  scheduleDailyScanRefresh();
 });
 
 // ─── GRACEFUL SHUTDOWN ───────────────────────────────────────────────────
