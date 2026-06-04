@@ -888,7 +888,10 @@ async function handleRequest(req, res) {
         const macd = closes.length >= 26 ? serverCalcMACD(closes) : 0;
         const why = generateWhy(rsi, macd, 20, null, lang);
         return sendJSON(res, 200, { ...data, why, _rsi: +rsi.toFixed(1), _macd: +macd.toFixed(3) });
-      } catch (err) { return sendError(res, 502, err.message); }
+      } catch (err) {
+        if (err.message && err.message.includes('returned 404')) return sendError(res, 404, 'Ativo não encontrado ou deslistado.');
+        return sendError(res, 502, err.message);
+      }
     }
 
     const newsMatch = pathname.match(/^\/api\/news\/([A-Za-z0-9.]+)$/);
@@ -897,7 +900,10 @@ async function handleRequest(req, res) {
       try {
         const news = await yahooNews(newsMatch[1]);
         return sendJSON(res, 200, news);
-      } catch (err) { return sendError(res, 502, err.message); }
+      } catch (err) {
+        if (err.message && err.message.includes('returned 404')) return sendError(res, 404, 'Ativo não encontrado ou deslistado.');
+        return sendError(res, 502, err.message);
+      }
     }
 
     if (pathname === '/api/scan/health') {

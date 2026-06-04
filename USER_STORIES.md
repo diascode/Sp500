@@ -5121,6 +5121,56 @@ Se a API retornar 503:
 
 ---
 
+## Epic 68 — Sprint 59: Bug Crítico — Scan Não Funciona (Localhost + Railway)
+
+### US-316 — Remover Tickers Deslistados e Tratar 404 em /api/history e /api/news
+
+**As a** usuário logado no Momentum,
+**I want** que o scan não exiba erros para ativos inválidos e que o detalhe de um ativo retorne uma mensagem clara quando ele não existe no Yahoo Finance,
+**so that** não haja 502s visíveis para o usuário nem buracos silenciosos no universo de ativos.
+
+**Diagnóstico final (2026-06-04):**
+
+O cache de scan está funcionando corretamente. Os 8 tickers com 404 são **confirmadamente deslistados ou inexistentes no Yahoo Finance** — não é bloqueio de IP nem mudança de API. O Yahoo Finance simplesmente não reconhece mais esses símbolos.
+
+Há dois problemas ativos:
+
+1. **8 tickers mortos no universo** (`lib/scan.js`) → geram `[scan-cache] failed` no boot e ficam ausentes dos resultados. O Brasil foi de 40 para 33 tickers (−7).
+
+2. **502 em `/api/history` e `/api/news` quando um usuário acessa um desses tickers** — o endpoint propaga o erro do Yahoo Finance diretamente ao cliente em vez de retornar um 404 tratado.
+
+**Tickers a remover (todos confirmados inválidos no Yahoo Finance):**
+
+`ELET3.SA`, `JBSS3.SA`, `EMBR3.SA`, `MRFG3.SA`, `CIEL3.SA`, `BRFS3.SA`, `PETZ3.SA` (Brasil) · `AMXL.MX` (Emerging)
+
+**Implementação:**
+
+**Parte 1 — `lib/scan.js`:** remover os 8 tickers da lista. Substituir por ativos válidos do mesmo setor para manter o universo em ~40 tickers Brasil:
+- Financeiro → `SANB11.SA` (Santander Brasil), `BBSE3.SA` (BB Seguridade)
+- Consumo/Varejo → `SOMA3.SA` (Grupo Soma), `ARZZ3.SA` (Arezzo)
+- Utilidades → `ENGI11.SA` (Energisa), `EGIE3.SA` (Engie Brasil)
+- Emerging/Mexico → `AMXB.MX` ou remover se símbolo não confirmado
+
+**Parte 2 — `server.js` `/api/history` e `/api/news`:** quando `yahooFetch` retornar 404, responder com `sendError(res, 404, 'Ativo não encontrado ou deslistado.')` em vez de propagar o erro como 502.
+
+**Acceptance Criteria:**
+
+- [ ] Os 8 tickers removidos de `lib/scan.js`
+- [ ] Substitutos adicionados; universo Brasil ≥ 38 tickers após remoção
+- [ ] Após rebuild, nenhum `[scan-cache] failed` nos logs de boot
+- [ ] `GET /api/scan/cached?market=brasil` retorna 200 com ≥ 38 stocks
+- [ ] `GET /api/history/CIEL3.SA` (ou qualquer ticker inválido) retorna 404 com mensagem em PT-BR — não 502
+- [ ] `GET /api/news/CIEL3.SA` idem
+- [ ] Nenhuma regressão nos tickers válidos restantes
+
+**Notas técnicas:**
+- Mudanças em dois arquivos apenas: `lib/scan.js` (lista de tickers) e `server.js` (tratamento de erro nos endpoints de detalhe)
+- Não requer nova variável de env, migração de API, nem mudança de infra
+
+**Status:** ✅ Done · **Sprint:** 59 · **Effort:** 1h · **Priority:** 🟠 Alta · **Epic:** 68
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -5166,5 +5216,6 @@ Se a API retornar 503:
 | 56 | 65 | US-313 | Primeiros Passos: CVM compliance disclaimers + language polish | 📋 Planned |
 | 57 | 66 | US-314 | i18n: traduzir toasts, banners e erros de servidor para PT-BR | 📋 Planned |
 | 58 | 67 | US-315 | Varrer Mobile: cache de fechamento diário — scan instantâneo + IndexedDB | ✅ Done |
+| 59 | 68 | US-316 | Bug: 7 tickers Brasil + 1 Emerging com 404 no Yahoo Finance — deslistamentos/símbolo mudado | ✅ Done |
 
 *Completed sprints → USER_STORIES_COMPLETED.md*
