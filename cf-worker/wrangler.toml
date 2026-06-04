@@ -1,0 +1,6 @@
+name = "momentum-yahoo-proxy"
+main = "src/index.js"
+compatibility_date = "2024-01-15"
+
+[observability]
+enabled = true
