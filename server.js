@@ -161,7 +161,7 @@ async function refreshMarketCache(market) {
           results.push(settled[j].value);
         } else {
           const stock = batch[j];
-          console.warn(`[scan-cache] failed ${stock.t}: ${settled[j].reason?.message}`);
+          console.warn(`[scan-cache] failed ${stock.t}: ${settled[j].reason?.message} (${settled[j].reason?.cause?.code || settled[j].reason?.name || 'unknown'})`);
           if (prevMap[stock.t]) results.push({ ...prevMap[stock.t], stale: true });
         }
       }
