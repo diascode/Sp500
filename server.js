@@ -882,6 +882,20 @@ async function handleRequest(req, res) {
       try {
         const ticker = decodeURIComponent(historyMatch[1]);
         const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'pt';
+        // Serve from scan cache when available — avoids live Yahoo Finance calls on Railway
+        for (const mkt of Object.keys(UNIVERSES)) {
+          const cached = loadScanCache(mkt);
+          if (cached) {
+            const entry = cached.stocks.find(s => s.t === ticker);
+            if (entry && entry.data) {
+              const closes = extractCloses(entry.data);
+              const rsi = closes.length >= 15 ? serverCalcRSI(closes) : 50;
+              const macd = closes.length >= 26 ? serverCalcMACD(closes) : 0;
+              const why = generateWhy(rsi, macd, 20, null, lang);
+              return sendJSON(res, 200, { ...entry.data, why, _rsi: +rsi.toFixed(1), _macd: +macd.toFixed(3) });
+            }
+          }
+        }
         const data = await yahooFetch(ticker);
         const closes = extractCloses(data);
         const rsi = closes.length >= 15 ? serverCalcRSI(closes) : 50;
@@ -900,9 +914,8 @@ async function handleRequest(req, res) {
       try {
         const news = await yahooNews(newsMatch[1]);
         return sendJSON(res, 200, news);
-      } catch (err) {
-        if (err.message && err.message.includes('returned 404')) return sendError(res, 404, 'Ativo não encontrado ou deslistado.');
-        return sendError(res, 502, err.message);
+      } catch {
+        return sendJSON(res, 200, []);
       }
     }
 
@@ -929,10 +942,11 @@ async function handleRequest(req, res) {
       if (!cache) return sendJSON(res, 503, { status: 'warming_up', retryAfter: 30, message: 'Dados de mercado sendo preparados. Tente novamente em alguns instantes.' });
       const etag = `"${new Date(cache.generatedAt).getTime()}"`;
       if (req.headers['if-none-match'] === etag) { res.writeHead(304); res.end(); return; }
+      const visibleCache = { ...cache, stocks: cache.stocks.filter(s => !s._regime) };
       const ageMs = Date.now() - new Date(cache.generatedAt).getTime();
       res.setHeader('ETag', etag);
       res.setHeader('X-Cache-Age', String(Math.round(ageMs / 1000)));
-      return sendJSON(res, 200, cache);
+      return sendJSON(res, 200, visibleCache);
     }
 
     if (pathname === '/api/scan') {
