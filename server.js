@@ -107,6 +107,7 @@ setInterval(() => { const now = Date.now(); for (const [k, v] of _publicRateLimi
 
 // ─── DAILY SCAN CACHE ───────────────────────────────────────────────────
 const SCAN_CACHE_STALE_MS = 12 * 60 * 60 * 1000;   // skip refresh if cache < 12h
+const SCAN_CACHE_VERSION = 2;  // bump when universe changes to force client/server rebuild
 const SCAN_REFRESH_EVERY_MS = 6 * 60 * 60 * 1000;  // scheduled interval
 const _scanRefreshInFlight = new Set();
 
@@ -166,7 +167,7 @@ async function refreshMarketCache(market) {
       }
     }
 
-    const payload = { generatedAt: new Date().toISOString(), market, stocks: results };
+    const payload = { generatedAt: new Date().toISOString(), market, stocks: results, v: SCAN_CACHE_VERSION };
     saveScanCache(market, payload);
     const staleCount = results.filter(s => s.stale).length;
     console.log(`[scan-cache] ${market} done — ${results.length} stocks, ${staleCount} stale`);
@@ -177,12 +178,18 @@ async function refreshMarketCache(market) {
   }
 }
 
+function cacheNeedsRefresh(c) {
+  if (!c) return true;
+  if (c.v !== SCAN_CACHE_VERSION) return true;
+  if (c.stocks.filter(s => !s.stale).length === 0) return true;
+  return Date.now() - new Date(c.generatedAt).getTime() > SCAN_CACHE_STALE_MS;
+}
+
 function scheduleDailyScanRefresh() {
-  // On startup: refresh markets whose cache is older than SCAN_CACHE_STALE_MS
+  // On startup: refresh markets whose cache is stale, empty, or wrong version
   for (const market of Object.keys(UNIVERSES)) {
     const c = loadScanCache(market);
-    const age = c ? Date.now() - new Date(c.generatedAt).getTime() : Infinity;
-    if (age > SCAN_CACHE_STALE_MS) {
+    if (cacheNeedsRefresh(c)) {
       refreshMarketCache(market).catch(err => console.error('[scan-cache] startup error:', err));
     }
   }
@@ -190,8 +197,7 @@ function scheduleDailyScanRefresh() {
   setInterval(() => {
     for (const market of Object.keys(UNIVERSES)) {
       const c = loadScanCache(market);
-      const age = c ? Date.now() - new Date(c.generatedAt).getTime() : Infinity;
-      if (age > SCAN_CACHE_STALE_MS) {
+      if (cacheNeedsRefresh(c)) {
         refreshMarketCache(market).catch(err => console.error('[scan-cache] scheduled error:', err));
       }
     }

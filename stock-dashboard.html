@@ -1517,10 +1517,15 @@ const _scanRefreshRateLimit = {};
 async function scanMarketCached(market) {
   const IDB_KEY = `scan_${market}`;
   const STALE_MS = 12 * 60 * 60 * 1000;
+  const CACHE_VERSION = 2;
 
-  // 1. Check IndexedDB first
+  // 1. Check IndexedDB first (skip if wrong version or empty)
   const idbEntry = await idbGet(IDB_KEY);
-  if (idbEntry && (Date.now() - new Date(idbEntry.generatedAt).getTime()) < STALE_MS) {
+  const idbFresh = idbEntry &&
+    idbEntry.v === CACHE_VERSION &&
+    idbEntry.stocks?.length > 0 &&
+    (Date.now() - new Date(idbEntry.generatedAt).getTime()) < STALE_MS;
+  if (idbFresh) {
     return idbEntry;
   }
 
