@@ -537,10 +537,10 @@ Exit. No hesitation. The stop was calculated on the ATR — the normal volatilit
   pt: {
     mission: 'Ferramenta educacional. An&aacute;lise t&eacute;cnica em <strong>🇧🇷 Brasil &middot; 🇺🇸 EUA &middot; 🇪🇺 Europa &middot; 🌍 Mercados Emergentes</strong>. Filtra sinais de alta pontua&ccedil;&atilde;o. Cada varredura busca dados ao vivo &mdash; <abbr title="&Iacute;ndice de For&ccedil;a Relativa">RSI</abbr>, <abbr title="Converg&ecirc;ncia e Diverg&ecirc;ncia de M&eacute;dias M&oacute;veis">MACD</abbr>, <abbr title="&Iacute;ndice Direcional M&eacute;dio">ADX</abbr>, m&eacute;dias m&oacute;veis, Bandas de Bollinger, detec&ccedil;&atilde;o de padr&otilde;es.',
     brand: 'analisador de a&ccedil;&otilde;es &middot; dados ao vivo &middot; por jerry',
-    scan: 'VARRER', scanAll: 'VARRER TUDO', signals: 'SINAIS',
+    scan: 'SIMULAR', scanAll: 'SIMULAR TUDO', signals: 'SINAIS',
     universe: 'TODOS OS ATIVOS', tracked: 'RASTREADOS', education: 'EDUCAÇÃO', simulate: 'PADRÕES',
     sim_title: '🔍 BUSCAR PADRÃO', sim_scanFirst: 'Sem dados — execute um scan primeiro para encontrar exemplos reais.',
-    sim_noMatch: 'Nenhuma correspondência para estes filtros. Tente varrer mais mercados ou mudar a direção.',
+    sim_noMatch: 'Nenhuma correspondência para estes filtros. Tente simular mais mercados ou mudar a direção.',
     sim_allDir: 'TODOS', sim_allPatterns: 'TODOS OS PADRÕES',
     sim_results: 'correspondências encontradas', sim_matchQuality: 'Qualidade da correspondência',
     sim_disclaimer: 'Correspondência técnica mais próxima do seu scan — não é garantia de que o padrão está se formando.',
@@ -653,7 +653,7 @@ Exit. No hesitation. The stop was calculated on the ATR — the normal volatilit
     cal_sources: 'Fontes:',
 
     // Correlation
-    correlation_scanFirst: 'Faça a varredura de pelo menos 2 ativos para mostrar correlação.',
+    correlation_scanFirst: 'Faça a simulação de pelo menos 2 ativos para mostrar correlação.',
     correlation_together: '>0,5 = movem juntos',
     correlation_opposite: '<-0,3 = movem em sentidos opostos',
 
@@ -676,7 +676,7 @@ Exit. No hesitation. The stop was calculated on the ATR — the normal volatilit
     errors_alreadyTracked: 'já está sendo rastreado.',
     errors_alreadyInPortfolio: 'já está no seu portfólio.',
     errors_freeTierPortfolio: 'Nível gratuito limitado a 3 posições. Faça upgrade para Pro para ilimitado.',
-    errors_scanFirst: 'Faça a varredura deste mercado primeiro para obter preços.',
+    errors_scanFirst: 'Faça a simulação deste mercado primeiro para obter preços.',
     errors_invalidTaxRate: 'Informe uma alíquota válida (0-100%)',
 
     // Trading Journal / P&L Summary (formerly Tax Report)

@@ -5171,6 +5171,150 @@ Há dois problemas ativos:
 
 ---
 
+## Epic 69 — Sprint 60: UX Language & Filter Polish
+
+### US-317 — Renomear "Score" para "Pontos" em toda a interface
+
+**As a** usuário brasileiro do Momentum,
+**I want** que o termo técnico "score" seja substituído por "pontos" em toda a interface,
+**so that** a linguagem seja acessível ao público leigo em finanças, sem jargão em inglês.
+
+**Ocorrências a alterar** (arquivo `stock-dashboard.html`):
+
+- Chips de filtro nos Sinais: `"Score 3.5+"` → `"Pontos 3.5+"`, `"Score 2.5–3.4"` → `"Pontos 2.5–3.4"`
+- Função `feedCardPillLabel` e `signalBadgeHtml`: todas as strings `"Score ≥ 3.5"`, `"Score 2.5–3.4"`, `"Score < 2.0"`, `"Score < 2.5"`
+- Header do card de sinal: `"📊 Critérios técnicos: X/Y · Score Z/6.0"` → `"... · Z pontos / 6.0"`
+- Tooltip: `title="Score: X / 6.0 máximo"` → `"Pontuação: X / 6.0 máximo"`
+- Labels inline nas tabs Sinais e hed: `"Score ≥ 3.5"` → `"Pontos ≥ 3.5"`
+- Cabeçalho da tabela Histórico: coluna `SCORE` → `PONTOS`
+- Texto educativo/inline: qualquer `score` visível ao usuário final → `pontos`
+- Não alterar: código interno JavaScript (variáveis, lógica), nomes de propriedades de objetos (`d.score`, `s.score`), comentários de código
+
+**Acceptance Criteria:**
+- [ ] Nenhum `Score` ou `score` visível ao usuário final permanece em inglês
+- [ ] Variáveis JS internas (`d.score`, `s.score`, `calcAdjustedSize`, etc.) **não** foram alteradas
+- [ ] Visual dos chips, badges e cards permanece idêntico — apenas o texto muda
+- [ ] Nenhuma regressão na lógica de filtragem ou cálculo
+
+**Status:** 🔲 To Do · **Sprint:** 60 · **Effort:** 1h · **Priority:** 🟡 Média · **Epic:** 69
+
+---
+
+### US-318 — Filtro Sinais: remover "Venda" e "Aguardar", adicionar "Pontos 2.4+"
+
+**As a** usuário na aba Sinais,
+**I want** ver apenas filtros de compra relevantes, sem opções de venda ou espera,
+**so that** o foco da tela de Sinais seja exclusivamente em oportunidades de entrada, alinhado com o propósito educacional do app.
+
+**Mudanças nos chips de filtro** (`stock-dashboard.html` linha ~137–141):
+
+Remover:
+- `<button ... data-signal="neutral">Aguardar</button>`
+- `<button ... data-signal="sell">Venda</button>`
+
+Adicionar (entre `"Pontos 3.5+"` e `"Todos"`):
+- `<button ... data-signal="watchlist" onclick="filterSignal('watchlist')">Pontos 2.4+</button>`
+
+Resultado final dos chips:
+```
+[Pontos 3.5+]  [Pontos 2.4+]  [Todos]
+```
+
+**Notas técnicas:**
+- `data-signal="watchlist"` já cobre o range 2.5–3.4 internamente; o label visual muda para "Pontos 2.4+" para refletir a intenção (mostrar tudo acima de 2.4, incluindo watchlist)
+- A lógica de `filterSignal()` não precisa mudar — apenas o label e quais chips existem
+- O chip `data-signal="all"` (Todos) permanece
+
+**Acceptance Criteria:**
+- [ ] Chips "Aguardar" e "Venda" removidos da tela Sinais
+- [ ] Chip "Pontos 2.4+" exibido e funcional — ao clicar, filtra sinais watchlist (2.5–3.4)
+- [ ] Chips restantes: `Pontos 3.5+` · `Pontos 2.4+` · `Todos`
+- [ ] Estado ativo (`.chip-active`) funciona corretamente nos 3 chips
+- [ ] Nenhuma regressão na lógica de filtragem
+
+**Status:** 🔲 To Do · **Sprint:** 60 · **Effort:** 30min · **Priority:** 🟡 Média · **Epic:** 69
+
+---
+
+### US-319 — Remover botão "🔄 Atualizar" do timestamp do scan
+
+**As a** usuário do Momentum,
+**I want** que o link "🔄 Atualizar" não apareça ao lado do timestamp de análise,
+**so that** a interface fique mais limpa e o usuário não recarregue dados desnecessariamente.
+
+**Mudança** (`stock-dashboard.html` linha ~1999):
+
+De:
+```js
+labelEl.innerHTML = `Análise do último fechamento — ${dateStr} às ${timeStr} · <button onclick="forceRefreshScan()" ...>🔄 Atualizar</button>`;
+```
+Para:
+```js
+labelEl.innerHTML = `Análise do último fechamento — ${dateStr} às ${timeStr}`;
+```
+
+**Acceptance Criteria:**
+- [ ] O botão "🔄 Atualizar" não aparece mais ao lado do timestamp
+- [ ] O timestamp continua sendo exibido corretamente após o scan
+- [ ] A função `forceRefreshScan()` pode ser mantida no código (apenas não exposta na UI)
+
+**Status:** 🔲 To Do · **Sprint:** 60 · **Effort:** 15min · **Priority:** 🟡 Média · **Epic:** 69
+
+---
+
+### US-320 — Renomear "Varrer" para "Simular" em toda a interface
+
+**As a** usuário do Momentum,
+**I want** que o botão e as referências à ação de scan usem a palavra "Simular" em vez de "Varrer",
+**so that** a linguagem reflita melhor o caráter educacional/simulado da análise, sem soar como ferramenta de trading profissional.
+
+**Ocorrências a alterar** (`stock-dashboard.html`):
+
+- Botão no appbar (linha ~36): `⚡ Varrer` → `⚡ Simular`
+- Hed inicial (linha ~122): `"Pronto para varrer o mercado."` → `"Pronto para simular o mercado."`
+- Restauração do botão após scan (linhas ~1712, ~1968): `'⚡ Varrer'` → `'⚡ Simular'`
+- Botão "⚡ Varrer Lista" na aba Lista: → `"⚡ Simular Lista"`
+- Toast/mensagens que mencionar "varrer": atualizar para "simular"
+
+**Acceptance Criteria:**
+- [ ] O botão principal no appbar exibe `⚡ Simular`
+- [ ] O hed exibe "Pronto para simular o mercado." antes do primeiro scan
+- [ ] Após o scan, o botão restaura para `⚡ Simular` (não `⚡ Varrer`)
+- [ ] Nenhuma instância visível de "Varrer" ou "varrer" permanece na UI
+- [ ] Lógica interna (função `scanAll`, `scanMarket`, etc.) **não** foi renomeada
+
+**Status:** 🔲 To Do · **Sprint:** 60 · **Effort:** 30min · **Priority:** 🟡 Média · **Epic:** 69
+
+---
+
+### US-321 — Traduzir "BUY" e termos em inglês no gráfico do módulo de treinamento
+
+**As a** usuário do módulo de treinamento,
+**I want** que o gráfico "Score do Momentum" use termos em português,
+**so that** a experiência educacional seja 100% em PT-BR, sem mescla de inglês.
+
+**Mudança** (`stock-dashboard.html` linha ~6218):
+
+De:
+```
+Score ≥ 3,5 → BUY  |  2,5–3,5 → MONITORAR  |  < 2,5 → sem sinal
+```
+Para:
+```
+Pontos ≥ 3,5 → COMPRAR  |  2,5–3,5 → MONITORAR  |  < 2,5 → sem sinal
+```
+
+Auditar também qualquer outro texto em inglês visível nos gráficos SVG ou tooltips do módulo de treinamento (`CHART_REGISTRY`, `_svgWrap`).
+
+**Acceptance Criteria:**
+- [ ] O texto no gráfico do Score do Momentum exibe `Pontos ≥ 3,5 → COMPRAR`
+- [ ] Nenhum outro texto em inglês visível ao usuário nos gráficos de treinamento
+- [ ] O SVG renderiza corretamente sem truncamento de texto
+
+**Status:** 🔲 To Do · **Sprint:** 60 · **Effort:** 15min · **Priority:** 🟡 Média · **Epic:** 69
+
+---
+
 ## Sprint Roadmap
 
 | Sprint | Epics | Stories | Theme | Status |
@@ -5217,5 +5361,6 @@ Há dois problemas ativos:
 | 57 | 66 | US-314 | i18n: traduzir toasts, banners e erros de servidor para PT-BR | 📋 Planned |
 | 58 | 67 | US-315 | Varrer Mobile: cache de fechamento diário — scan instantâneo + IndexedDB | ✅ Done |
 | 59 | 68 | US-316 | Bug: 7 tickers Brasil + 1 Emerging com 404 no Yahoo Finance — deslistamentos/símbolo mudado | ✅ Done |
+| 60 | 69 | US-317–321 | UX Language Polish: score→pontos, simular, filtros Sinais, remover Atualizar, traduzir training | 📋 Planned |
 
 *Completed sprints → USER_STORIES_COMPLETED.md*
