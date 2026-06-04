@@ -936,7 +936,7 @@ async function handleRequest(req, res) {
           healthData[market] = { lastRefresh: null, ageHours: null, stockCount: 0, staleCount: 0, inFlight: _scanRefreshInFlight.has(market) };
         }
       }
-      return sendJSON(res, 200, { markets: healthData });
+      return sendJSON(res, 200, { markets: healthData, proxy: process.env.YAHOO_PROXY_URL || null });
     }
 
     if (pathname === '/api/scan/cached') {
@@ -1036,7 +1036,8 @@ server.listen(PORT, HOST, () => {
   console.log(`👤  ${users.length} users registered`);
   console.log(`📁  Data: ${auth.DB_PATH}`);
   console.log(`🔒  Auth rate limit: ${AUTH_MAX} attempts per ${AUTH_WINDOW_MS / 60000} min per IP`);
-  console.log(`💾  Yahoo cache TTL: ${CACHE_TTL_MS / 1000}s\n`);
+  console.log(`💾  Yahoo cache TTL: ${CACHE_TTL_MS / 1000}s`);
+  console.log(`🌐  Yahoo proxy: ${process.env.YAHOO_PROXY_URL || '(none — using Yahoo directly)'}\n`);
   scheduleDailyScanRefresh();
 });
 
