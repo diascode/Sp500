@@ -5509,7 +5509,7 @@ function renderPatternFinder() {
     matches.forEach(d => {
       const isExpanded = _simExpanded === d.ticker;
       const sigColor = d.signal==='buy'?'var(--buy)':d.signal==='sell'?'var(--sell)':'var(--hold)';
-      const sigLabel = d.signal==='buy'?t('buy'):d.signal==='sell'?t('sell'):t('hold');
+      const sigLabel = `Pontos ${(d.score??0).toFixed(1)}`;
       const patColor = d.matchPattern.dir==='bull'?'var(--buy)':d.matchPattern.dir==='bear'?'var(--sell)':'var(--hold)';
       const scorePct = Math.min(100, Math.round((d.matchScore / 9) * 100));
       const rsiC = d.rsi>55?'var(--buy)':d.rsi<40?'var(--sell)':'var(--hold)';
