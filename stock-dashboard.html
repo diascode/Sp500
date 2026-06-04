@@ -5461,7 +5461,7 @@ function renderPatternFinder() {
     { key:'neutral', label: '◈ ' + t('edu_neutral'),      color:'var(--hold)' },
   ];
 
-  let html = '<div class="card" style="padding:0;overflow:hidden">';
+  let html = '<div class="shell" style="padding-top:var(--s-5);padding-bottom:var(--s-6)"><div class="card" style="padding:0;overflow:hidden">';
 
   // Header
   html += `<div style="padding:12px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -5491,7 +5491,7 @@ function renderPatternFinder() {
   html += '</div>';
 
   if (!hasData) {
-    html += `<div style="padding:40px 20px;text-align:center"><div style="font-size:32px;margin-bottom:12px">📡</div><div style="font-family:var(--font-mono);font-size:12px;color:var(--ink-3)">${t('sim_scanFirst')}</div></div></div>`;
+    html += `<div style="padding:40px 20px;text-align:center"><div style="font-size:32px;margin-bottom:12px">📡</div><div style="font-family:var(--font-mono);font-size:12px;color:var(--ink-3)">${t('sim_scanFirst')}</div></div></div></div>`;
     container.innerHTML = html;
     return;
   }
@@ -5562,7 +5562,7 @@ function renderPatternFinder() {
     });
   }
 
-  html += '</div>';
+  html += '</div></div>';
   container.innerHTML = html;
 
   // Draw chart for expanded row
