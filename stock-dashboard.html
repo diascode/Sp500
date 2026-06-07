@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MOMENTUM · by Jerry</title>
+<title>CRAQUEI · Analise suas ações</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -24,8 +24,8 @@
     <!-- Row 1: Brand + Auth controls -->
     <div class="appbar-row1">
       <div class="appbar-brand">
-        <div class="brand-mark">M</div>
-        <span class="brand-name">Momentum</span>
+        <div class="brand-mark" style="font-size:16px">★</div>
+        <span class="brand-name">Craquei</span>
       </div>
       <div class="appbar-right">
         <!-- Theme toggle -->
@@ -57,6 +57,8 @@
               </div>
             </div>
             <button class="dropdown-item" onclick="showOnboardingModal()">🚀 Primeiros Passos</button>
+            <button class="dropdown-item" onclick="showEducationView();switchEduTopic('craquei_identity')">★ Formação Craquei</button>
+            <button class="dropdown-item" onclick="showAboutView()">★ Sobre o Craquei</button>
             <button class="dropdown-item" onclick="showBillingView()">💳 Minha Assinatura</button>
             <button class="dropdown-item" onclick="showChangePassword()">🔑 Alterar senha</button>
             <button class="dropdown-item" id="adminPanelBtn" onclick="showAdminView()" style="display:none">⚙️ Painel admin</button>
@@ -75,7 +77,8 @@
         <button class="nav-pill" onclick="showTrackedView()" data-view="tracked">Acompanhados</button>
         <button class="nav-pill" onclick="showSimulatorView()" data-view="simulator">Simular</button>
         <button class="nav-pill" onclick="showPortfolioView()" data-view="portfolio">Carteira</button>
-        <button class="nav-pill" onclick="showEducationView()" data-view="learn">📘 Primeiros Passos</button>
+        <button class="nav-pill" onclick="showEducationView()" data-view="learn">★ Primeiros Passos</button>
+        <button class="nav-pill" onclick="showAboutView()" data-view="about">Sobre</button>
       </nav>
       <div class="fx-bar" id="fxBar"></div>
     </div>
@@ -84,7 +87,7 @@
 </header>
 
 <div id="upgradeBanner" style="display:none;background:linear-gradient(90deg,rgba(var(--primary-rgb,78,121,255),0.12),rgba(var(--primary-rgb,78,121,255),0.06));border-bottom:1px solid rgba(var(--primary-rgb,78,121,255),0.2);padding:8px 16px;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center">
-  <span style="font-size:13px;color:var(--ink-1)">📊 Desbloqueie o <strong>Momentum Pro</strong> — simulação ilimitada + 16 aulas de análise técnica</span>
+  <span style="font-size:13px;color:var(--ink-1)">★ Desbloqueie o <strong>Craquei Pro</strong> — simulação ilimitada + 16 aulas de análise técnica</span>
   <button class="btn primary" onclick="showUpgradeModal()" style="font-size:11px;padding:4px 12px;white-space:nowrap">Conhecer o Pro</button>
   <button onclick="dismissUpgradeBanner()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:16px;line-height:1;padding:0 4px" title="Fechar">×</button>
 </div>
@@ -197,8 +200,8 @@
 <div class="modal-backdrop" id="authModal">
   <div class="modal">
     <div class="brand">
-      <div class="brand-mark">M</div>
-      <span class="brand-name">Momentum</span>
+      <div class="brand-mark" style="font-size:18px">★</div>
+      <span class="brand-name">Craquei</span>
     </div>
     <h2 class="hed2" id="authModalTitle" style="font-size:26px;margin:0 0 6px">Bem-vindo de volta 👋</h2>
     <p id="authModalSub" style="color:var(--ink-3);font-size:14px;margin:0 0 24px">Continua de onde você parou.</p>
@@ -236,8 +239,8 @@
 <div class="modal-backdrop" id="resetModal">
   <div class="modal">
     <div class="brand">
-      <div class="brand-mark">M</div>
-      <span class="brand-name">Momentum</span>
+      <div class="brand-mark" style="font-size:18px">★</div>
+      <span class="brand-name">Craquei</span>
     </div>
     <h2 class="hed2" style="font-size:22px;margin:0 0 6px">Nova senha</h2>
     <p style="color:var(--ink-3);font-size:14px;margin:0 0 20px">Escolha uma senha segura com pelo menos 6 caracteres.</p>
@@ -279,7 +282,7 @@
 <script src="/static/fx.js"></script>
 <script>
 // ─── STATE ─────────────────────────────────────────────────────────────
-let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], closedTrades: JSON.parse(localStorage.getItem('momentum_closed') || '[]'), universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, showBilling: false, displayedStocks: [], homeMode: localStorage.getItem('momentum_home_mode') || 'sinais', backtestResults: null, marketRegime: 'risk_on', simCapital: parseInt(localStorage.getItem('momentum_sim_capital') || '1000', 10), trackedView: localStorage.getItem('momentum_tracked_view') || 'cards', trackedTab: 'abertas', scanGeneratedAt: {} };
+let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], closedTrades: JSON.parse(localStorage.getItem('momentum_closed') || '[]'), universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, showBilling: false, showAbout: false, showTraining: false, displayedStocks: [], homeMode: localStorage.getItem('momentum_home_mode') || 'sinais', backtestResults: null, marketRegime: 'risk_on', simCapital: parseInt(localStorage.getItem('momentum_sim_capital') || '1000', 10), trackedView: localStorage.getItem('momentum_tracked_view') || 'cards', trackedTab: 'abertas', scanGeneratedAt: {} };
 function businessDaysBetween(d1str, d2str) {
   const ms = Date.parse(d2str) - Date.parse(d1str);
   const calDays = ms / (1000 * 60 * 60 * 24);
@@ -777,7 +780,7 @@ function acceptCookies() {
 }
 
 function showPrivacyNote() {
-  showToast('O MOMENTUM salva sua sessão e preferências localmente. Nenhum cookie de rastreamento de terceiros é usado. Suas posições e watchlist são salvas no servidor e removidas permanentemente ao excluir a conta (LGPD Art. 18). Exporte ou delete seus dados a qualquer momento no menu da conta.', true, 8000);
+  showToast('O CRAQUEI salva sua sessão e preferências localmente. Nenhum cookie de rastreamento de terceiros é usado. Suas posições e watchlist são salvas no servidor e removidas permanentemente ao excluir a conta (LGPD Art. 18). Exporte ou delete seus dados a qualquer momento no menu da conta.', true, 8000);
 }
 
 function showUpgradeBanner() {
@@ -2116,6 +2119,8 @@ function renderDashboard() {
   if (state.showSimulator) { renderSimulator(); return; }
   if (state.showUniverse) { renderUniverseView(); return; }
   if (state.showTracked) { renderTrackedPicks(); return; }
+  if (state.showAbout) { renderAboutView(); return; }
+  if (state.showTraining) { renderTrainingView(); return; }
 
   const grid = document.getElementById('resultsGrid');
   const scanHdr = document.getElementById('scanHeader');
@@ -2313,7 +2318,7 @@ function renderBacktest() {
   // Explanation panel (always visible)
   html += `<div class="card" style="padding:var(--s-5);margin-bottom:var(--s-4);border-left:3px solid var(--primary);word-break:break-word">`;
   html += `<h3 class="hed3" style="margin-top:0;margin-bottom:var(--s-3)">O que é o Histórico?</h3>`;
-  html += `<p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0 0 var(--s-3) 0">O Histórico aplica os critérios do Momentum (RSI, MACD, ADX, Volume, SMA50, SMA200, proximidade de topo, slope do RSI e regime de volatilidade) sobre todos os pregões disponíveis, identificando cada data em que uma ação teria gerado um sinal. Em seguida, mede o retorno real da ação nos <strong>10, 20 e 30 pregões seguintes</strong>.</p>`;
+  html += `<p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0 0 var(--s-3) 0">O Histórico aplica os critérios do Craquei (RSI, MACD, ADX, Volume, SMA50, SMA200, proximidade de topo, slope do RSI e regime de volatilidade) sobre todos os pregões disponíveis, identificando cada data em que uma ação teria gerado um sinal. Em seguida, mede o retorno real da ação nos <strong>10, 20 e 30 pregões seguintes</strong>.</p>`;
   html += `<p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0 0 var(--s-3) 0">O resultado mostra a <strong>taxa de acerto histórica</strong> — quantas vezes o sinal foi seguido de valorização — e o <strong>retorno médio</strong>, indicando se os ganhos compensaram as perdas.</p>`;
   html += `<p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0">Use o Histórico para comparar o desempenho histórico entre pontos ≥ 3.5 e pontos 2.5–3.4. Os dados são exibidos como foram — sem promessa de resultado futuro.</p>`;
   html += `</div>`;
@@ -3894,7 +3899,7 @@ function renderSimulator() {
     const simSig = stock.signal === 'neutral' ? 'hold' : stock.signal;
     const whyTxt = feedCardWhy(stock);
     html += `<div class="card" style="padding:var(--s-5);margin-top:var(--s-4)">
-      <div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Por que o Momentum sinalizou ${simSig === 'buy' ? 'Compra' : simSig === 'sell' ? 'Venda' : 'Aguardar'}</div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Por que o Craquei sinalizou ${simSig === 'buy' ? 'Compra' : simSig === 'sell' ? 'Venda' : 'Aguardar'}</div>
       <div style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0">${whyTxt}</div>
       <p style="font-size:12px;color:var(--ink-3);margin:8px 0 0">Os valores de TP e SL são estimativas baseadas em suporte/resistência técnica e não garantem resultado.</p>
     </div>`;
@@ -5193,7 +5198,7 @@ function changeFontSize(d) {
   document.body.style.zoom = s;
 }
 
-let _eduTopic = 'strategy';
+let _eduTopic = 'craquei_identity';
 let _lessonStep = 1;
 let _quizAnswers = {};
 let _quizSubmitted = false;
@@ -5615,9 +5620,233 @@ function changeSimChartPeriod(ticker, period) {
   });
 }
 
+function _resetViewState() {
+  state.showTracked = false; state.showUniverse = false; state.showSimulator = false;
+  state.showPortfolio = false; state.showAbout = false; state.showTraining = false;
+  document.querySelectorAll('.nav-pill[data-view]').forEach(b => b.classList.remove('active'));
+  const scanHdr = document.getElementById('scanHeader'); if (scanHdr) scanHdr.style.display = 'none';
+  const grid = document.getElementById('resultsGrid'); if (grid) grid.style.display = 'none';
+  const sidebar = document.getElementById('legacySidebar'); if (sidebar) sidebar.style.display = 'none';
+  const cs = document.getElementById('calendarSection'); if (cs) cs.style.display = 'none';
+  const d = document.getElementById('dashboard'); if (d) { d.style.display = 'block'; d.innerHTML = ''; }
+}
+
+function showAboutView() {
+  _resetViewState();
+  state.showAbout = true;
+  const pill = document.querySelector('.nav-pill[data-view="about"]');
+  if (pill) pill.classList.add('active');
+  renderAboutView();
+}
+
+function renderAboutView() {
+  const d = document.getElementById('dashboard');
+  if (!d) return;
+  d.style.display = 'block';
+  d.innerHTML = `
+  <div class="shell" style="padding-top:var(--s-5);padding-bottom:var(--s-6)">
+    <div style="max-width:680px;margin:0 auto">
+
+      <!-- Logo header -->
+      <div style="text-align:center;margin-bottom:var(--s-6)">
+        <img src="/static/craquei-logo.svg" alt="Craquei" style="width:96px;height:96px;margin-bottom:var(--s-3)">
+        <h1 style="font-family:var(--font-display);font-size:2.4rem;font-weight:800;margin:0;background:linear-gradient(135deg,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Craquei</h1>
+        <p style="color:var(--ink-3);font-size:15px;margin:8px 0 0">O clube de quem finalmente entendeu o mercado.</p>
+      </div>
+
+      <!-- Cards -->
+      <div style="display:flex;flex-direction:column;gap:var(--s-4)">
+
+        <div class="card" style="border-left:4px solid #f59e0b;padding:var(--s-5)">
+          <div style="font-size:1.8rem;margin-bottom:10px">🚫🏦</div>
+          <p style="font-size:15px;color:var(--ink-2);line-height:1.7;margin:0">
+            Craquei não é um banco. Não é uma corretora. E não é aquele curso online chato que você nunca termina.
+            O Craquei é um <strong style="color:var(--ink)">clube</strong> — pra quem sempre achou que a bolsa de valores era coisa de gente rica, de terno, de outro mundo.
+            <span style="color:#f59e0b;font-weight:600"> Spoiler: não é.</span>
+          </p>
+        </div>
+
+        <div class="card" style="border-left:4px solid #ef4444;padding:var(--s-5)">
+          <div style="font-size:1.8rem;margin-bottom:10px">⚡★</div>
+          <p style="font-size:15px;color:var(--ink-2);line-height:1.7;margin:0">
+            O nome? Vem dos dois lugares ao mesmo tempo. <strong style="color:var(--ink)">Craque</strong> como Zico, como a Marta —
+            aquela pessoa que entende o jogo antes dos outros.
+            E <strong style="color:var(--ink)">craquei</strong> como aquele momento em que a ficha cai, a luz acende e você
+            finalmente entende o que tá acontecendo com o seu dinheiro. Os dois significados são você —
+            só que em momentos diferentes da mesma história.
+          </p>
+        </div>
+
+        <div class="card" style="border-left:4px solid #22c55e;padding:var(--s-5)">
+          <div style="font-size:1.8rem;margin-bottom:10px">🇧🇷👷</div>
+          <p style="font-size:15px;color:var(--ink-2);line-height:1.7;margin:0">
+            A gente foi criado pra uma pessoa só: o brasileiro que trabalha pra caramba, que cuida da família,
+            que conhece PIX, poupança e FGTS de cor — mas nunca se sentiu convidado pra conversa sobre ações.
+            Aqui a porta tá aberta, o café tá quente, e ninguém vai te julgar por não saber o que é P/L.
+          </p>
+        </div>
+
+        <div class="card" style="background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(239,68,68,0.1));border:1px solid rgba(245,158,11,0.3);padding:var(--s-5);text-align:center">
+          <div style="font-size:2rem;margin-bottom:12px">🏆</div>
+          <p style="font-size:17px;font-weight:700;color:var(--ink);margin:0 0 8px">Bem-vindo ao clube dos que finalmente cracaram o código.</p>
+          <p style="font-size:20px;font-weight:800;color:#f59e0b;margin:0;letter-spacing:0.02em">A partir de agora, você é um Craque. ★</p>
+        </div>
+
+        <!-- Stats fun facts -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-3)">
+          <div class="card" style="text-align:center;padding:var(--s-4)">
+            <div style="font-size:1.8rem;font-weight:800;color:#f59e0b;font-family:var(--font-display)">2,4%</div>
+            <div style="font-size:11px;color:var(--ink-3);margin-top:4px">dos brasileiros investem em ações. O resto ainda não recebeu o convite.</div>
+          </div>
+          <div class="card" style="text-align:center;padding:var(--s-4)">
+            <div style="font-size:1.8rem;font-weight:800;color:#22c55e;font-family:var(--font-display)">141</div>
+            <div style="font-size:11px;color:var(--ink-3);margin-top:4px">ações monitoradas em Brasil, EUA, Europa e Emergentes.</div>
+          </div>
+          <div class="card" style="text-align:center;padding:var(--s-4)">
+            <div style="font-size:1.8rem;font-weight:800;color:#ef4444;font-family:var(--font-display)">R$0</div>
+            <div style="font-size:11px;color:var(--ink-3);margin-top:4px">de taxa de corretagem. A gente só mostra o sinal. Você decide.</div>
+          </div>
+        </div>
+
+        <!-- Legal note -->
+        <p style="font-size:11px;color:var(--ink-4);text-align:center;line-height:1.6;margin:0">
+          ⚠ Simulador educacional · Não constitui recomendação de investimento · Craquei não é registrado como consultor de valores mobiliários junto à CVM · Os scores são gerados por algoritmo matemático · Você é responsável por suas decisões.
+        </p>
+
+      </div>
+    </div>
+  </div>`;
+}
+
+function showTrainingView() {
+  _resetViewState();
+  state.showTraining = true;
+  const pill = document.querySelector('.nav-pill[data-view="learn"]');
+  if (pill) pill.classList.add('active');
+  renderTrainingView();
+}
+
+function renderTrainingView() {
+  const d = document.getElementById('dashboard');
+  if (!d) return;
+  d.style.display = 'block';
+
+  const prog = JSON.parse(localStorage.getItem('craquei_identity_progress') || '[]');
+  const modules = [
+    {
+      id: 'mod1', emoji: '🤔', title: 'Ações: o que diabos é isso?',
+      sub: 'Você não é leigo. Você é iniciante — tem diferença enorme.',
+      items: ['O que é uma ação de verdade (sem enrolação e sem palavra bonita)', 'Por que toda grande empresa que você conhece — Petrobras, Magazine Luiza, Ambev — já foi negociada por alguém como você', 'Como a bolsa funciona no dia a dia, em linguagem de pessoa normal'],
+      badge: '★ Craque do Primeiro Passo', badgeColor: '#f59e0b'
+    },
+    {
+      id: 'mod2', emoji: '🎯', title: 'Pontos Craquei: decodifica o placar',
+      sub: 'Você não precisa virar analista. Você precisa entender o que o número quer dizer.',
+      items: ['Como o Craquei monta a pontuação de cada ação e o que ela mede', 'O que significa uma nota alta — e por que nota alta não é garantia de nada', 'Como usar o Pontos Craquei pra comparar empresas sem precisar abrir planilha nenhuma'],
+      badge: '★ Craque do Placar', badgeColor: '#22d3ee'
+    },
+    {
+      id: 'mod3', emoji: '📈', title: 'Gráfico sem medo, sem mito',
+      sub: 'Gráfico não é adivinhação. É a história da empresa contada em linha.',
+      items: ['O que o eixo de cima e o eixo de baixo realmente mostram (e por que isso importa)', 'Como ler uma tendência sem precisar saber o nome técnico dela', 'Por que o gráfico sozinho não decide nada — e o que ele decide em conjunto com o resto'],
+      badge: '★ Craque da Leitura', badgeColor: '#22c55e'
+    },
+    {
+      id: 'mod4', emoji: '⏰', title: 'Compra agora ou espera mais?',
+      sub: 'Essa dúvida nunca some. O que muda é o seu critério pra responder ela.',
+      items: ['Quais sinais ajudam a avaliar se um momento é bom ou só parece bom', 'Por que "tá barato" não quer dizer o que a maioria pensa que quer dizer', 'Como criar um critério próprio — simples, sem fórmula — pra tomar essa decisão com mais calma'],
+      badge: '★ Craque do Timing', badgeColor: '#f97316'
+    },
+    {
+      id: 'mod5', emoji: '💼', title: 'Minha primeira carteira de verdade',
+      sub: 'Diversificar não é ter muito dinheiro. É não colocar tudo numa aposta só.',
+      items: ['Como montar uma carteira simples com o que você tem — sem esperar sobrar mais', 'Por que ter 3 ações de setores diferentes já é uma estratégia real', 'O que revisar na sua carteira de tempos em tempos (sem virar escravo da tela do celular)'],
+      badge: '★ Craque da Carteira', badgeColor: '#a855f7'
+    }
+  ];
+
+  const completed = modules.filter(m => prog.includes(m.id)).length;
+  const pct = Math.round((completed / modules.length) * 100);
+
+  let html = `<div class="shell" style="padding-top:var(--s-5);padding-bottom:var(--s-6)">
+    <div style="max-width:680px;margin:0 auto">
+
+      <!-- Header -->
+      <div style="margin-bottom:var(--s-5)">
+        <div style="display:flex;align-items:center;gap:var(--s-3);margin-bottom:var(--s-3)">
+          <span style="font-size:2rem">🏆</span>
+          <div>
+            <h1 style="font-family:var(--font-display);font-size:1.6rem;font-weight:800;margin:0;color:var(--ink)">Formação Craquei</h1>
+            <p style="color:var(--ink-3);font-size:13px;margin:4px 0 0">5 módulos pra você mudar como pensa sobre dinheiro. Sem curso chato. Sem jargão.</p>
+          </div>
+        </div>
+        <!-- Progress bar -->
+        <div style="background:var(--bg-2);border-radius:999px;height:10px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f59e0b,#ef4444);border-radius:999px;transition:width 0.4s ease"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px">
+          <span style="font-size:12px;color:var(--ink-3)">${completed} de ${modules.length} módulos concluídos</span>
+          <span style="font-size:12px;font-weight:600;color:#f59e0b">${pct}%</span>
+        </div>
+      </div>
+
+      <!-- Modules -->
+      <div style="display:flex;flex-direction:column;gap:var(--s-4)">`;
+
+  modules.forEach((m, i) => {
+    const done = prog.includes(m.id);
+    const locked = i > 0 && !prog.includes(modules[i-1].id);
+    html += `<div class="card" style="padding:var(--s-5);opacity:${locked ? '0.5' : '1'};position:relative;${done ? 'border-left:4px solid ' + m.badgeColor : ''}">
+      ${done ? `<div style="position:absolute;top:16px;right:16px;background:${m.badgeColor};color:#000;font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap">${m.badge}</div>` : ''}
+      <div style="display:flex;align-items:flex-start;gap:var(--s-3);margin-bottom:var(--s-3)">
+        <span style="font-size:2rem;flex-shrink:0">${m.emoji}</span>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Módulo ${i+1}</div>
+          <h3 style="font-size:17px;font-weight:700;color:var(--ink);margin:0 0 6px;line-height:1.3">${m.title}</h3>
+          <p style="font-size:13px;color:${m.badgeColor};font-weight:600;margin:0">${m.sub}</p>
+        </div>
+      </div>
+      <ul style="margin:0 0 var(--s-4) 0;padding:0 0 0 var(--s-4);display:flex;flex-direction:column;gap:8px">
+        ${m.items.map(item => `<li style="font-size:14px;color:var(--ink-2);line-height:1.5">${item}</li>`).join('')}
+      </ul>
+      ${locked
+        ? `<div style="font-size:13px;color:var(--ink-4);text-align:center">🔒 Complete o módulo anterior primeiro</div>`
+        : `<button onclick="toggleTrainingModule('${m.id}')" style="width:100%;padding:10px;background:${done ? 'rgba(239,68,68,0.1)' : 'var(--primary)'};color:${done ? 'var(--sell)' : 'var(--primary-ink)'};border:1px solid ${done ? 'var(--sell)' : 'var(--primary)'};border-radius:8px;font-weight:600;cursor:pointer;font-size:14px;transition:all 0.2s">
+            ${done ? '✓ Concluído — clique para desmarcar' : 'Marcar como concluído →'}
+          </button>`
+      }
+    </div>`;
+  });
+
+  if (completed === modules.length) {
+    html += `<div class="card" style="text-align:center;padding:var(--s-6);background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(239,68,68,0.1));border:1px solid rgba(245,158,11,0.4)">
+      <div style="font-size:3rem;margin-bottom:12px">🏆</div>
+      <h2 style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:#f59e0b;margin:0 0 8px">Você cracou o código!</h2>
+      <p style="color:var(--ink-2);font-size:15px;margin:0 0 20px">Formação Craquei completa. Você não é mais iniciante — você é um Craque de verdade.</p>
+      <button onclick="showEducationView()" class="btn-primary" style="font-size:15px;padding:12px 28px">Ir para as Aulas Técnicas →</button>
+    </div>`;
+  }
+
+  html += `</div>
+      <p style="font-size:11px;color:var(--ink-4);text-align:center;margin-top:var(--s-5);line-height:1.6">⚠ Conteúdo educacional · Não constitui recomendação de investimento · Craquei não é registrado como consultor de valores mobiliários junto à CVM</p>
+    </div>
+  </div>`;
+
+  d.innerHTML = html;
+}
+
+function toggleTrainingModule(id) {
+  const prog = JSON.parse(localStorage.getItem('craquei_identity_progress') || '[]');
+  const idx = prog.indexOf(id);
+  if (idx >= 0) prog.splice(idx, 1); else prog.push(id);
+  localStorage.setItem('craquei_identity_progress', JSON.stringify(prog));
+  if (idx < 0) showToast('🏆 Módulo concluído! Você tá chegando lá, Craque.', true, 3000);
+  renderTrainingView();
+}
+
 function showEducationView() {
   try {
-    state.showTracked = false; state.showUniverse = false; state.showSimulator = false; state.showPortfolio = false;
+    state.showTracked = false; state.showUniverse = false; state.showSimulator = false; state.showPortfolio = false; state.showAbout = false; state.showTraining = false;
     document.querySelectorAll('.nav-pill[data-view]').forEach(b => b.classList.remove('active'));
     const learnPill = document.querySelector('.nav-pill[data-view="learn"]');
     if (learnPill) learnPill.classList.add('active');
@@ -5632,13 +5861,14 @@ function showEducationView() {
     const d = document.getElementById('dashboard');
     d.style.display = 'block';
     const _isPro = authUser && (authUser.tier === 'pro' || authUser.tier === 'admin');
-    if (!_isPro && !FREE_EDU_TOPICS.includes(_eduTopic)) _eduTopic = 'why';
+    if (!_isPro && !FREE_EDU_TOPICS.includes(_eduTopic)) _eduTopic = 'craquei_identity';
     renderEdu();
   } catch(e) { console.error('Education error:', e); }
 }
 
 // ─── COURSE HELPERS ─────────────────────────────────────────────────────
 const COURSE_MODULES = [
+  { icon:'★', name:'Craquei',           topics:['craquei_identity'] },
   { icon:'🌱', name:'Fundamentos',      topics:['why','strategy','diversify'] },
   { icon:'🌎', name:'O Mercado',        topics:['brazilstats','sectors','realcases'] },
   { icon:'📊', name:'Análise Técnica',  topics:['chart_basics','rsi','sma','macd','adx','bb','atr','patterns','momentum_signal'] },
@@ -5646,7 +5876,7 @@ const COURSE_MODULES = [
   { icon:'🇧🇷', name:'Impostos',        topics:['darf'] },
   { icon:'🏦', name:'Renda Fixa',       topics:['tesouro','lci_lca','juros_compostos','cdb_cdi'] },
 ];
-const FREE_EDU_TOPICS = ['why'];
+const FREE_EDU_TOPICS = ['why', 'craquei_identity'];
 
 function loadCourseProgress() {
   try { return JSON.parse(localStorage.getItem('jerry_course_progress') || '[]'); } catch { return []; }
@@ -5967,7 +6197,7 @@ CHART_REGISTRY['chartRSIZones'] = () => _svgWrap('Zonas do RSI', 'Sobrecomprado 
     <rect x="0" y="127" width="440" height="33" rx="4" fill="#22d3ee22"/>
     <text x="8" y="22" fill="#ef5350" font-size="11" font-weight="700" font-family="system-ui">RSI &gt; 70 — SOBRECOMPRADO (possível correção)</text>
     <text x="8" y="83" fill="#4caf50" font-size="11" font-weight="700" font-family="system-ui">RSI 30–70 — ZONA NEUTRA (tendência)</text>
-    <text x="8" y="95" fill="#888" font-size="10" font-family="system-ui">O Momentum considera RSI 50–70 como zona ideal (alta saudável)</text>
+    <text x="8" y="95" fill="#888" font-size="10" font-family="system-ui">O Craquei considera RSI 50–70 como zona ideal (alta saudável)</text>
     <text x="8" y="148" fill="#22d3ee" font-size="11" font-weight="700" font-family="system-ui">RSI &lt; 30 — SOBREVENDIDO (possível recuperação)</text>
     <line x1="0" y1="33" x2="440" y2="33" stroke="#ef535066" stroke-width="1.5"/>
     <line x1="0" y1="127" x2="440" y2="127" stroke="#22d3ee66" stroke-width="1.5"/>
@@ -6031,7 +6261,7 @@ CHART_REGISTRY['chartADXStrength'] = () => _svgWrap('Força da Tendência — AD
     <text x="8" y="22" fill="#4caf50" font-size="11" font-weight="700" font-family="system-ui">ADX &gt; 40 — TENDÊNCIA FORTE</text>
     <text x="8" y="35" fill="#888" font-size="10" font-family="system-ui">Sinal confiável. Entrar na direção confirmada.</text>
     <text x="8" y="67" fill="#e8a846" font-size="11" font-weight="700" font-family="system-ui">ADX 25–40 — TENDÊNCIA MODERADA</text>
-    <text x="8" y="80" fill="#888" font-size="10" font-family="system-ui">Momentum usa ADX &gt; 25 como filtro.</text>
+    <text x="8" y="80" fill="#888" font-size="10" font-family="system-ui">Craquei usa ADX &gt; 25 como filtro.</text>
     <text x="8" y="112" fill="#ef5350" font-size="11" font-weight="700" font-family="system-ui">ADX &lt; 25 — SEM TENDÊNCIA</text>
     <text x="8" y="125" fill="#888" font-size="10" font-family="system-ui">Mercado lateral. Sinais menos confiáveis.</text>
     <text x="8" y="148" fill="#555" font-size="9" font-family="system-ui">ADX não indica direção — combine com +DI / -DI para saber se é alta ou baixa.</text>
@@ -6199,7 +6429,7 @@ CHART_REGISTRY['chartDARFCalendar'] = () => _svgWrap('Calendário do DARF', 'Pra
   </svg>`, 'Isenção: vendas totais no mês &lt; R$20.000 (apenas operações normais, não day-trade).');
 
 // Momentum signal topic
-CHART_REGISTRY['chartMomentumScore'] = () => _svgWrap('Pontuação do Momentum — 9 Critérios', 'Máximo de 6,0 pontos',
+CHART_REGISTRY['chartMomentumScore'] = () => _svgWrap('Pontuação do Craquei — 9 Critérios', 'Máximo de 6,0 pontos',
   `<svg viewBox="0 0 440 175" width="100%" style="display:block">
     ${[
       ['Preço > SMA200',1.0,'#4caf50'],
@@ -6304,7 +6534,7 @@ function renderLessonQuiz() {
     // Results header
     const scoreColor = score >= 5 ? '#4caf50' : score >= 3 ? '#e8a846' : '#ef5350';
     const msg = score >= 5
-      ? '🏆 Parabéns! Você entendeu os conceitos fundamentais. Agora você está pronto para explorar como o Momentum identifica oportunidades no mercado.'
+      ? '🏆 Parabéns! Você entendeu os conceitos fundamentais. Agora você está pronto para explorar como o Craquei identifica oportunidades no mercado.'
       : score >= 3
       ? '💪 Bom começo! Você pegou os pontos principais. Que tal reler as seções e tentar de novo?'
       : '🌱 Sem pressão — esses conceitos levam um tempo pra entrar. Comece de novo com calma, uma seção de cada vez.';
@@ -6399,6 +6629,125 @@ function renderInteractiveLesson(topicId, isDone) {
   return h;
 }
 
+function renderCraqueIdentityInline(prog) {
+  const modules = [
+    {
+      id:'ci_mod1', emoji:'🤔', title:'Ação — o que é isso aqui?',
+      sub:'Depois daqui, você olha pra uma ação e decide se quer ou não — com motivo, não com achismo.',
+      items:[
+        'Conseguir explicar o que é uma ação sem jargão — pra você mesmo ou pra qualquer pessoa',
+        'Saber a diferença entre ter uma ação e ter dinheiro na poupança, e quando cada uma faz mais sentido',
+        'Reconhecer quando alguém te oferecer uma "oportunidade" se é ação de verdade ou é outra coisa'
+      ],
+      badge:'Dono de Nada (ainda)', badgeColor:'#f59e0b'
+    },
+    {
+      id:'ci_mod2', emoji:'🎯', title:'O placar do Craquei — como ler',
+      sub:'Depois daqui, você olha pro Pontos de uma empresa e sabe o que aquele número tá tentando te dizer — e o que ele não te diz.',
+      items:[
+        'Olhar pro score e decidir se vale continuar pesquisando ou se já dá pra descartar',
+        'Saber quando Pontos alto não significa "compra já" e quando Pontos baixo não significa "foge"',
+        'Entender de onde o número vem — o suficiente pra não confiar cegamente, e não ignorar'
+      ],
+      badge:'Leitor de Placar', badgeColor:'#22d3ee'
+    },
+    {
+      id:'ci_mod3', emoji:'📈', title:'Gráfico — sem surtar',
+      sub:'Depois daqui, você abre um gráfico e decide se o que tá vendo é sinal ou barulho.',
+      items:[
+        'Olhar pra uma linha subindo ou descendo e saber que perguntas fazer antes de tirar conclusão',
+        'Identificar quando um gráfico tá mostrando algo útil e quando tá só te deixando ansioso à toa',
+        'Dizer "esse movimento aqui eu entendo" — e também "esse eu não sei, então não vou agir por impulso"'
+      ],
+      badge:'Sem Pânico', badgeColor:'#22c55e'
+    },
+    {
+      id:'ci_mod4', emoji:'⏰', title:'Compra agora ou espera?',
+      sub:'Depois daqui, quando estiver interessado numa ação, você sabe que perguntas fazer antes de apertar qualquer botão.',
+      items:[
+        'Saber quando "tá barata" é motivo válido pra comprar e quando é só uma impressão',
+        'Identificar pelo menos dois sinais que indicam esperar — e dois que indicam que esperar não muda muita coisa',
+        'Ter uma checklist mental curta que você aplica antes de qualquer decisão — sem precisar de ninguém te dizendo o que fazer'
+      ],
+      badge:'Segura a Ansiedade', badgeColor:'#f97316'
+    },
+    {
+      id:'ci_mod5', emoji:'💼', title:'Primeira carteira — sem drama',
+      sub:'Depois daqui, você monta uma carteira simples, com o que tem, e consegue explicar por que cada coisa tá lá.',
+      items:[
+        'Distribuir o que você tem entre mais de um ativo sem precisar de muito dinheiro pra começar',
+        'Revisar sua própria carteira em 10 minutos e decidir se precisa mudar alguma coisa ou se tá ok',
+        'Dizer "essa carteira faz sentido pra mim porque..." — com as suas próprias palavras, sem copiar carteira de influencer'
+      ],
+      badge:'Carteira Com Nome', badgeColor:'#a855f7'
+    }
+  ];
+
+  const done = modules.filter(m => prog.includes(m.id));
+  const pct = Math.round(done.length / modules.length * 100);
+  const allDone = done.length === modules.length;
+
+  let h = '';
+
+  // header card
+  h += `<div class="card" style="margin-bottom:var(--s-4);padding:var(--s-5)">`;
+  h += `<div style="display:flex;align-items:center;gap:var(--s-3);margin-bottom:var(--s-3)">`;
+  h += `<img src="/static/craquei-logo.svg" alt="" style="width:44px;height:44px;flex-shrink:0">`;
+  h += `<div><div class="kicker" style="color:#f59e0b;margin-bottom:4px">★ Formação Craquei</div>`;
+  h += `<p style="font-size:13px;color:var(--ink-3);margin:0">5 módulos pra você saber tomar decisões. Não pra ficar rico.</p></div></div>`;
+  h += `<div style="background:var(--bg-2);border-radius:999px;height:8px;overflow:hidden;margin-bottom:6px">`;
+  h += `<div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f59e0b,#ef4444);border-radius:999px;transition:width 0.4s"></div></div>`;
+  h += `<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:var(--ink-3)">${done.length} de ${modules.length} módulos</span><span style="font-size:11px;font-weight:600;color:#f59e0b">${pct}%</span></div>`;
+  h += `</div>`;
+
+  modules.forEach((m, i) => {
+    const isDone = prog.includes(m.id);
+    const locked = i > 0 && !prog.includes(modules[i-1].id);
+    h += `<div class="card" style="margin-bottom:var(--s-3);padding:var(--s-4);opacity:${locked ? '0.5' : '1'};${isDone ? 'border-left:3px solid ' + m.badgeColor : ''}">`;
+    h += `<div style="display:flex;align-items:flex-start;gap:var(--s-3)">`;
+    h += `<span style="font-size:1.6rem;flex-shrink:0;line-height:1">${m.emoji}</span>`;
+    h += `<div style="flex:1;min-width:0">`;
+    h += `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">`;
+    h += `<span style="font-size:10px;color:var(--ink-4);font-family:var(--font-mono);text-transform:uppercase">Módulo ${i+1}</span>`;
+    if (isDone) h += `<span style="background:${m.badgeColor};color:#000;font-size:9px;font-weight:700;padding:2px 8px;border-radius:999px">${m.badge}</span>`;
+    h += `</div>`;
+    h += `<div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px;line-height:1.3">${m.title}</div>`;
+    h += `<div style="font-size:12px;color:${m.badgeColor};font-weight:600;margin-bottom:var(--s-3);line-height:1.4">${m.sub}</div>`;
+    h += `<ul style="margin:0 0 var(--s-3);padding-left:var(--s-4);display:flex;flex-direction:column;gap:6px">`;
+    m.items.forEach(item => { h += `<li style="font-size:13px;color:var(--ink-2);line-height:1.5">${item}</li>`; });
+    h += `</ul>`;
+    if (locked) {
+      h += `<p style="font-size:12px;color:var(--ink-4);margin:0">🔒 Complete o módulo anterior primeiro</p>`;
+    } else {
+      h += `<button onclick="toggleCraqueIdentityMod('${m.id}')" style="padding:8px 16px;background:${isDone ? 'transparent' : 'var(--primary)'};color:${isDone ? 'var(--sell)' : 'var(--primary-ink)'};border:1px solid ${isDone ? 'var(--sell)' : 'var(--primary)'};border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;transition:all 0.2s">`;
+      h += isDone ? '✓ Concluído — desfazer' : 'Marcar como concluído →';
+      h += `</button>`;
+    }
+    h += `</div></div></div>`;
+  });
+
+  if (allDone) {
+    h += `<div class="card" style="text-align:center;padding:var(--s-6);background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(239,68,68,0.08));border:1px solid rgba(245,158,11,0.3)">`;
+    h += `<div style="font-size:2.5rem;margin-bottom:12px">🏆</div>`;
+    h += `<h3 style="font-family:var(--font-display);font-size:1.3rem;font-weight:800;color:#f59e0b;margin:0 0 8px">Formação completa.</h3>`;
+    h += `<p style="color:var(--ink-2);font-size:14px;margin:0 0 20px;line-height:1.6">Você não é mais aquele que "não entende nada de investimento." Agora você tem critério. Isso é diferente de dica.</p>`;
+    h += `<button onclick="switchEduTopic('why')" class="btn-primary" style="font-size:14px;padding:10px 24px">Continuar para Fundamentos →</button>`;
+    h += `</div>`;
+  }
+
+  h += `<p style="font-size:11px;color:var(--ink-4);text-align:center;margin-top:var(--s-4);line-height:1.6">⚠ Conteúdo educacional · Não constitui recomendação de investimento · Craquei não é registrado como consultor de valores mobiliários junto à CVM</p>`;
+  return h;
+}
+
+function toggleCraqueIdentityMod(id) {
+  const prog = loadCourseProgress();
+  const idx = prog.indexOf(id);
+  if (idx >= 0) prog.splice(idx, 1); else prog.push(id);
+  saveCourseProgress(prog);
+  if (idx < 0) showToast('★ Módulo concluído. Você tá chegando lá.', true, 3000);
+  renderEdu();
+}
+
 function renderEdu() {
   const container = document.getElementById('dashboard');
   container.style.display = 'block';
@@ -6410,6 +6759,7 @@ function renderEdu() {
   const isComplete = prog.length >= total;
 
   const allTopics = [
+    { id:'craquei_identity', icon:'★', name:'Craquei', color:'#f59e0b', title:'Formação Craquei', subtitle:'5 módulos pra você saber tomar decisões — não pra ficar rico.', body:'' },
     { id:'strategy',        icon:'🧩', name:t('edu_strategyName'),      color:'#4caf50', title:t('edu_strategyTitle'),      subtitle:t('edu_strategySubtitle'),      body:t('edu_strategyBody') },
     { id:'why',             icon:'🌱', name:t('edu_whyName'),           color:'#22d3ee', title:t('edu_whyTitle'),           subtitle:t('edu_whySubtitle'),           body:t('edu_whyBody') },
     { id:'diversify',       icon:'🌐', name:t('edu_diversifyName'),     color:'#ff6a00', title:t('edu_diversifyTitle'),     subtitle:t('edu_diversifySubtitle'),     body:t('edu_diversifyBody') },
@@ -6420,7 +6770,7 @@ function renderEdu() {
     { id:'rsi',             icon:'📈', name:'RSI',                      color:'#22d3ee', title:t('edu_rsiTitle'),           subtitle:t('edu_rsiSubtitle'),           body:t('edu_rsiBody') },
     { id:'macd',            icon:'🔄', name:'MACD',                     color:'#4caf50', title:t('edu_macdTitle'),          subtitle:t('edu_macdSubtitle'),          body:t('edu_macdBody') },
     { id:'adx',             icon:'📊', name:'ADX',                      color:'#e8a846', title:t('edu_adxTitle'),           subtitle:t('edu_adxSubtitle'),           body:t('edu_adxBody') },
-    { id:'atr',             icon:'📏', name:'ATR',                      color:'#f59e0b', title:'ATR — Volatilidade Diária e Como Usamos', subtitle:'O que é Average True Range, como é calculado e como o Momentum usa ATR para stops e posições.', body:t('edu_atrBody') },
+    { id:'atr',             icon:'📏', name:'ATR',                      color:'#f59e0b', title:'ATR — Volatilidade Diária e Como Usamos', subtitle:'O que é Average True Range, como é calculado e como o Craquei usa ATR para stops e posições.', body:t('edu_atrBody') },
     { id:'sma',             icon:'〰️', name:'SMA',                      color:'#ff6a00', title:t('edu_smaTitle'),           subtitle:t('edu_smaSubtitle'),           body:t('edu_smaBody') },
     { id:'bb',              icon:'📉', name:'Bollinger',                color:'#c85a17', title:t('edu_bollingerTitle'),     subtitle:t('edu_bollingerSubtitle'),     body:t('edu_bollingerBody') },
     { id:'patterns',        icon:'📐', name:t('edu_patternsTab'),       color:'#4caf50', title:t('edu_patternsTitle'),      subtitle:t('edu_patternsSubtitle'),      body:t('edu_patternsBody') },
@@ -6428,7 +6778,7 @@ function renderEdu() {
     { id:'tesouro',         icon:'🏛️', name:'Tesouro Direto',           color:'#22d3ee', title:'Tesouro Direto — A Renda Fixa do Governo', subtitle:'Selic, IPCA+ e Prefixado: qual escolher e quando.', body:t('edu_tesouroBody') },
     { id:'lci_lca',         icon:'🌾', name:'LCI e LCA',                color:'#4caf50', title:'LCI e LCA — Renda Fixa Isenta de IR',      subtitle:'Por que a isenção importa e quando compensa mais que o Tesouro.', body:t('edu_lciLcaBody') },
     { id:'juros_compostos', icon:'📐', name:'Juros Compostos',          color:'#ff6a00', title:'O Poder dos Juros Compostos',               subtitle:'A força que transforma disciplina em patrimônio ao longo do tempo.', body:t('edu_jurosCompostosBody') },
-    { id:'momentum_signal', icon:'🎯', name:'Sinal Momentum', color:'#22d3ee', title:'Como o Momentum Calcula os Scores', subtitle:'Entenda os 9 critérios do scoring v3, as faixas de score e a pontuação máxima de 6.0.', body:t('edu_momentumSignalBody') },
+    { id:'momentum_signal', icon:'🎯', name:'Sinal Craquei', color:'#22d3ee', title:'Como o Craquei Calcula os Scores', subtitle:'Entenda os 9 critérios do scoring v3, as faixas de score e a pontuação máxima de 6.0.', body:t('edu_momentumSignalBody') },
     { id:'cdb_cdi',    icon:'🏦', name:'CDB e CDI',        color:'#4caf50', title:'CDB e CDI — Renda Fixa Bancária',                subtitle:'O que é CDI, como o CDB rende sobre ele, e quando compensa mais que o Tesouro.', body:t('edu_cdbCdiBody') },
     { id:'smart_exit', icon:'🛡️', name:'Saída Inteligente', color:'#ef5350', title:'Saída Inteligente — Stop Móvel e o Prazo de 20 Dias', subtitle:'Por que sair em 20 dias, como o stop móvel protege seus ganhos e quando sair antes do prazo.', body:t('edu_smartExitBody') },
     { id:'market_regime', icon:'🌡️', name:'Regime de Mercado', color:'#ef9a00', title:'Regime de Mercado — Filtro Técnico de Ruído', subtitle:'Entenda os três estados do IBOV (🟢🟡🔴) e como o app usa isso como filtro de dados — não como instrução de investimento.', body:t('edu_marketRegimeBody') },
@@ -6502,10 +6852,12 @@ function renderEdu() {
     html += `<p style="color:var(--ink-3);font-size:13px;margin-bottom:var(--s-5);max-width:320px;margin-left:auto;margin-right:auto">Este tópico faz parte do curso completo, disponível apenas para assinantes Pro. Acesse todas as ${allTopics.length} aulas de análise técnica, renda fixa e estratégia.</p>`;
     html += `<button class="btn-primary" onclick="showUpgradeModal()">Assinar Pro — R$29,90/mês</button>`;
     html += `</div>`;
+  } else if (current.id === 'craquei_identity') {
+  html += renderCraqueIdentityInline(prog);
   } else if (window.LESSON_DATA && window.LESSON_DATA[current.id]) {
   html += `<div class="card" style="margin-bottom:var(--s-4)">`;
   html += `<div class="kicker" style="margin-bottom:var(--s-3);color:var(--primary)">${current.icon} ${current.name} · Primeiros Passos</div>`;
-  html += `<p style="font-size:11px;color:#555;margin-bottom:var(--s-4);padding:8px 10px;background:#0d0d0d;border-radius:6px;border:1px solid #1a1a1a">📋 Conteúdo educacional — Não constitui recomendação de investimento. Momentum não é registrado como consultor de valores mobiliários junto à CVM.</p>`;
+  html += `<p style="font-size:11px;color:#555;margin-bottom:var(--s-4);padding:8px 10px;background:#0d0d0d;border-radius:6px;border:1px solid #1a1a1a">📋 Conteúdo educacional — Não constitui recomendação de investimento. Craquei não é registrado como consultor de valores mobiliários junto à CVM.</p>`;
   html += renderInteractiveLesson(current.id, isDone);
   html += `</div>`;
   } else {
@@ -6901,9 +7253,9 @@ init();
 
 <div id="onboardingModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.88);align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--bg-0,#0f1b2d);border:1px solid var(--line);border-radius:16px;max-width:480px;width:100%;padding:32px;position:relative;max-height:90vh;overflow-y:auto">
-    <div style="font-size:36px;text-align:center;margin-bottom:16px">📊</div>
-    <h2 style="font-family:var(--font-display);font-size:24px;font-weight:700;text-align:center;margin:0 0 8px">Bem-vindo ao Momentum!</h2>
-    <p style="color:var(--ink-3);text-align:center;font-size:14px;margin:0 0 20px">Simulador educacional de análise técnica de ações.</p>
+    <div style="font-size:36px;text-align:center;margin-bottom:16px">★</div>
+    <h2 style="font-family:var(--font-display);font-size:24px;font-weight:700;text-align:center;margin:0 0 8px">Bem-vindo ao Craquei!</h2>
+    <p style="color:var(--ink-3);text-align:center;font-size:14px;margin:0 0 20px">O clube de quem finalmente entendeu o mercado.</p>
     <div style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.25);border-radius:8px;padding:12px 16px;margin:0 0 20px;display:flex;align-items:center;gap:10px">
       <span style="font-size:1.2rem">🔒</span>
       <span style="color:var(--ink-2);font-size:.9rem" data-onboarding-safety></span>
@@ -6928,7 +7280,7 @@ init();
     </div>
     <div style="border-top:1px solid var(--line);padding-top:12px;margin-bottom:12px;font-size:11px;color:var(--ink-4);line-height:1.6;text-align:center">
       ⚠ Simulação educacional · Dados para fins didáticos · Não constitui recomendação de investimento<br>
-      <strong style="color:var(--ink-3)">📋 Sobre o Momentum:</strong> Este app é um screener de análise técnica — <strong>não é</strong> corretora, distribuidora, analista de valores mobiliários ou assessor de investimentos registrado na CVM. Os scores são gerados por algoritmo matemático. Você é responsável por suas próprias decisões.
+      <strong style="color:var(--ink-3)">📋 Sobre o Craquei:</strong> Este app é um screener de análise técnica — <strong>não é</strong> corretora, distribuidora, analista de valores mobiliários ou assessor de investimentos registrado na CVM. Os scores são gerados por algoritmo matemático. Você é responsável por suas próprias decisões.
     </div>
     <div style="display:flex;gap:12px">
       <button onclick="completeOnboarding()" style="flex:1;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px">Começar agora →</button>
@@ -6942,7 +7294,7 @@ init();
     <button onclick="closeUpgradeModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;cursor:pointer;font-size:20px;color:var(--ink-3)">×</button>
     <div style="text-align:center;margin-bottom:20px">
       <div style="font-size:40px;margin-bottom:8px">📊</div>
-      <h2 style="font-family:var(--font-mono);color:var(--primary);font-size:17px;margin-bottom:4px">Momentum Pro — Plataforma Educacional</h2>
+      <h2 style="font-family:var(--font-mono);color:var(--primary);font-size:17px;margin-bottom:4px">Craquei Pro — Plataforma Educacional</h2>
       <p style="font-size:13px;color:var(--ink-2)">Ferramentas completas de aprendizado em análise técnica</p>
     </div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:13px">

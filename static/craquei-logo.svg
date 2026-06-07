@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none">
+  <defs>
+    <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+    <linearGradient id="crackGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="120" cy="120" r="110" fill="#111827"/>
+  <circle cx="120" cy="120" r="110" fill="url(#starGrad)" opacity="0.12"/>
+
+  <!-- 5-point star -->
+  <polygon
+    points="120,28 138,85 198,85 150,120 168,178 120,143 72,178 90,120 42,85 102,85"
+    fill="url(#starGrad)"
+    filter="url(#glow)"
+  />
+
+  <!-- Lightning bolt crack through the star — "craquei" = cracked it -->
+  <path
+    d="M128 52 L108 108 L124 108 L112 168 L142 100 L126 100 Z"
+    fill="#111827"
+    opacity="0.85"
+  />
+  <path
+    d="M128 52 L108 108 L124 108 L112 168 L142 100 L126 100 Z"
+    fill="url(#crackGrad)"
+    opacity="0.9"
+  />
+
+  <!-- Small chart line at bottom of star — stock market reference -->
+  <polyline
+    points="72,178 86,164 98,170 112,155 126,162 140,148 154,155 168,140"
+    stroke="#22c55e"
+    stroke-width="3.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.9"
+  />
+  <circle cx="168" cy="140" r="4" fill="#22c55e"/>
+</svg>
