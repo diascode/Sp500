@@ -57,7 +57,7 @@
               </div>
             </div>
             <button class="dropdown-item" onclick="showOnboardingModal()">🚀 Primeiros Passos</button>
-            <button class="dropdown-item" onclick="showEducationView();switchEduTopic('craquei_identity')">★ Formação Craquei</button>
+            <button class="dropdown-item" onclick="showEducationView();switchEduTopic('craquei_identity')">★ Craquei</button>
             <button class="dropdown-item" onclick="showAboutView()">★ Sobre o Craquei</button>
             <button class="dropdown-item" onclick="showBillingView()">💳 Minha Assinatura</button>
             <button class="dropdown-item" onclick="showChangePassword()">🔑 Alterar senha</button>
@@ -1987,7 +1987,7 @@ function updateScanHed(stocks, generatedAt) {
     if (watchCount > 0) msg += `<span style="color:#ca8a04">📊 ${watchCount} Pontos 2.5–3.4</span>`;
     hed.innerHTML = msg + '.';
   } else {
-    hed.innerHTML = 'Nenhum sinal de compra no momento.';
+    hed.innerHTML = 'Nenhuma com pontos acima de 3.5 no momento.';
   }
 
   let labelEl = document.getElementById('scanCacheLabel');
@@ -3729,7 +3729,7 @@ function renderSimulator() {
   html += '<div class="card" style="padding:var(--s-4);margin-bottom:var(--s-4);border-left:3px solid var(--primary)">';
   html += '<div style="font-size:12px;color:var(--ink-3);line-height:1.7">';
   html += '🔍 <strong style="color:var(--ink-2)">Critérios do Simular:</strong> exibe apenas ações com sinal de <strong style="color:var(--buy)">Compra</strong> da última simulação, ordenadas por RSI crescente (RSI menor = mais próximo de zona de entrada). ';
-  html += 'O score de correspondência indica o quanto o padrão histórico se encaixa nos candles recentes. ';
+  html += 'O ponto de correspondência indica o quanto o padrão histórico se encaixa nos candles recentes. ';
   html += '<strong>⚠ Padrões gráficos são indicadores, não garantias. Use sempre Stop de Proteção.</strong>';
   html += '</div></div>';
 
@@ -5699,18 +5699,18 @@ function renderAboutView() {
             <div style="font-size:11px;color:var(--ink-3);margin-top:4px">dos brasileiros investem em ações. O resto ainda não recebeu o convite.</div>
           </div>
           <div class="card" style="text-align:center;padding:var(--s-4)">
-            <div style="font-size:1.8rem;font-weight:800;color:#22c55e;font-family:var(--font-display)">141</div>
-            <div style="font-size:11px;color:var(--ink-3);margin-top:4px">ações monitoradas em Brasil, EUA, Europa e Emergentes.</div>
+            <div style="font-size:1.8rem;font-weight:800;color:#22c55e;font-family:var(--font-display)">40</div>
+            <div style="font-size:11px;color:var(--ink-3);margin-top:4px">ações monitoradas em Brasil</div>
           </div>
           <div class="card" style="text-align:center;padding:var(--s-4)">
             <div style="font-size:1.8rem;font-weight:800;color:#ef4444;font-family:var(--font-display)">R$0</div>
-            <div style="font-size:11px;color:var(--ink-3);margin-top:4px">de taxa de corretagem. A gente só mostra o sinal. Você decide.</div>
+            <div style="font-size:11px;color:var(--ink-3);margin-top:4px">de taxa de corretagem. A gente te mostra como ler sinal. Você decide.</div>
           </div>
         </div>
 
         <!-- Legal note -->
         <p style="font-size:11px;color:var(--ink-4);text-align:center;line-height:1.6;margin:0">
-          ⚠ Simulador educacional · Não constitui recomendação de investimento · Craquei não é registrado como consultor de valores mobiliários junto à CVM · Os scores são gerados por algoritmo matemático · Você é responsável por suas decisões.
+          ⚠ Simulador educacional · Não constitui recomendação de investimento · Craquei não é registrado como consultor de valores mobiliários junto à CVM · Os pontos são gerados por algoritmo matemático · Você é responsável por suas decisões.
         </p>
 
       </div>
@@ -5776,8 +5776,8 @@ function renderTrainingView() {
         <div style="display:flex;align-items:center;gap:var(--s-3);margin-bottom:var(--s-3)">
           <span style="font-size:2rem">🏆</span>
           <div>
-            <h1 style="font-family:var(--font-display);font-size:1.6rem;font-weight:800;margin:0;color:var(--ink)">Formação Craquei</h1>
-            <p style="color:var(--ink-3);font-size:13px;margin:4px 0 0">5 módulos pra você mudar como pensa sobre dinheiro. Sem curso chato. Sem jargão.</p>
+            <h1 style="font-family:var(--font-display);font-size:1.6rem;font-weight:800;margin:0;color:var(--ink)">Craquei</h1>
+            <p style="color:var(--ink-3);font-size:13px;margin:4px 0 0">Módulos pra você mudar como pensa sobre dinheiro. Sem curso chato. Sem jargão.</p>
           </div>
         </div>
         <!-- Progress bar -->
@@ -5822,7 +5822,7 @@ function renderTrainingView() {
     html += `<div class="card" style="text-align:center;padding:var(--s-6);background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(239,68,68,0.1));border:1px solid rgba(245,158,11,0.4)">
       <div style="font-size:3rem;margin-bottom:12px">🏆</div>
       <h2 style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:#f59e0b;margin:0 0 8px">Você cracou o código!</h2>
-      <p style="color:var(--ink-2);font-size:15px;margin:0 0 20px">Formação Craquei completa. Você não é mais iniciante — você é um Craque de verdade.</p>
+      <p style="color:var(--ink-2);font-size:15px;margin:0 0 20px">Modulo Craquei completo. Você não é mais iniciante — você é um Craque de verdade.</p>
       <button onclick="showEducationView()" class="btn-primary" style="font-size:15px;padding:12px 28px">Ir para as Aulas Técnicas →</button>
     </div>`;
   }
@@ -6645,7 +6645,7 @@ function renderCraqueIdentityInline(prog) {
       id:'ci_mod2', emoji:'🎯', title:'O placar do Craquei — como ler',
       sub:'Depois daqui, você olha pro Pontos de uma empresa e sabe o que aquele número tá tentando te dizer — e o que ele não te diz.',
       items:[
-        'Olhar pro score e decidir se vale continuar pesquisando ou se já dá pra descartar',
+        'Contar os pontos e decidir se vale continuar pesquisando ou se já dá pra descartar',
         'Saber quando Pontos alto não significa "compra já" e quando Pontos baixo não significa "foge"',
         'Entender de onde o número vem — o suficiente pra não confiar cegamente, e não ignorar'
       ],
@@ -6693,8 +6693,8 @@ function renderCraqueIdentityInline(prog) {
   h += `<div class="card" style="margin-bottom:var(--s-4);padding:var(--s-5)">`;
   h += `<div style="display:flex;align-items:center;gap:var(--s-3);margin-bottom:var(--s-3)">`;
   h += `<img src="/static/craquei-logo.svg" alt="" style="width:44px;height:44px;flex-shrink:0">`;
-  h += `<div><div class="kicker" style="color:#f59e0b;margin-bottom:4px">★ Formação Craquei</div>`;
-  h += `<p style="font-size:13px;color:var(--ink-3);margin:0">5 módulos pra você saber tomar decisões. Não pra ficar rico.</p></div></div>`;
+  h += `<div><div class="kicker" style="color:#f59e0b;margin-bottom:4px">★ Craquei</div>`;
+  h += `<p style="font-size:13px;color:var(--ink-3);margin:0">Módulos pra você saber tomar decisões. Não pra ficar rico.</p></div></div>`;
   h += `<div style="background:var(--bg-2);border-radius:999px;height:8px;overflow:hidden;margin-bottom:6px">`;
   h += `<div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f59e0b,#ef4444);border-radius:999px;transition:width 0.4s"></div></div>`;
   h += `<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:var(--ink-3)">${done.length} de ${modules.length} módulos</span><span style="font-size:11px;font-weight:600;color:#f59e0b">${pct}%</span></div>`;
@@ -6729,7 +6729,7 @@ function renderCraqueIdentityInline(prog) {
   if (allDone) {
     h += `<div class="card" style="text-align:center;padding:var(--s-6);background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(239,68,68,0.08));border:1px solid rgba(245,158,11,0.3)">`;
     h += `<div style="font-size:2.5rem;margin-bottom:12px">🏆</div>`;
-    h += `<h3 style="font-family:var(--font-display);font-size:1.3rem;font-weight:800;color:#f59e0b;margin:0 0 8px">Formação completa.</h3>`;
+    h += `<h3 style="font-family:var(--font-display);font-size:1.3rem;font-weight:800;color:#f59e0b;margin:0 0 8px">Craquei completo</h3>`;
     h += `<p style="color:var(--ink-2);font-size:14px;margin:0 0 20px;line-height:1.6">Você não é mais aquele que "não entende nada de investimento." Agora você tem critério. Isso é diferente de dica.</p>`;
     h += `<button onclick="switchEduTopic('why')" class="btn-primary" style="font-size:14px;padding:10px 24px">Continuar para Fundamentos →</button>`;
     h += `</div>`;
@@ -6759,7 +6759,7 @@ function renderEdu() {
   const isComplete = prog.length >= total;
 
   const allTopics = [
-    { id:'craquei_identity', icon:'★', name:'Craquei', color:'#f59e0b', title:'Formação Craquei', subtitle:'5 módulos pra você saber tomar decisões — não pra ficar rico.', body:'' },
+    { id:'craquei_identity', icon:'★', name:'Craquei', color:'#f59e0b', title:'Craquei', subtitle:'5 módulos pra você saber tomar decisões — não pra ficar rico.', body:'' },
     { id:'strategy',        icon:'🧩', name:t('edu_strategyName'),      color:'#4caf50', title:t('edu_strategyTitle'),      subtitle:t('edu_strategySubtitle'),      body:t('edu_strategyBody') },
     { id:'why',             icon:'🌱', name:t('edu_whyName'),           color:'#22d3ee', title:t('edu_whyTitle'),           subtitle:t('edu_whySubtitle'),           body:t('edu_whyBody') },
     { id:'diversify',       icon:'🌐', name:t('edu_diversifyName'),     color:'#ff6a00', title:t('edu_diversifyTitle'),     subtitle:t('edu_diversifySubtitle'),     body:t('edu_diversifyBody') },
@@ -6778,7 +6778,7 @@ function renderEdu() {
     { id:'tesouro',         icon:'🏛️', name:'Tesouro Direto',           color:'#22d3ee', title:'Tesouro Direto — A Renda Fixa do Governo', subtitle:'Selic, IPCA+ e Prefixado: qual escolher e quando.', body:t('edu_tesouroBody') },
     { id:'lci_lca',         icon:'🌾', name:'LCI e LCA',                color:'#4caf50', title:'LCI e LCA — Renda Fixa Isenta de IR',      subtitle:'Por que a isenção importa e quando compensa mais que o Tesouro.', body:t('edu_lciLcaBody') },
     { id:'juros_compostos', icon:'📐', name:'Juros Compostos',          color:'#ff6a00', title:'O Poder dos Juros Compostos',               subtitle:'A força que transforma disciplina em patrimônio ao longo do tempo.', body:t('edu_jurosCompostosBody') },
-    { id:'momentum_signal', icon:'🎯', name:'Sinal Craquei', color:'#22d3ee', title:'Como o Craquei Calcula os Scores', subtitle:'Entenda os 9 critérios do scoring v3, as faixas de score e a pontuação máxima de 6.0.', body:t('edu_momentumSignalBody') },
+    { id:'momentum_signal', icon:'🎯', name:'Sinal Craquei', color:'#22d3ee', title:'Como o Craquei Calcula os pontos', subtitle:'Entenda os 9 critérios do scoring v3, as faixas de pontos a pontuação máxima de 6.0.', body:t('edu_momentumSignalBody') },
     { id:'cdb_cdi',    icon:'🏦', name:'CDB e CDI',        color:'#4caf50', title:'CDB e CDI — Renda Fixa Bancária',                subtitle:'O que é CDI, como o CDB rende sobre ele, e quando compensa mais que o Tesouro.', body:t('edu_cdbCdiBody') },
     { id:'smart_exit', icon:'🛡️', name:'Saída Inteligente', color:'#ef5350', title:'Saída Inteligente — Stop Móvel e o Prazo de 20 Dias', subtitle:'Por que sair em 20 dias, como o stop móvel protege seus ganhos e quando sair antes do prazo.', body:t('edu_smartExitBody') },
     { id:'market_regime', icon:'🌡️', name:'Regime de Mercado', color:'#ef9a00', title:'Regime de Mercado — Filtro Técnico de Ruído', subtitle:'Entenda os três estados do IBOV (🟢🟡🔴) e como o app usa isso como filtro de dados — não como instrução de investimento.', body:t('edu_marketRegimeBody') },
@@ -7255,7 +7255,7 @@ init();
   <div style="background:var(--bg-0,#0f1b2d);border:1px solid var(--line);border-radius:16px;max-width:480px;width:100%;padding:32px;position:relative;max-height:90vh;overflow-y:auto">
     <div style="font-size:36px;text-align:center;margin-bottom:16px">★</div>
     <h2 style="font-family:var(--font-display);font-size:24px;font-weight:700;text-align:center;margin:0 0 8px">Bem-vindo ao Craquei!</h2>
-    <p style="color:var(--ink-3);text-align:center;font-size:14px;margin:0 0 20px">O clube de quem finalmente entendeu o mercado.</p>
+    <p style="color:var(--ink-3);text-align:center;font-size:14px;margin:0 0 20px">O clube de quem quer entender o mercado.</p>
     <div style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.25);border-radius:8px;padding:12px 16px;margin:0 0 20px;display:flex;align-items:center;gap:10px">
       <span style="font-size:1.2rem">🔒</span>
       <span style="color:var(--ink-2);font-size:.9rem" data-onboarding-safety></span>
@@ -7263,7 +7263,7 @@ init();
     <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:28px">
       <div style="display:flex;gap:12px;align-items:flex-start">
         <span style="font-size:22px;flex-shrink:0">📡</span>
-        <div><strong style="color:var(--ink)">Passo 1 — Simule uma varredura</strong><br><span style="font-size:13px;color:var(--ink-3)">Clique em "Varrer" para calcular RSI, MACD, ADX e ver os dados técnicos de cada ativo com score numérico. Nenhuma operação real é realizada.</span></div>
+        <div><strong style="color:var(--ink)">Passo 1 — Simule uma varredura</strong><br><span style="font-size:13px;color:var(--ink-3)">Clique em "Varrer" para calcular RSI, MACD, ADX e ver os dados técnicos de cada ativo com pontos numérico. Nenhuma operação real é realizada.</span></div>
       </div>
       <div style="display:flex;gap:12px;align-items:flex-start">
         <span style="font-size:22px;flex-shrink:0">⭐</span>
@@ -7280,7 +7280,7 @@ init();
     </div>
     <div style="border-top:1px solid var(--line);padding-top:12px;margin-bottom:12px;font-size:11px;color:var(--ink-4);line-height:1.6;text-align:center">
       ⚠ Simulação educacional · Dados para fins didáticos · Não constitui recomendação de investimento<br>
-      <strong style="color:var(--ink-3)">📋 Sobre o Craquei:</strong> Este app é um screener de análise técnica — <strong>não é</strong> corretora, distribuidora, analista de valores mobiliários ou assessor de investimentos registrado na CVM. Os scores são gerados por algoritmo matemático. Você é responsável por suas próprias decisões.
+      <strong style="color:var(--ink-3)">📋 Sobre o Craquei:</strong> Este app é um screener de análise técnica — <strong>não é</strong> corretora, distribuidora, analista de valores mobiliários ou assessor de investimentos registrado na CVM. Os pontos são gerados por algoritmo matemático. Você é responsável por suas próprias decisões.
     </div>
     <div style="display:flex;gap:12px">
       <button onclick="completeOnboarding()" style="flex:1;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px">Começar agora →</button>
