@@ -57,7 +57,6 @@
               </div>
             </div>
             <button class="dropdown-item" onclick="showOnboardingModal()">🚀 Primeiros Passos</button>
-            <button class="dropdown-item" onclick="showEducationView();switchEduTopic('craquei_identity')">★ Craquei</button>
             <button class="dropdown-item" onclick="showAboutView()">★ Sobre o Craquei</button>
             <button class="dropdown-item" onclick="showBillingView()">💳 Minha Assinatura</button>
             <button class="dropdown-item" onclick="showChangePassword()">🔑 Alterar senha</button>
@@ -78,7 +77,6 @@
         <button class="nav-pill" onclick="showSimulatorView()" data-view="simulator">Simular</button>
         <button class="nav-pill" onclick="showPortfolioView()" data-view="portfolio">Carteira</button>
         <button class="nav-pill" onclick="showEducationView()" data-view="learn">★ Primeiros Passos</button>
-        <button class="nav-pill" onclick="showAboutView()" data-view="about">Sobre</button>
       </nav>
       <div class="fx-bar" id="fxBar"></div>
     </div>
@@ -1987,7 +1985,7 @@ function updateScanHed(stocks, generatedAt) {
     if (watchCount > 0) msg += `<span style="color:#ca8a04">📊 ${watchCount} Pontos 2.5–3.4</span>`;
     hed.innerHTML = msg + '.';
   } else {
-    hed.innerHTML = 'Nenhuma com pontos acima de 3.5 no momento.';
+    hed.innerHTML = 'Nenhuma ação com pontuação acima desse critério.';
   }
 
   let labelEl = document.getElementById('scanCacheLabel');
