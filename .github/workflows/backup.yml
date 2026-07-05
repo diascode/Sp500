@@ -1,0 +1,49 @@
+name: Daily Backup
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 3am UTC daily
+  workflow_dispatch:      # allow manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: backups
+          fetch-depth: 0
+
+      - name: Login and download backup
+        env:
+          ADMIN_EMAIL: ${{ secrets.CRAQUEI_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.CRAQUEI_ADMIN_PASSWORD }}
+        run: |
+          TOKEN=$(curl -sf https://www.craquei.com.br/api/auth/login \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+          mkdir -p backups
+          curl -sf https://www.craquei.com.br/api/admin/backup \
+            -H "Authorization: Bearer $TOKEN" \
+            -o "backups/users-$(date +%Y-%m-%d).json"
+
+          echo "Backup saved: backups/users-$(date +%Y-%m-%d).json"
+          wc -l "backups/users-$(date +%Y-%m-%d).json"
+
+      - name: Remove backups older than 30 days
+        run: |
+          find backups/ -name "users-*.json" -mtime +30 -delete || true
+
+      - name: Commit backup
+        run: |
+          git config user.email "backup-bot@craquei.com.br"
+          git config user.name "Craquei Backup Bot"
+          git add backups/
+          git diff --staged --quiet || git commit -m "backup: $(date +%Y-%m-%d) [skip ci]"
+          git push origin backups

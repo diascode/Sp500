@@ -279,7 +279,7 @@ async function handleRequest(req, res) {
           <a href="${vLink}" style="display:inline-block;background:#4ade80;color:#000;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;margin-bottom:24px">Confirmar email →</a>
           <p style="color:#666;font-size:12px;margin:0">Este link expira em 24 horas. Se você não criou uma conta, ignore este email.</p>
         </div>`);
-      return sendJSON(res, 201, { token: signToken(user), user: { id: user.id, email: user.email, tier: user.tier }, emailVerified: false });
+      return sendJSON(res, 201, { pending: true, email: user.email });
     }
 
     if (pathname === '/api/auth/login' && req.method === 'POST') {
@@ -288,6 +288,7 @@ async function handleRequest(req, res) {
       if (!email || !password) return sendError(res, 400, 'Email e senha são obrigatórios');
       const user = findUser(email);
       if (!user || !await verifyPassword(password, user.password)) return sendError(res, 401, 'Email ou senha inválidos');
+      if (!user.emailVerified) return sendJSON(res, 403, { error: 'EMAIL_NOT_VERIFIED', email: user.email });
       return sendJSON(res, 200, { token: signToken(user), user: { id: user.id, email: user.email, tier: user.tier } });
     }
 
@@ -425,6 +426,30 @@ async function handleRequest(req, res) {
       return sendJSON(res, 200, { ok: true });
     }
 
+    // Resend without auth — for pending-verification state after signup
+    if (pathname === '/api/auth/resend-verification-public' && req.method === 'POST') {
+      const body = await readBody(req);
+      const email = (body.email || '').toLowerCase().trim();
+      const user = findUser(email);
+      if (!user || user.emailVerified) return sendJSON(res, 200, { ok: true }); // silent — no enumeration
+      const lastSent = _verifyCooldown.get(user.email) || 0;
+      if (Date.now() - lastSent < 60_000) return sendError(res, 429, 'Aguarde antes de solicitar outro email de verificação.');
+      const vToken = makeToken();
+      _verifyTokens.set(vToken, { email: user.email, expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
+      _verifyCooldown.set(user.email, Date.now());
+      saveTokens();
+      const vLink = `${APP_URL_BASE}/?verify=${vToken}`;
+      await sendEmail(user.email, 'Confirme seu email — Craquei', `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0a;padding:32px;border-radius:12px;color:#e0e0e0">
+          <h2 style="color:#4ade80;margin:0 0 8px">Craquei ★</h2>
+          <p style="color:#aaa;font-size:13px;margin:0 0 24px">Analise suas ações. Crack o código do mercado.</p>
+          <p style="font-size:14px;color:#ccc;margin:0 0 24px">Clique no botão abaixo para confirmar seu endereço de email.</p>
+          <a href="${vLink}" style="display:inline-block;background:#4ade80;color:#000;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;margin-bottom:24px">Confirmar email →</a>
+          <p style="color:#666;font-size:12px;margin:0">Este link expira em 24 horas. Se você não solicitou isso, ignore este email.</p>
+        </div>`);
+      return sendJSON(res, 200, { ok: true });
+    }
+
     // ─── GDPR / ACCOUNT ─────────────────────────────────────────
     if (pathname === '/api/auth/data-export' && req.method === 'GET') {
       const authUser = getAuthUser(req);
@@ -519,6 +544,17 @@ async function handleRequest(req, res) {
     }
 
     // ─── ADMIN ───────────────────────────────────────────────────
+    if (pathname === '/api/admin/backup' && req.method === 'GET') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
+      if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="users-${new Date().toISOString().slice(0,10)}.json"`);
+      res.writeHead(200);
+      res.end(JSON.stringify(users, null, 2));
+      return;
+    }
+
     if (pathname === '/api/admin/users' && req.method === 'GET') {
       const authUser = getAuthUser(req);
       if (!authUser) return sendError(res, 401, 'Não autenticado');

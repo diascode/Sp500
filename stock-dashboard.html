@@ -714,12 +714,17 @@ async function submitAuth() {
       setToken(data.token);
       await checkAuth();
       closeAuthModal();
-      if (authMode === 'signup') {
-        showToast('📧 Verifique seu email para confirmar o cadastro.', true, 5000);
-      }
       if (authUser && !authUser.onboardingDone) {
         setTimeout(showOnboardingModal, 800);
       }
+    } else if (data.pending) {
+      // Signup: email not yet verified — show pending wall
+      closeAuthModal();
+      showVerifyPendingWall(data.email);
+    } else if (data.error === 'EMAIL_NOT_VERIFIED') {
+      // Login: account exists but email not verified
+      closeAuthModal();
+      showVerifyPendingWall(data.email);
     } else {
       errEl.textContent = data.error || t('auth_wrongCredentials');
       errEl.style.display = 'block';
@@ -817,6 +822,47 @@ async function resendVerificationEmail() {
   } finally {
     if (btn) { btn.textContent = 'Reenviar email'; btn.disabled = false; }
   }
+}
+
+let _pendingVerifyEmail = null;
+
+function showVerifyPendingWall(email) {
+  _pendingVerifyEmail = email;
+  const existing = document.getElementById('verifyPendingWall');
+  if (existing) existing.remove();
+  const wall = document.createElement('div');
+  wall.id = 'verifyPendingWall';
+  wall.style.cssText = 'position:fixed;inset:0;z-index:9999;background:var(--bg-0,#0a0a0a);display:flex;align-items:center;justify-content:center;padding:24px';
+  wall.innerHTML = `
+    <div style="max-width:420px;width:100%;background:var(--bg-1,#111);border:1px solid var(--border,#222);border-radius:16px;padding:40px 32px;text-align:center">
+      <div style="font-size:48px;margin-bottom:16px">📧</div>
+      <h2 style="margin:0 0 8px;font-size:20px;color:var(--ink-1,#e0e0e0)">Confirme seu email</h2>
+      <p style="color:var(--ink-3,#888);font-size:14px;margin:0 0 8px">Enviamos um link de ativação para</p>
+      <p style="color:#4ade80;font-size:14px;font-weight:700;margin:0 0 24px">${email}</p>
+      <p style="color:var(--ink-3,#888);font-size:13px;margin:0 0 28px">Clique no link do email para ativar sua conta. Verifique também o spam.</p>
+      <button onclick="resendVerifyPublic()" id="resendPublicBtn" style="width:100%;padding:14px;background:#4ade80;color:#000;border:none;border-radius:8px;font-weight:700;font-size:15px;cursor:pointer;margin-bottom:12px">Reenviar email de ativação</button>
+      <button onclick="document.getElementById('verifyPendingWall').remove();_pendingVerifyEmail=null;" style="width:100%;padding:10px;background:none;border:1px solid var(--border,#333);border-radius:8px;color:var(--ink-3,#888);font-size:13px;cursor:pointer">Voltar</button>
+    </div>`;
+  document.body.appendChild(wall);
+}
+
+async function resendVerifyPublic() {
+  const btn = document.getElementById('resendPublicBtn');
+  if (!btn || !_pendingVerifyEmail) return;
+  btn.textContent = 'Enviando...'; btn.disabled = true;
+  try {
+    const resp = await fetch('/api/auth/resend-verification-public', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: _pendingVerifyEmail })
+    });
+    const data = await resp.json();
+    if (resp.status === 429) {
+      showToast('Aguarde antes de reenviar.', false, 3000);
+    } else {
+      showToast('Email reenviado! Verifique sua caixa de entrada.', true, 4000);
+    }
+  } catch { showToast('Erro ao reenviar. Tente novamente.', false, 4000); }
+  finally { if (btn) { btn.textContent = 'Reenviar email de ativação'; btn.disabled = false; } }
 }
 
 function showUpgradeModal() {
@@ -7093,11 +7139,16 @@ async function init() {
       .then(r => r.json())
       .then(data => {
         if (data.ok) {
+          // Remove pending wall if visible
+          const wall = document.getElementById('verifyPendingWall');
+          if (wall) wall.remove();
           if (authUser) authUser.emailVerified = true;
           updateAuthUI();
           showToast('✅ Email verificado! Conta ativada com sucesso.', true, 5000);
+          // If not logged in yet, show auth modal so user can sign in
+          if (!authUser) setTimeout(showAuthModal, 1000);
         } else {
-          showToast('Link de verificação expirado. Entre e clique em "Reenviar email".', false, 6000);
+          showToast('Link de verificação expirado. Solicite um novo.', false, 6000);
         }
       })
       .catch(() => showToast('Não foi possível verificar o email. Tente novamente.', false, 4000));
