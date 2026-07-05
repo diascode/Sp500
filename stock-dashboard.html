@@ -64,6 +64,7 @@
             <button class="dropdown-item" onclick="exportMyData()">📥 Exportar meus dados</button>
             <button class="dropdown-item danger" onclick="logout()">🚪 Sair</button>
             <button class="dropdown-item danger" onclick="deleteMyAccount()">🗑️ Excluir conta</button>
+            <a href="mailto:suporte@craquei.com.br" class="dropdown-item" style="text-decoration:none;display:block">✉️ suporte@craquei.com.br</a>
           </div>
         </div>
       </div>
@@ -191,7 +192,10 @@
 
 <footer class="footer">
   <div id="footerVersion" style="display:none"></div>
-  <div id="footerDisclaimer" class="disclaimer"><strong>⚠ PAPER TRADING — EDUCATIONAL PURPOSES ONLY.</strong> MOMENTUM is a technical analysis simulator. Nothing on this site constitutes financial advice, investment recommendation, or solicitation to buy or sell securities. All trades are simulated. Past performance does not guarantee future results. Consult a qualified financial advisor before making real investment decisions. <strong>By using this app you agree these are paper trades only.</strong></div>
+  <div id="footerDisclaimer" class="disclaimer"><strong>⚠ SIMULAÇÃO DE OPERAÇÕES — APENAS PARA FINS EDUCACIONAIS.</strong> O MOMENTUM é um screener de análise técnica — NÃO é corretora, distribuidora, analista de valores mobiliários ou assessor de investimentos registrado na CVM (Res. CVM 62/2022). Os scores são gerados por algoritmo matemático. Nada neste site constitui recomendação de investimento ou solicitação de compra ou venda de valores mobiliários. Resultados passados não garantem resultados futuros. Você é responsável por suas próprias decisões de investimento.</div>
+  <div style="margin-top:8px;font-size:12px;color:var(--ink-4);text-align:center">
+    Dúvidas ou sugestões? <a href="mailto:suporte@craquei.com.br" style="color:var(--ink-3);text-decoration:underline">suporte@craquei.com.br</a>
+  </div>
 </footer>
 
 <!-- AUTH MODAL -->
@@ -7329,7 +7333,8 @@ init();
     </div>
     <div style="border-top:1px solid var(--line);padding-top:12px;margin-bottom:12px;font-size:11px;color:var(--ink-4);line-height:1.6;text-align:center">
       ⚠ Simulação educacional · Dados para fins didáticos · Não constitui recomendação de investimento<br>
-      <strong style="color:var(--ink-3)">📋 Sobre o Craquei:</strong> Este app é um screener de análise técnica — <strong>não é</strong> corretora, distribuidora, analista de valores mobiliários ou assessor de investimentos registrado na CVM. Os pontos são gerados por algoritmo matemático. Você é responsável por suas próprias decisões.
+      <strong style="color:var(--ink-3)">📋 Sobre o Craquei:</strong> Este app é um screener de análise técnica — <strong>não é</strong> corretora, distribuidora, analista de valores mobiliários ou assessor de investimentos registrado na CVM. Os pontos são gerados por algoritmo matemático. Você é responsável por suas próprias decisões.<br><br>
+      Dúvidas ou sugestões? <a href="mailto:suporte@craquei.com.br" style="color:var(--ink-3);text-decoration:underline">suporte@craquei.com.br</a>
     </div>
     <div style="display:flex;gap:12px">
       <button onclick="completeOnboarding()" style="flex:1;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px">Começar agora →</button>
