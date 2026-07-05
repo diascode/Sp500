@@ -288,7 +288,7 @@ async function handleRequest(req, res) {
       if (!email || !password) return sendError(res, 400, 'Email e senha são obrigatórios');
       const user = findUser(email);
       if (!user || !await verifyPassword(password, user.password)) return sendError(res, 401, 'Email ou senha inválidos');
-      if (!user.emailVerified) return sendJSON(res, 403, { error: 'EMAIL_NOT_VERIFIED', email: user.email });
+      if (user.emailVerified === false) return sendJSON(res, 403, { error: 'EMAIL_NOT_VERIFIED', email: user.email });
       return sendJSON(res, 200, { token: signToken(user), user: { id: user.id, email: user.email, tier: user.tier } });
     }
 
