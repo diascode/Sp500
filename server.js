@@ -56,7 +56,7 @@ process.on('uncaughtException', (err) => {
 // ─── FEATURE FLAGS ──────────────────────────────────────────────────────
 const FLAGS_PATH = path.join(DIR, 'data', 'feature-flags.json');
 const DEFAULT_FLAGS = {
-  cpf_required:   true,
+  cpf_required:   false,
   correlation:    { free: true,  pro: true },
   patternFinder:  { free: true,  pro: true },
   simulator:      { free: true,  pro: true },
@@ -258,9 +258,14 @@ async function handleRequest(req, res) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) return sendError(res, 400, 'Email inválido');
       const cpfDigits = (body.cpf || '').replace(/\D/g, '');
-      if (featureFlags.cpf_required !== false && !cpfDigits) return sendError(res, 400, 'CPF é obrigatório para cadastro');
-      if (!validateCPF(cpfDigits)) return sendError(res, 400, 'CPF inválido');
-      if (users.some(u => u.cpf === cpfDigits)) return sendError(res, 409, 'CPF já cadastrado');
+      if (featureFlags.cpf_required !== false) {
+        if (!cpfDigits) return sendError(res, 400, 'CPF é obrigatório para cadastro');
+        if (!validateCPF(cpfDigits)) return sendError(res, 400, 'CPF inválido');
+        if (users.some(u => u.cpf === cpfDigits)) return sendError(res, 409, 'CPF já cadastrado');
+      } else if (cpfDigits) {
+        if (!validateCPF(cpfDigits)) return sendError(res, 400, 'CPF inválido');
+        if (users.some(u => u.cpf === cpfDigits)) return sendError(res, 409, 'CPF já cadastrado');
+      }
       if (findUser(email)) return sendError(res, 409, 'Email já cadastrado');
       const user = { id: nextId(), email: email.toLowerCase(), password: await hashPassword(password), cpf: cpfDigits, tier: 'free', createdAt: new Date().toISOString(), stripeCustomerId: null, stripeSubId: null, subStatus: null, paymentMethodLast4: null, failedPaymentCount: 0, paymentHistory: [], subscriptionEnd: null, emailVerified: false };
       users.push(user); saveUsers(users);
@@ -568,6 +573,7 @@ async function handleRequest(req, res) {
         failedPaymentCount: u.failedPaymentCount || 0,
         paymentHistory: (u.paymentHistory || []).slice(-6).reverse(),
         isSubscribed: u.tier === 'pro' && u.subscriptionEnd && new Date(u.subscriptionEnd) > new Date(),
+        emailVerified: u.emailVerified !== false,
       }));
       const stats = {
         total: users.length,
@@ -689,6 +695,21 @@ async function handleRequest(req, res) {
     // ─── FEATURE FLAGS ───────────────────────────────────────────
     if (pathname === '/api/feature-flags' && req.method === 'GET') {
       return sendJSON(res, 200, featureFlags);
+    }
+
+    if (pathname === '/api/admin/delete-user' && req.method === 'POST') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
+      if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
+      const body = await readBody(req);
+      const targetEmail = (body.email || '').toLowerCase().trim();
+      if (!targetEmail) return sendError(res, 400, 'Email obrigatório');
+      if (targetEmail === ADMIN_EMAIL) return sendError(res, 400, 'Não é possível deletar a conta admin');
+      const idx = users.findIndex(u => u.email === targetEmail);
+      if (idx === -1) return sendError(res, 404, 'Usuário não encontrado');
+      users.splice(idx, 1);
+      saveUsers(users);
+      return sendJSON(res, 200, { ok: true });
     }
 
     if (pathname === '/api/admin/feature-flags' && req.method === 'POST') {
