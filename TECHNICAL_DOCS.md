@@ -1,6 +1,6 @@
 # MOMENTUM — Technical Documentation
 
-*Version 5.3 — June 2026*
+*Version 5.4 — July 2026*
 
 ---
 
@@ -111,8 +111,12 @@ Momentum/
 │   ├── indicators.js         # TA indicator stubs / exports (~37 lines)
 │   ├── lessons.js            # Interactive lesson data — window.LESSON_DATA (~2,188 lines)
 │   └── patterns.js           # Chart pattern definitions (~83 lines)
+├── .github/
+│   └── workflows/
+│       └── backup.yml        # GitHub Actions: daily backup to backups branch
 ├── data/
-│   └── users.json            # User database (created at first signup)
+│   ├── users.json            # User database (created at first signup)
+│   └── tokens.json           # Pending reset/verify tokens (persisted across restarts)
 ├── .claude/
 │   ├── settings.json         # Claude Code permissions
 │   └── commands/
@@ -128,6 +132,7 @@ Momentum/
 |---|---|---|
 | `data/users.json` | First signup | Persistent user records |
 | `data/users.json.tmp.<pid>` | During save | Atomic write temp file (auto-deleted) |
+| `data/tokens.json` | First token issued | Reset and verify tokens — persists across restarts |
 | `data/feature-flags.json` | First admin toggle | Feature flag overrides (defaults in `server.js`) |
 
 ---
@@ -139,7 +144,7 @@ Copy `.env.example` to `.env` and fill in values before running.
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `JWT_SECRET` | **Yes** | — | Secret for signing JWTs. Min 32 chars. Generate: `openssl rand -hex 64` |
-| `APP_URL` | **Yes** | `http://localhost:8080` | Public URL — used for CORS origin and Stripe redirect URLs |
+| `APP_URL` | **Yes** | `http://localhost:8080` | Public URL — used for email links and Stripe redirect URLs. Production: `https://www.craquei.com.br` |
 | `NODE_ENV` | No | `development` | Set to `production` to enable JWT_SECRET safety guard |
 | `PORT` | No | `8080` | Port the server listens on inside the container |
 | `HOST` | No | `0.0.0.0` | Bind address |
@@ -216,7 +221,7 @@ res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
 ### 4.4 Authentication System
 
-**Token format:** JWT (RS256 algorithm via `jsonwebtoken` library).
+**Token format:** JWT (HS256 algorithm via `jsonwebtoken` library).
 
 **Payload:**
 ```json
@@ -224,6 +229,20 @@ res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 ```
 
 **Expiry:** 30 days.
+
+**Mandatory email verification:**
+
+Email verification is enforced at login. Users who have not confirmed their email cannot obtain a JWT:
+
+- `POST /api/auth/signup` — creates the account, sends verification email, returns `{ pending: true, email }`. **No JWT issued.**
+- `POST /api/auth/login` — if `emailVerified === false`, returns HTTP 403 `{ error: "EMAIL_NOT_VERIFIED", email }`.
+- `GET /api/auth/verify-email?token=...` — marks the account as verified; the user can then log in normally.
+
+The frontend responds to both `pending` and `EMAIL_NOT_VERIFIED` by displaying a full-screen verification wall (`showVerifyPendingWall(email)`) with a resend button. The resend uses `POST /api/auth/resend-verification-public` (no JWT required) with a 60-second per-email cooldown.
+
+**Token persistence (`data/tokens.json`):**
+
+Reset and verification tokens were previously stored in in-memory Maps and lost on server restart. They are now persisted to `data/tokens.json` on every mutation and reloaded at boot (expired tokens are filtered out on load). This ensures password-reset and verification links remain valid across Railway redeployments.
 
 **Token extraction:**
 
@@ -377,10 +396,12 @@ Create a new user account.
 
 | Code | Body | Condition |
 |---|---|---|
-| 201 | `{ token, user: { id, email, tier } }` | Success |
+| 201 | `{ pending: true, email }` | Account created — verification email sent, no JWT |
 | 400 | `{ error }` | Missing fields or password < 6 chars |
-| 409 | `{ error: "Email already registered" }` | Duplicate email |
+| 409 | `{ error }` | Duplicate email or CPF |
 | 429 | `{ error }` | Rate limit exceeded |
+
+> **No JWT is issued on signup.** The user must verify their email before they can log in.
 
 ---
 
@@ -399,7 +420,8 @@ Authenticate an existing user.
 |---|---|---|
 | 200 | `{ token, user: { id, email, tier } }` | Success |
 | 400 | `{ error }` | Missing fields |
-| 401 | `{ error: "Invalid email or password" }` | Wrong credentials |
+| 401 | `{ error: "Email ou senha inválidos" }` | Wrong credentials |
+| 403 | `{ error: "EMAIL_NOT_VERIFIED", email }` | Correct credentials but email not confirmed |
 | 429 | `{ error }` | Rate limit exceeded |
 
 ---
@@ -435,6 +457,55 @@ Change the authenticated user's password.
 | 200 | `{ ok: true }` | Success |
 | 400 | `{ error }` | Missing fields, wrong current password, or new password too short |
 | 401 | `{ error }` | Not authenticated |
+
+---
+
+---
+
+#### `POST /api/auth/resend-verification-public`
+
+Resend the verification email without requiring a JWT. Used by the frontend pending-wall for users who are not yet logged in.
+
+**Request body:**
+```json
+{ "email": "user@example.com" }
+```
+
+**Responses:**
+
+| Code | Body | Condition |
+|---|---|---|
+| 200 | `{ ok: true }` | Email sent (or user doesn't exist — silent, no enumeration) |
+| 429 | `{ error }` | Called again within the 60-second cooldown |
+
+---
+
+#### `POST /api/auth/forgot-password`
+
+Send a password-reset link to the given email. Always returns 200 to prevent user enumeration. The reset token is persisted to `data/tokens.json` and expires in 1 hour.
+
+**Request body:**
+```json
+{ "email": "user@example.com" }
+```
+
+**Response 200:** `{ ok: true, message: "Se esse email estiver cadastrado..." }`
+
+---
+
+#### `POST /api/auth/reset-password`
+
+Set a new password using a reset token from the email link.
+
+**Request body:**
+```json
+{ "token": "<hex token from email>", "password": "newpassword" }
+```
+
+| Code | Body | Condition |
+|---|---|---|
+| 200 | `{ ok: true }` | Password updated; token invalidated |
+| 400 | `{ error }` | Token expired/invalid or password < 6 chars |
 
 ---
 
@@ -541,6 +612,20 @@ Grant or revoke admin tier.
 ```
 
 > This endpoint exists for future multi-admin scenarios. Currently the admin email is hardcoded in server.js.
+
+---
+
+---
+
+#### `GET /api/admin/backup`
+
+Download the full `users.json` as a JSON file. Used by the GitHub Actions daily backup workflow.
+
+**Headers:** `Authorization: Bearer <admin-token>`
+
+**Response 200:** Raw `users.json` array with `Content-Disposition: attachment; filename="users-YYYY-MM-DD.json"`.
+
+> Contains hashed passwords, emails, CPFs, and Stripe IDs. Store only in private/encrypted destinations.
 
 ---
 
@@ -797,6 +882,10 @@ let _quizSubmitted = false;     // true after "Ver Resultado" clicked
 | `darf_carry_swing` | number | Accumulated swing loss carryforward (R$) |
 | `darf_carry_daytrade` | number | Accumulated day-trade loss carryforward (R$) |
 | `momentum_consent` | `'1'` | Cookie/LGPD consent accepted flag |
+
+**Email verification wall:**
+
+When signup or login returns a pending/unverified state, the frontend calls `showVerifyPendingWall(email)`, which appends a full-screen overlay (`#verifyPendingWall`) blocking app access. The overlay shows the email address, a "Reenviar email de ativação" button (calls `resendVerifyPublic()` → `/api/auth/resend-verification-public`), and a "Voltar" button that removes the wall. When the user clicks the verification link, `?verify=` handling removes the wall and prompts login.
 
 ### 6.2 i18n System
 
@@ -1421,25 +1510,48 @@ docker compose logs -f
 docker compose down
 ```
 
-### Deploying to Railway or Render
+### Production Deployment — Railway (current)
 
-**Railway** and **Render** are the recommended platforms for this app. Both support persistent filesystems and long-running Node.js servers — no code changes required.
+The production instance runs at **https://www.craquei.com.br** on Railway.
 
-**Railway:**
-1. Connect GitHub repo at [railway.app](https://railway.app).
-2. Railway auto-detects `npm start` from `package.json`.
-3. Add env vars in the Railway dashboard (JWT_SECRET, APP_URL, etc.).
-4. Optionally add a Railway volume mounted at `/app/data` to persist `users.json` across deploys.
+**Setup checklist:**
 
-**Render:**
-1. Create a new **Web Service** at [render.com](https://render.com), connect GitHub.
-2. Set **Build Command:** `npm install --omit=dev`; **Start Command:** `node server.js`.
-3. Add env vars in the Render dashboard.
-4. Add a **Disk** at `/app/data` (any size — the JSON file stays small until thousands of users).
+| Step | Status |
+|---|---|
+| GitHub repo connected | ✅ |
+| Railway volume `app-data` mounted at `/app/data` | ✅ |
+| `APP_URL=https://www.craquei.com.br` | ✅ |
+| `JWT_SECRET` (64-char hex) | ✅ |
+| `ADMIN_EMAIL` | ✅ |
+| `RESEND_API_KEY` + `RESEND_FROM_EMAIL` | ✅ |
+| `STRIPE_SECRET_KEY` (use `sk_live_...` for production) | ⚠️ sandbox |
+| `STRIPE_PRICE_PRO_MONTHLY` (live price ID) | ⚠️ sandbox |
+| `STRIPE_WEBHOOK_SECRET` (live webhook) | ⚠️ sandbox |
+
+**Data persistence:** The Railway volume `app-data` is mounted at `/app/data`. Both `users.json` and `tokens.json` are written there and survive redeployments. Verified: after a forced redeploy, user count remained unchanged.
 
 **Why not Vercel?**
 
-Vercel's serverless functions have a **read-only filesystem** — writing to `data/users.json` is not possible. Deploying on Vercel would require migrating user storage to an external database (e.g. Neon Postgres or Vercel KV). Railway/Render are drop-in compatible with the current architecture.
+Vercel's serverless functions have a **read-only filesystem** — writing to `data/users.json` is not possible. Railway is the recommended platform and is already in production.
+
+### Daily Backup (GitHub Actions)
+
+A scheduled workflow (`.github/workflows/backup.yml`) runs at **03:00 UTC daily** and on manual trigger:
+
+1. Authenticates as admin via `POST /api/auth/login`
+2. Downloads `GET /api/admin/backup` (full `users.json`)
+3. Saves as `backups/users-YYYY-MM-DD.json` on the `backups` branch
+4. Removes files older than 30 days
+5. Commits with `[skip ci]` to avoid triggering a Railway redeploy
+
+**Required GitHub secrets** (Settings → Secrets → Actions):
+
+| Secret | Value |
+|---|---|
+| `CRAQUEI_ADMIN_EMAIL` | Admin account email |
+| `CRAQUEI_ADMIN_PASSWORD` | Admin account password |
+
+The `backups` branch is an orphan branch (no shared history with `master`). Manual trigger available under Actions → Daily Backup → Run workflow.
 
 ### Healthcheck
 
