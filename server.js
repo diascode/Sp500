@@ -34,7 +34,7 @@ const {
   saveUsers, ADMIN_EMAIL, users,
   hashPassword, verifyPassword, findUser, nextId,
   TIERS, AUTH_MAX, AUTH_WINDOW_MS,
-  checkAuthRateLimit, getAuthUser, APP_URL_BASE,
+  checkAuthRateLimit, getAuthUser, APP_URL_BASE, saveTokens,
 } = auth;
 
 const {
@@ -268,6 +268,7 @@ async function handleRequest(req, res) {
       const vToken = makeToken();
       _verifyTokens.set(vToken, { email: user.email, expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
       _verifyCooldown.set(user.email, Date.now());
+      saveTokens();
       const vLink = `${APP_URL_BASE}/?verify=${vToken}`;
       sendEmail(user.email, 'Confirme seu email — Craquei', `
         <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0a;padding:32px;border-radius:12px;color:#e0e0e0">
@@ -355,6 +356,7 @@ async function handleRequest(req, res) {
       if (user) {
         const token = makeToken();
         _resetTokens.set(token, { email, expiresAt: Date.now() + 60 * 60 * 1000 }); // 1 hour
+        saveTokens();
         const link = `${APP_URL_BASE}/?reset=${token}`;
         await sendEmail(email, 'Redefinição de senha — Craquei', `
           <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0a;padding:32px;border-radius:12px;color:#e0e0e0">
@@ -382,6 +384,7 @@ async function handleRequest(req, res) {
       user.passwordChangedAt = new Date().toISOString();
       saveUsers(users);
       _resetTokens.delete(token);
+      saveTokens();
       return sendJSON(res, 200, { ok: true });
     }
 
@@ -394,6 +397,7 @@ async function handleRequest(req, res) {
       user.emailVerified = true;
       saveUsers(users);
       _verifyTokens.delete(token);
+      saveTokens();
       return sendJSON(res, 200, { ok: true });
     }
 
@@ -408,6 +412,7 @@ async function handleRequest(req, res) {
       const vToken = makeToken();
       _verifyTokens.set(vToken, { email: user.email, expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
       _verifyCooldown.set(user.email, Date.now());
+      saveTokens();
       const vLink = `${APP_URL_BASE}/?verify=${vToken}`;
       await sendEmail(user.email, 'Confirme seu email — Craquei', `
         <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0a0a0a;padding:32px;border-radius:12px;color:#e0e0e0">
