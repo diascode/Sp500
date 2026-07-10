@@ -75,6 +75,9 @@ function saveFlags(flags) {
 }
 let featureFlags = loadFlags();
 
+// ─── TELEGRAM BOT ───────────────────────────────────────────────────────
+const telegramBot = require('./lib/telegram')(ENV);
+
 // ─── STRIPE ─────────────────────────────────────────────────────────────
 let stripe;
 try {
@@ -909,6 +912,15 @@ async function handleRequest(req, res) {
       return sendJSON(res, 200, { status: 'ok', uptime: Math.floor(process.uptime()), users: users.length, version: '5.1' });
     }
 
+    // ─── TELEGRAM WEBHOOK ────────────────────────────────────────────
+    if (pathname === '/api/telegram/webhook' && req.method === 'POST') {
+      if (!telegramBot) return sendJSON(res, 200, { ok: true });
+      const body = await readBody(req);
+      sendJSON(res, 200, { ok: true }); // respond immediately — Telegram requires <5s
+      telegramBot.handleUpdate(body).catch(err => console.error('[telegram] handleUpdate error:', err));
+      return;
+    }
+
     // ─── SCAN LIMIT ──────────────────────────────────────────────
     if (pathname === '/api/limit') {
       const authUser = getAuthUser(req);
@@ -1099,7 +1111,15 @@ server.listen(PORT, HOST, () => {
   console.log(`📁  Data: ${auth.DB_PATH}`);
   console.log(`🔒  Auth rate limit: ${AUTH_MAX} attempts per ${AUTH_WINDOW_MS / 60000} min per IP`);
   console.log(`💾  Yahoo cache TTL: ${CACHE_TTL_MS / 1000}s`);
-  console.log(`🌐  Yahoo proxy: ${process.env.YAHOO_PROXY_URL || '(none — using Yahoo directly)'}\n`);
+  console.log(`🌐  Yahoo proxy: ${process.env.YAHOO_PROXY_URL || '(none — using Yahoo directly)'}`);
+  if (telegramBot) {
+    const appUrl = ENV.APP_URL || `http://localhost:${PORT}`;
+    telegramBot.registerWebhook(appUrl).catch(err => console.error('[telegram] webhook registration error:', err));
+    console.log(`🤖  Telegram bot: active`);
+  } else {
+    console.log(`🤖  Telegram bot: disabled (set TELEGRAM_BOT_TOKEN + ANTHROPIC_API_KEY)`);
+  }
+  console.log('');
   scheduleDailyScanRefresh();
 });
 
