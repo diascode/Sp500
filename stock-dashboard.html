@@ -1167,6 +1167,40 @@ async function showAdminView() {
     </tr>`;
   }
   html += '</tbody></table></div>';
+
+  // Telegram conversations
+  const tg = await fetch('/api/admin/telegram-conversations', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('momentum_token') } }).then(r => r.json()).catch(() => ({ botActive: false, conversations: [] }));
+  html += '<div class="kicker" style="margin-top:var(--s-6);margin-bottom:var(--s-3)">🤖 Telegram Bot</div>';
+  if (!tg.botActive) {
+    html += '<p style="color:var(--ink-4);font-size:13px">Bot inativo — configure TELEGRAM_BOT_TOKEN e ANTHROPIC_API_KEY nas variáveis de ambiente.</p>';
+  } else if (!tg.conversations.length) {
+    html += '<p style="color:var(--ink-4);font-size:13px">Nenhuma conversa ainda.</p>';
+  } else {
+    html += '<div class="card-flush" style="overflow-x:auto;margin-bottom:var(--s-5)">';
+    html += '<table class="tracked-table"><thead><tr><th>USUÁRIO</th><th>CHAT ID</th><th>MSGS</th><th>HOJE</th><th>ÚLTIMA ATIVIDADE</th><th>VER</th></tr></thead><tbody>';
+    tg.conversations.forEach(c => {
+      html += `<tr>
+        <td style="font-weight:500">${esc(c.userName)}</td>
+        <td style="font-family:var(--font-mono);font-size:11px;color:var(--ink-4)">${c.chatId}</td>
+        <td style="text-align:center">${c.messageCount}</td>
+        <td style="text-align:center;color:${c.dailyCount > 15 ? 'var(--sell)' : 'var(--ink-3)'}">${c.dailyCount}</td>
+        <td style="font-family:var(--font-mono);font-size:11px;color:var(--ink-4)">${c.lastActivity ? c.lastActivity.slice(0,16).replace('T',' ') : '—'}</td>
+        <td><button onclick="adminToggleTgChat('${c.chatId}')" style="font-size:10px;padding:3px 10px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--ink-3);cursor:pointer">▼ msgs</button></td>
+      </tr>
+      <tr id="tg-chat-${c.chatId}" style="display:none"><td colspan="6" style="padding:0">
+        <div style="padding:12px 16px;background:var(--bg-1);max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
+          ${c.messages.map(m => `
+            <div style="display:flex;gap:8px;align-items:flex-start">
+              <span style="font-size:11px;color:var(--ink-4);white-space:nowrap;padding-top:2px">${m.ts ? m.ts.slice(11,16) : ''}</span>
+              <span style="font-size:11px;font-weight:600;color:${m.role === 'user' ? 'var(--blue)' : 'var(--green)'};white-space:nowrap">${m.role === 'user' ? '👤' : '🤖'}</span>
+              <span style="font-size:12px;color:var(--ink-3);line-height:1.5">${esc(m.content)}</span>
+            </div>`).join('')}
+        </div>
+      </td></tr>`;
+    });
+    html += '</tbody></table></div>';
+  }
+
   html += '</div>';
   container.innerHTML = html;
 
@@ -1189,6 +1223,11 @@ async function showAdminView() {
 
 function adminTogglePayments(uid) {
   const row = document.getElementById('admin-payments-' + uid);
+  if (row) row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+
+function adminToggleTgChat(chatId) {
+  const row = document.getElementById('tg-chat-' + chatId);
   if (row) row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
 }
 

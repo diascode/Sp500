@@ -76,7 +76,7 @@ function saveFlags(flags) {
 let featureFlags = loadFlags();
 
 // ─── TELEGRAM BOT ───────────────────────────────────────────────────────
-const telegramBot = require('./lib/telegram')(ENV);
+const telegramBot = require('./lib/telegram')(ENV, DIR);
 
 // ─── STRIPE ─────────────────────────────────────────────────────────────
 let stripe;
@@ -552,6 +552,14 @@ async function handleRequest(req, res) {
     }
 
     // ─── ADMIN ───────────────────────────────────────────────────
+    if (pathname === '/api/admin/telegram-conversations' && req.method === 'GET') {
+      const authUser = getAuthUser(req);
+      if (!authUser) return sendError(res, 401, 'Não autenticado');
+      if (authUser.email.toLowerCase() !== ADMIN_EMAIL) return sendError(res, 403, 'Admin only');
+      if (!telegramBot) return sendJSON(res, 200, { conversations: [], botActive: false });
+      return sendJSON(res, 200, { conversations: telegramBot.getConversations(), botActive: true });
+    }
+
     if (pathname === '/api/admin/backup' && req.method === 'GET') {
       const authUser = getAuthUser(req);
       if (!authUser) return sendError(res, 401, 'Não autenticado');
