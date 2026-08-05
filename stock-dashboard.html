@@ -33,7 +33,7 @@
         <!-- Font size -->
         <button class="btn-ghost font-size-btn" id="fontSizeBtn" onclick="cycleFontSize()" title="Tamanho da fonte">A</button>
         <!-- Scan CTA (hidden, used for progress display) -->
-        <button class="btn-primary appbar-scan" id="scanBtn" onclick="scanAll()">⚡ Simular</button>
+        <button class="btn-primary appbar-scan" id="scanBtn" onclick="scanAll()">⚡ Scan</button>
         <!-- Auth: signed out -->
         <button class="btn-ghost" id="signInBtn" onclick="showAuthModal()" style="display:none">Entrar</button>
         <!-- Auth: signed in -->
@@ -281,7 +281,7 @@
 <script src="/static/fx.js"></script>
 <script>
 // ─── STATE ─────────────────────────────────────────────────────────────
-let state = { market: 'brasil', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], closedTrades: JSON.parse(localStorage.getItem('momentum_closed') || '[]'), universeCache: {}, theme: 'brasil', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, showBilling: false, showAbout: false, showTraining: false, displayedStocks: [], homeMode: localStorage.getItem('momentum_home_mode') || 'sinais', backtestResults: null, marketRegime: 'risk_on', simCapital: parseInt(localStorage.getItem('momentum_sim_capital') || '1000', 10), trackedView: localStorage.getItem('momentum_tracked_view') || 'cards', trackedTab: 'abertas', scanGeneratedAt: {} };
+let state = { market: 'us', stocks: {}, analyzed: [], portfolio: [], trackedPicks: [], closedTrades: JSON.parse(localStorage.getItem('momentum_closed') || '[]'), universeCache: {}, theme: 'us', showTracked: false, showUniverse: false, showPortfolio: false, showSimulator: false, showBilling: false, showAbout: false, showTraining: false, displayedStocks: [], homeMode: localStorage.getItem('momentum_home_mode') || 'sinais', backtestResults: null, marketRegime: 'risk_on', simCapital: parseInt(localStorage.getItem('momentum_sim_capital') || '1000', 10), trackedView: localStorage.getItem('momentum_tracked_view') || 'cards', trackedTab: 'abertas', scanGeneratedAt: {} };
 function businessDaysBetween(d1str, d2str) {
   const ms = Date.parse(d2str) - Date.parse(d1str);
   const calDays = ms / (1000 * 60 * 60 * 24);
@@ -1621,7 +1621,7 @@ async function scanMarket(market) {
     return results;
   } catch (err) {
     if (err.warmingUp) {
-      showToast('Estamos preparando os dados de mercado. Isso leva alguns segundos na primeira execução.', false, 5000);
+      showToast('Preparing market data. This takes a few seconds on first run.', false, 5000);
       // Auto-retry once after retryAfter seconds
       const retryAfter = (err.retryAfter || 30) * 1000;
       await new Promise(r => setTimeout(r, retryAfter));
@@ -1683,7 +1683,7 @@ async function scanMarket(market) {
         if (signal.aborted || e.name === 'AbortError') return;
         if (!_scanErrShown && e.status === 429) {
           _scanErrShown = true;
-          showToast('Limite de varredura atingido — aguarde alguns minutos', false, 5000);
+          showToast('Scan limit reached — please wait a few minutes', false, 5000);
         }
       }).finally(() => {
         completed++;
@@ -1701,7 +1701,7 @@ async function forceRefreshScan() {
   const now = Date.now();
   if (_scanRefreshRateLimit[market] && now - _scanRefreshRateLimit[market] < 3_600_000) {
     const waitMin = Math.ceil((3_600_000 - (now - _scanRefreshRateLimit[market])) / 60_000);
-    showToast(`Aguarde ${waitMin} minuto${waitMin > 1 ? 's' : ''} para atualizar novamente.`, false, 3000);
+    showToast(`Please wait ${waitMin} minute${waitMin > 1 ? 's' : ''} before refreshing.`, false, 3000);
     return;
   }
   _scanRefreshRateLimit[market] = now;
@@ -1713,11 +1713,9 @@ async function forceRefreshScan() {
 async function scanAll() {
   if (!authUser) { showAuthModal(); return; }
   const btn = document.getElementById('scanBtn');
-  if (btn) { btn.innerHTML = '⚡ Simulando...'; btn.disabled = true; }
-  // Start BOVA11 regime fetch concurrently with the main scan
-  const bovaPromise = state.market === 'brasil'
-    ? fetchHistory('BOVA11.SA').catch(() => null)
-    : null;
+  if (btn) { btn.innerHTML = '⚡ Scanning...'; btn.disabled = true; }
+  // BOVA11 regime fetch removed (US-only market)
+  const bovaPromise = null;
   await scanMarket(state.market);
   // Market regime (Brasil only) — awaiting promise already in flight
   if (bovaPromise) {
@@ -1733,9 +1731,7 @@ async function scanAll() {
   renderDashboard();
   updateStats();
   // Fetch market-pulse news for broad market indices
-  const pulseProxies = state.market === 'brasil' ? ['BOVA11.SA','PETR4.SA','VALE3.SA']
-    : state.market === 'europe' ? ['VGK','EWG','EWQ']
-    : ['SPY','QQQ','DIA'];
+  const pulseProxies = ['SPY','QQQ','DIA'];
   _marketPulseNews = [];
   Promise.all(pulseProxies.map(t => fetchNews(t))).then(results => {
     const seen = new Set();
@@ -1747,7 +1743,7 @@ async function scanAll() {
   if (statusEl2) statusEl2.textContent = t('status_ready');
   const updateEl = document.getElementById('updateTime');
   if (updateEl) updateEl.textContent = new Date().toISOString().replace('T',' ').slice(0,19)+' UTC';
-  if (btn) { btn.innerHTML = '⚡ Simular'; btn.disabled = false; }
+  if (btn) { btn.innerHTML = '⚡ Scan'; btn.disabled = false; }
   autoFetchFxRates(false);
 }
 
@@ -1756,8 +1752,6 @@ async function scanAll() {
 
 function switchMarket(market) {
   if (_scanAbort) { _scanAbort.abort(); _scanAbort = null; }
-  // reset legacy/removed markets to brasil
-  if (market === 'us' || market === 'emerging' || market === 'europe') market = 'brasil';
   state.market = market;
   
   _signalFilter = 'buy';
@@ -1775,7 +1769,7 @@ function switchMarket(market) {
   const activeTab = document.querySelector(`.market-tabs .btn[data-market="${market}"]`);
   if (activeTab) activeTab.classList.add('active-market');
   const labels = {
-    brasil: '🇧🇷 ' + t('market_brasil'),
+    us: '🇺🇸 S&P 500',
   };
   document.getElementById('activeMarketLabel').textContent = labels[market] || market;
   renderDashboard();
@@ -2003,7 +1997,7 @@ function updateScanProgress(pct, ticker) {
 
 function hideScanProgress() {
   const btn = document.getElementById('scanBtn');
-  if (btn) btn.textContent = '⚡ Simular';
+  if (btn) btn.textContent = '⚡ Scan';
   const grid = document.getElementById('resultsGrid');
   if (grid && grid.style.display === 'none') grid.style.display = '';
 }
@@ -7154,9 +7148,9 @@ async function init() {
   // Phase 2: Universe counts after auth settles  
   setTimeout(async () => {
     try {
-      await loadUniverse('brasil');
-      const brMeta = state._universeMeta.brasil;
-      if (brMeta) { const mBtn = document.querySelector('[data-market="brasil"]'); if (mBtn) mBtn.textContent = `🇧🇷 Brasil (${brMeta.visible})`; const uc = document.getElementById('universeCount'); if (uc) uc.textContent = brMeta.visible; }
+      await loadUniverse('us');
+      const usMeta = state._universeMeta.us;
+      if (usMeta) { const mBtn = document.querySelector('[data-market="us"]'); if (mBtn) mBtn.textContent = `🇺🇸 US (${usMeta.visible})`; const uc = document.getElementById('universeCount'); if (uc) uc.textContent = usMeta.visible; }
     } catch(e) { console.log('Universe load error:', e); }
   }, 50);
   // Phase 3: Correlation only — user must click SCAN explicitly
