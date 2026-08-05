@@ -1,8 +1,8 @@
 // Momentum — i18n strings and language helpers.
-var _lang = 'pt';
+var _lang = 'en';
 var LANGS = {
   en: {
-    mission: 'Educational tool. Technical analysis across <strong>US &middot; Europe &middot; Emerging Markets</strong>. Filters high-scoring signals. Each scan fetches live market data &mdash; RSI, MACD, ADX, moving averages, Bollinger Bands, pattern detection.',
+    mission: 'Educational tool. Technical analysis across the <strong>S&P 500</strong>. Filters high-scoring signals. Each scan fetches live market data &mdash; RSI, MACD, ADX, moving averages, Bollinger Bands, pattern detection.',
     brand: 'stock scanner &middot; live market data &middot; by jerry',
     scan: 'SCAN', scanAll: 'SCAN ALL', signals: 'SIGNALS',
     universe: 'ALL STOCKS', tracked: 'TRACKED', education: 'EDUCATION', simulate: 'PATTERNS',
@@ -18,7 +18,7 @@ var LANGS = {
     // Status
     status_idle: 'IDLE', status_ready: 'READY', status_scanning: 'SCANNING',
     status_scanLabel: 'SCAN', status_marketLabel: 'MARKET', status_dataLabel: 'DATA',
-    market_us: 'US', market_brasil: 'Brasil', market_europe: 'Europe', market_emerging: 'Emerging',
+    market_us: 'US',
     correlation_title: '🔗 CORRELATION',
     correlation_desc: 'Measures how stocks move together. 🟢 +0.7 = move in sync. 🔴 -0.3 = move opposite. Diversify across uncorrelated picks.',
     status_refreshingTracked: 'REFRESHING TRACKED...',
@@ -54,7 +54,6 @@ var LANGS = {
     auth_noAccount: "Don't have an account?",
     auth_haveAccount: 'Already have an account?',
     auth_changePassword: 'Change Password',
-    auth_cpfRequired: 'CPF is required to create an account.',
     auth_currentPassword: 'Current password',
     auth_newPassword: 'New password (min 6 chars)',
     auth_confirmPassword: 'Confirm new password',
@@ -130,7 +129,7 @@ var LANGS = {
     proGate_myStocksDetail: 'Track your portfolio, see real-time P&L, monthly profit breakdowns, and generate tax reports.',
     proGate_correlationLock: 'Correlation Matrix is a Pro feature.',
     proGate_upgrade: '⬆ UPGRADE',
-    proGate_goPro: '⬆ GO PRO — €9/MO',
+    proGate_goPro: '⬆ GO PRO — $9.99/MO',
     proGate_signIn: 'Sign in with a Pro account.',
     proGate_educationDesc: 'Sign in with a Pro account to access Education.',
 
@@ -161,40 +160,18 @@ var LANGS = {
     taxReport_update: '🔄 UPDATE',
     taxReport_pdf: '🖨️ PRINT / SAVE PDF',
 
-    // DARF — Brazilian Income Tax (B3)
-    darf_title: '🇧🇷 DARF — BRAZILIAN INCOME TAX (RENDA VARIÁVEL B3)',
-    darf_swingTitle: 'SWING TRADE (B3)',
-    darf_daytradeTitle: 'DAY TRADE (B3)',
-    darf_grossSales: 'Gross Sales (BRL)',
-    darf_realizedGain: 'Realized Gain',
-    darf_lossCarryforward: 'Loss Carryforward',
-    darf_taxableGain: 'Taxable Gain',
-    darf_exemption: 'Monthly Exemption (R$20k sales)',
-    darf_taxOwed: 'Tax Owed',
-    darf_dedoDuro: 'Withholding (dedo-duro, deducted)',
-    darf_netDARF: 'Net DARF Due',
-    darf_code: 'DARF Code: 6015',
-    darf_siCalcLink: 'Open SicalcWeb',
-    darf_updateLoss: '💾 SAVE LOSSES',
-    darf_lossSwing: 'Accrued Loss Swing:',
-    darf_lossDaytrade: 'Accrued Loss Day Trade:',
-    darf_noBrlTrades: 'No BRL (B3) closed positions this period.',
-    darf_disclaimer: 'Estimated calculation per Receita Federal rules. Swing: 15% tax with R$20k/month gross sales exemption. Day trade: 20% tax, no exemption. Dedo-duro withholding: 0.005% gross sales (swing) / 1% net gain (day trade), already deducted at source. DARF code 6015 due last business day of following month.',
-    darf_tradeType: 'TRADE TYPE',
-    darf_swing: 'Swing',
-    darf_daytrade: 'Day Trade',
-    darf_newLoss: 'New loss to carry forward',
-    darf_sicalcTitle: 'GERAR DARF NO SICALCWEB',
-    darf_due: 'due',
-    darf_copy: 'COPY',
-    darf_noCpf: 'CPF not set.',
-    darf_addCpf: 'Add CPF in your profile',
+    // US Capital Gains — Tax Reference (informational only)
+    tax_us_title: '📊 US CAPITAL GAINS — TAX REFERENCE',
+    tax_us_shortTerm: 'SHORT-TERM (held ≤ 1 year)',
+    tax_us_longTerm: 'LONG-TERM (held > 1 year)',
+    tax_us_shortRate: 'Taxed as ordinary income (10%–37%)',
+    tax_us_longRate: '0%, 15%, or 20% depending on income',
+    tax_us_washSale: 'Wash-Sale Rule: loss disallowed if same security bought within 30 days before/after sale',
+    tax_us_lossCarryforward: 'Loss Carryforward: net capital losses up to $3,000/yr can offset ordinary income',
+    tax_us_disclaimer: 'Informational only — NOT tax advice. Consult a CPA or tax professional for your specific situation. Tax rates and rules vary by income, filing status, and holding period.',
 
     // Profile
     profile_title: 'My Profile',
-    profile_cpf: 'CPF',
-    profile_cpfHint: 'Used to pre-fill SicalcWeb. Stored securely on the server.',
-    profile_cpfInvalid: 'Invalid CPF. Check the number and try again.',
     profile_save: '💾 Save',
     profile_saved: 'Profile saved.',
 
