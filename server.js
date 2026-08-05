@@ -259,7 +259,7 @@ async function handleRequest(req, res) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) return sendError(res, 400, 'Invalid email');
       if (findUser(email)) return sendError(res, 409, 'Email already registered');
-      const user = { id: nextId(), email: email.toLowerCase(), password: await hashPassword(password), tier: 'free', createdAt: new Date().toISOString(), stripeCustomerId: null, stripeSubId: null, subStatus: null, paymentMethodLast4: null, failedPaymentCount: 0, paymentHistory: [], subscriptionEnd: null, emailVerified: false };
+      const user = { id: nextId(), email: email.toLowerCase(), password: await hashPassword(password), tier: 'free', createdAt: new Date().toISOString(), stripeCustomerId: null, stripeSubId: null, subStatus: null, paymentMethodLast4: null, failedPaymentCount: 0, paymentHistory: [], subscriptionEnd: null, emailVerified: true };
       users.push(user); saveUsers(users);
       // Send verification email (non-blocking)
       const vToken = makeToken();
